@@ -14,15 +14,30 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 
-import torch
-from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration
+try:
+    import torch
+    from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    class _MockTorch:  # type: ignore[no-redef]
+        @staticmethod
+        def inference_mode(*_args: Any, **_kwargs: Any) -> Any:
+            def decorator(fn: Any) -> Any:
+                return fn
+            return decorator
 
-DEFAULT_MODEL_PATH = "/home/berkay/modeller/turnike-4b-web2-fp8"
+    torch = _MockTorch()  # type: ignore[assignment]
+    AutoTokenizer = None  # type: ignore[assignment]
+    Qwen3_5ForConditionalGeneration = None  # type: ignore[assignment]
+
+DEFAULT_MODEL_PATH = os.environ.get("TURNIKE_MODEL_PATH", "/home/berkay/modeller/turnike-4b-web2-fp8")
 DEFAULT_MAX_LENGTH = 8192
 MAX_OPTIONS = 60
 
@@ -181,15 +196,20 @@ class TurnikeWeb2Engine:
 
     def __init__(
         self,
-        model_path: str = DEFAULT_MODEL_PATH,
+        model_path: str | None = None,
         max_length: int = DEFAULT_MAX_LENGTH,
         done_engeli: float = 0.6,
         max_options: int = MAX_OPTIONS,
     ) -> None:
-        self.model_path = Path(model_path)
+        effective_model_path = model_path or os.environ.get("TURNIKE_MODEL_PATH") or DEFAULT_MODEL_PATH
+        self.model_path = Path(effective_model_path)
         self.max_length = max_length
         self.done_engeli = done_engeli
-        self.max_options = max_options
+        if not HAS_TORCH or AutoTokenizer is None:
+            raise ImportError(
+                "Turnike server requires 'torch' and 'transformers'. "
+                "Install them with `pip install .[turnike]`."
+            )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         t0 = time.perf_counter()
@@ -485,15 +505,20 @@ def make_handler(engine: TurnikeWeb2Engine):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Reflex Local Turnike-4B-Web2-FP8 Server")
-    parser.add_argument("--model", default=DEFAULT_MODEL_PATH)
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Path to Turnike model (defaults to TURNIKE_MODEL_PATH or default model path)",
+    )
     parser.add_argument("--port", type=int, default=8794)
     parser.add_argument("--max-length", type=int, default=DEFAULT_MAX_LENGTH)
     parser.add_argument("--done-engeli", type=float, default=0.6)
     parser.add_argument("--max-options", type=int, default=MAX_OPTIONS)
     args = parser.parse_args()
 
+    chosen_model = args.model or os.environ.get("TURNIKE_MODEL_PATH") or DEFAULT_MODEL_PATH
     engine = TurnikeWeb2Engine(
-        model_path=args.model,
+        model_path=chosen_model,
         max_length=args.max_length,
         done_engeli=args.done_engeli,
         max_options=args.max_options,

@@ -8,8 +8,17 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-ENV_PATH = PROJECT_ROOT / ".env"
-FALLBACK_ENV_PATH = Path("/home/berkay/Projeler/Laya/.env")
+
+
+def get_env_path() -> Path:
+    """Return the path to the .env file, respecting REFLEX_ENV_PATH or defaulting to cwd/.env."""
+    custom = os.environ.get("REFLEX_ENV_PATH")
+    if custom:
+        return Path(custom)
+    return Path.cwd() / ".env"
+
+
+ENV_PATH = get_env_path()
 
 OPENROUTER_BASE_URL = "https://openrouter.ai"
 OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -31,25 +40,25 @@ SUPERVISOR_PRESETS = [
 ]
 
 DECISION_PRESETS = [
-    {"id": "local_turnike", "label": "Local · Turnike-4B-Web3-FP8 (8794)"},
+    {"id": "local_turnike", "label": "Local · Turnike-4B-Web2-FP8 (8794)"},
     {"id": "openrouter_jev", "label": "OpenRouter · Jev (~typesafe/jev-latest)"},
 ]
 
 
 def load_env() -> None:
     """Load environment variables from .env without overwriting existing shell variables."""
-    for candidate in (ENV_PATH, FALLBACK_ENV_PATH):
-        if not candidate.exists():
+    target_path = get_env_path()
+    if not target_path.exists():
+        return
+    for raw_line in target_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
             continue
-        for raw_line in candidate.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip().strip("'\"")
-            if key and key not in os.environ:
-                os.environ[key] = value
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 def get_openrouter_api_key() -> str:
@@ -57,8 +66,9 @@ def get_openrouter_api_key() -> str:
     load_env()
     key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not key:
+        env_file = get_env_path()
         raise RuntimeError(
-            f"OPENROUTER_API_KEY not found. Set it in {ENV_PATH} or in the shell environment."
+            f"OPENROUTER_API_KEY not found. Set it in {env_file} or in the shell environment."
         )
     return key
 
@@ -74,14 +84,19 @@ def get_meta_api_key() -> str:
 
 def save_env_key(key_name: str, key_value: str) -> None:
     """Persist an API key (`META_API_KEY`, `LLAMA_API_KEY`, `OPENROUTER_API_KEY`) into `.env` and `os.environ`."""
+    if "\n" in key_name or "\r" in key_name:
+        raise ValueError("key_name must not contain newline characters")
+    if "\n" in key_value or "\r" in key_value:
+        raise ValueError("key_value must not contain newline characters")
     clean_val = key_value.strip()
     if not clean_val:
         return
     os.environ[key_name] = clean_val
+    target_path = get_env_path()
     lines: list[str] = []
     replaced = False
-    if ENV_PATH.exists():
-        for raw_line in ENV_PATH.read_text(encoding="utf-8").splitlines():
+    if target_path.exists():
+        for raw_line in target_path.read_text(encoding="utf-8").splitlines():
             stripped = raw_line.strip()
             if stripped.startswith(f"{key_name}="):
                 lines.append(f"{key_name}={clean_val}")
@@ -90,7 +105,7 @@ def save_env_key(key_name: str, key_value: str) -> None:
                 lines.append(raw_line)
     if not replaced:
         lines.append(f"{key_name}={clean_val}")
-    ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    target_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class CalibrationThresholds(BaseModel):

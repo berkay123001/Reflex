@@ -11,6 +11,9 @@ dependencies = [
     "pydantic>=2.9,<3",
 ]
 
+[project.optional-dependencies]
+turnike = ["torch", "transformers"]
+
 [project.scripts]
 reflex = "reflex.server:main"
 
