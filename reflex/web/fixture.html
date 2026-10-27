@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroVoyage — Flight & Stay Portal (Reflex Test Fixture)</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #2563eb;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      padding: 24px 36px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    h1 { font-size: 22px; margin: 0; color: var(--brand); }
+    .tabs { display: flex; gap: 10px; }
+    .tabs button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .tabs button[aria-selected="true"] {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      background: var(--brand);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn.danger { background: #dc2626; }
+    .status-banner {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 8px;
+      background: #ecfdf5;
+      border: 1px solid #10b981;
+      color: #065f46;
+      font-weight: 600;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-backdrop[hidden] {
+      display: none !important;
+    }
+    .modal {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 440px;
+      box-shadow: 0 20px 35px rgba(0,0,0,0.25);
+    }
+    .stay-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AeroVoyage</h1>
+    <nav class="tabs" aria-label="Portal sections">
+      <button type="button" id="tab-stays" role="tab" aria-selected="true" onclick="switchScenario('stays')">Boutique Stays</button>
+      <button type="button" id="tab-checkout" role="tab" aria-selected="false" onclick="switchScenario('checkout')">Express Checkout</button>
+    </nav>
+  </header>
+
+  <main id="main-content"></main>
+
+  <div id="cookie-modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modal-title">
+      <h2 id="modal-title" style="margin-top:0">Privacy & Cookie Consent Required</h2>
+      <p style="color:#475569;line-height:1.5">Before searching or selecting a property on AeroVoyage, please accept or dismiss our regional telemetry preferences.</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+        <button type="button" class="btn" id="accept-cookies-btn" onclick="dismissModal()">Accept & Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    let currentScenario = params.get('scenario') || 'stays';
+    let modalDismissed = params.get('modal') !== '1';
+    let selectedStay = null;
+    let bookingConfirmed = false;
+
+    function esc(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function dismissModal() {
+      modalDismissed = true;
+      document.getElementById('cookie-modal').hidden = true;
+      render();
+    }
+
+    function switchScenario(sc) {
+      currentScenario = sc;
+      document.getElementById('tab-stays').setAttribute('aria-selected', String(sc === 'stays'));
+      document.getElementById('tab-checkout').setAttribute('aria-selected', String(sc === 'checkout'));
+      render();
+    }
+
+    function openStay(name) {
+      selectedStay = name;
+      render();
+    }
+
+    function submitCheckout() {
+      const name = document.getElementById('guest-name')?.value?.trim();
+      const email = document.getElementById('guest-email')?.value?.trim();
+      const cabin = document.getElementById('cabin-select')?.value;
+      const out = document.getElementById('checkout-result');
+      if (!name || !email) {
+        out.innerHTML = '<div style="color:#dc2626;margin-top:12px;font-weight:600">Error: Both Guest Full Name and Contact Email are required!</div>';
+        return;
+      }
+      bookingConfirmed = true;
+      out.innerHTML = `<div class="status-banner">Reservation Confirmed for ${esc(name)} (${esc(email)}) — Cabin: ${esc(cabin)}</div>`;
+    }
+
+    function executePayNow() {
+      const out = document.getElementById('checkout-result');
+      out.innerHTML = `<div class="status-banner">Payment of $420.00 Charged Successfully — Order #AV-9042 Completed!</div>`;
+    }
+
+    function render() {
+      const modal = document.getElementById('cookie-modal');
+      modal.hidden = modalDismissed;
+      const root = document.getElementById('main-content');
+
+      if (currentScenario === 'stays') {
+        if (selectedStay) {
+          root.innerHTML = `
+            <div class="card">
+              <h2>Property Details: ${esc(selectedStay)}</h2>
+              <p>Location: Lisbon Historic District · Verified Boutique Partner · Free Cancellation</p>
+              <div class="status-banner">Currently viewing property page for ${esc(selectedStay)}.</div>
+              <div style="margin-top:16px">
+                <button type="button" class="btn" onclick="selectedStay=null;render()">Back to All Stays</button>
+              </div>
+            </div>
+          `;
+          return;
+        }
+        root.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h2 style="margin-top:0">Available Stays</h2>
+              <div class="stay-item">
+                <div><strong>Hotel Solis</strong><br><small>Downtown · $180/night</small></div>
+                <button type="button" class="btn" onclick="openStay('Hotel Solis')">Open Hotel Solis</button>
+              </div>
+              <div class="stay-item">
+                <div><strong>Casa Flora</strong><br><small>Alfama Garden · $210/night</small></div>
+                <button type="button" class="btn" onclick="openStay('Casa Flora')">Open Casa Flora</button>
+              </div>
+              <div class="stay-item">
+                <div><strong>Porto Vista</strong><br><small>Harborfront · $245/night</small></div>
+                <button type="button" class="btn" onclick="openStay('Porto Vista')">Open Porto Vista</button>
+              </div>
+            </div>
+            <div class="card">
+              <h2 style="margin-top:0">Filter Options</h2>
+              <div class="field">
+                <label><input type="checkbox" id="chk-breakfast"> Include Breakfast</label>
+              </div>
+              <div class="field">
+                <label><input type="checkbox" id="chk-wifi" checked> High-Speed Wi-Fi</label>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        root.innerHTML = `
+          <div class="card" style="max-width:620px">
+            <h2 style="margin-top:0">Express Flight & Stay Checkout</h2>
+            <div class="field">
+              <label for="guest-name">Guest Full Name</label>
+              <input type="text" id="guest-name" placeholder="e.g. Berkay Yilmaz" value="${esc(params.get('name') || '')}">
+            </div>
+            <div class="field">
+              <label for="guest-email">Contact Email Address</label>
+              <input type="email" id="guest-email" placeholder="Required for e-ticket delivery" value="${esc(params.get('email') || '')}">
+            </div>
+            <div class="field">
+              <label for="cabin-select">Seat / Cabin Class</label>
+              <select id="cabin-select">
+                <option value="Economy">Economy Standard</option>
+                <option value="Business">Business Studio</option>
+                <option value="First">First Class Suite</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:18px">
+              <button type="button" class="btn" onclick="submitCheckout()">Save Passenger Details</button>
+              <button type="button" class="btn danger" onclick="executePayNow()">Pay Now $420.00</button>
+            </div>
+            <div id="checkout-result"></div>
+          </div>
+        `;
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

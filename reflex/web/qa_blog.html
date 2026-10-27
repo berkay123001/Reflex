@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-03: Araştırma & Teknoloji Blogu</title>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }
+    .container { max-width: 780px; margin: 0 auto; }
+    .nav-bar { display: flex; gap: 16px; padding: 12px 16px; background: #1e293b; border-radius: 8px; margin-bottom: 24px; }
+    .nav-bar a { color: #38bdf8; text-decoration: none; font-weight: 600; }
+    .hero-spacer { height: 760px; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 32px; margin-bottom: 32px; border: 1px solid #334155; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .card-body h3 { margin: 0 0 8px 0; color: #f8fafc; }
+    .card-footer { margin-top: 14px; display: flex; justify-content: flex-end; }
+    .btn { background: #2563eb; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container" id="main-content"></div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const root = document.getElementById('main-content');
+    if (params.get('decoy') === '1') {
+      root.innerHTML = `
+        <h1>Fırat Üniversitesi Akademik Bilgi Sistemi (abs.firat.edu.tr)</h1>
+        <p>Bu sayfa kurumsal akademik personel dizinidir. Burada blog yazısı veya teknik makale bulunmamaktadır.</p>
+        <a href="/qa/blog" class="btn">Blog Ana Sayfasına Dön</a>
+      `;
+    } else if (params.get('post') === 'transformer') {
+      root.innerHTML = `
+        <article class="card">
+          <h1>Derin Öğrenme ve Transformer Mimarisi (2026)</h1>
+          <p><strong>Yayın Tarihi:</strong> 14 Ekim 2026</p>
+          <p><strong>Yazar:</strong> Doç. Dr. Özal Yıldırım</p>
+          <p><strong>Doğrulama Kodu:</strong> TRANSFORMER-2026-OK</p>
+          <p>Bu makalede hibrit System-1 / System-2 ajan mimarilerinde dikkat mekanizmalarının düşük gecikmeli tarayıcı otomasyonuna etkisi incelenmektedir.</p>
+        </article>
+      `;
+    } else if (params.get('post') === 'quantum') {
+      root.innerHTML = `
+        <article class="card">
+          <h1>Kuantum Kriptografi Temelleri</h1>
+          <p>Bu yazı kuantum anahtar dağıtımı hakkındadır. Aradığınız Transformer makalesi değildir.</p>
+          <a href="/qa/blog" class="btn">Geri Dön</a>
+        </article>
+      `;
+    } else {
+      root.innerHTML = `
+        <div class="nav-bar">
+          <a href="/qa/blog">Ana Sayfa</a>
+          <a href="/qa/blog?decoy=1">Akademik Bilgi Sistemi (abs.firat.edu.tr)</a>
+        </div>
+        <div class="hero-spacer">
+          <h1>Doç. Dr. Özal Yıldırım — Kişisel Teknoloji & Yapay Zeka Blogu</h1>
+          <p>Son yayınlanan teknik makaleler sayfanın alt kısmındadır. Lütfen aşağı kaydırarak blog yazılarını inceleyin.</p>
+          <div style="display:flex;gap:8px;">
+            <img class="opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width="40" height="40">
+            <img class="opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width="40" height="40">
+            <img class="opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width="40" height="40">
+          </div>
+        </div>
+        <section id="blog-list">
+          <article class="card">
+            <div class="card-body">
+              <h3>Kuantum Kriptografi Temelleri</h3>
+              <p>Kuantum iletişim protokollerine giriş.</p>
+            </div>
+            <div class="card-footer">
+              <a href="/qa/blog?post=quantum" class="btn">Devamını Oku</a>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-body">
+              <h3>Derin Öğrenme ve Transformer Mimarisi (2026)</h3>
+              <p>Hibrit bilişsel ajanlar ve Transformer mimarisinin 2026 değerlendirmesi.</p>
+            </div>
+            <div class="card-footer">
+              <a href="/qa/blog?post=transformer" class="btn">Devamını Oku</a>
+            </div>
+          </article>
+        </section>
+      `;
+    }
+  </script>
+</body>
+</html>

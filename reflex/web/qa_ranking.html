@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-02: 1-50 Arası Küçükten Büyüğe Kör Sıralama</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+    .board { display: flex; gap: 40px; align-items: center; margin-top: 20px; }
+    .slots { display: flex; flex-direction: column; gap: 10px; }
+    .slot-btn { width: 180px; height: 48px; background: #1e293b; border: 2px solid #eab308; border-radius: 8px; color: #facc15; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+    .center-box { width: 240px; height: 240px; border: 3px solid #eab308; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: #1e293b; }
+    .opacity-0 { opacity: 0; position: absolute; width: 64px; height: 64px; pointer-events: none; }
+    .drawn-badge { margin-top: 16px; background: #eab308; color: #0f172a; font-size: 24px; font-weight: 800; padding: 8px 24px; border-radius: 999px; }
+    .start-btn { background: #eab308; color: #0f172a; border: none; padding: 14px 32px; font-size: 18px; font-weight: 800; border-radius: 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>1-50 ARASI KÜÇÜKTEN BÜYÜĞE KÖR SIRALAMA</h1>
+  <p id="sub-status">Sayıları 1. slottan 5. slota doğru küçükten büyüğe sıralayın!</p>
+
+  <div id="intro-view">
+    <button class="start-btn" onclick="startGame()">Başla</button>
+  </div>
+
+  <div id="game-view" class="board" style="display:none;">
+    <div class="slots" id="slots-container">
+      <button class="slot-btn" id="slot-1" onclick="placeInSlot(1)"><span>1</span></button>
+      <button class="slot-btn" id="slot-2" onclick="placeInSlot(2)"><span>2</span></button>
+      <button class="slot-btn" id="slot-3" onclick="placeInSlot(3)"><span>3</span></button>
+      <button class="slot-btn" id="slot-4" onclick="placeInSlot(4)"><span>4</span></button>
+      <button class="slot-btn" id="slot-5" onclick="placeInSlot(5)"><span>5</span></button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="center-box" id="roulette-box">
+        <span id="center-number" style="font-size:42px;font-weight:900;">?</span>
+      </div>
+      <div class="drawn-badge" id="drawn-pill" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="result-view" style="display:none;margin-top:24px;text-align:center;">
+    <h2 id="result-title"></h2>
+    <p id="result-detail"></p>
+  </div>
+
+  <script>
+    // Deterministic draw sequence: 1 (goes to slot 1 -> tests spans[0]===spans[1]==='1'), 38 (slot 4), 14 (slot 2), 49 (slot 5), 25 (slot 3)
+    const SEQUENCE = [1, 38, 14, 49, 25];
+    let stepIdx = 0;
+    let currentNumber = null;
+    let spinning = false;
+    window.__slots = {1: null, 2: null, 3: null, 4: null, 5: null};
+    window.__gameWon = false;
+
+    function triggerRoulette(nextNum) {
+      spinning = true;
+      currentNumber = null;
+      document.getElementById('center-number').innerText = '...';
+      document.getElementById('drawn-pill').style.display = 'none';
+      const box = document.getElementById('roulette-box');
+      for (let i = 0; i < 4; i++) {
+        const img = document.createElement('img');
+        img.className = 'opacity-0 roulette-decoy';
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        box.appendChild(img);
+      }
+      setTimeout(() => {
+        document.querySelectorAll('.roulette-decoy').forEach(el => el.remove());
+        currentNumber = nextNum;
+        spinning = false;
+        document.getElementById('center-number').innerText = String(nextNum);
+        const pill = document.getElementById('drawn-pill');
+        pill.style.display = 'block';
+        pill.innerText = String(nextNum);
+      }, 650);
+    }
+
+    function startGame() {
+      document.getElementById('intro-view').style.display = 'none';
+      document.getElementById('game-view').style.display = 'flex';
+      triggerRoulette(SEQUENCE[0]);
+    }
+
+    function placeInSlot(slotNum) {
+      if (spinning || currentNumber === null) return;
+      if (window.__slots[slotNum] !== null) return; // already occupied!
+      window.__slots[slotNum] = currentNumber;
+      const btn = document.getElementById('slot-' + slotNum);
+      btn.innerHTML = '<span>' + currentNumber + '</span><span>' + slotNum + '</span>';
+
+      // Check ascending order of filled slots
+      const filled = Object.entries(window.__slots).filter(([_, v]) => v !== null).map(([k, v]) => Number(v));
+      for (let i = 1; i < filled.length; i++) {
+        if (filled[i] < filled[i - 1]) {
+          document.getElementById('game-view').style.display = 'none';
+          document.getElementById('result-view').style.display = 'block';
+          document.getElementById('result-title').innerText = 'OYUN BİTTİ - YANLIŞ SIRALAMA!';
+          document.getElementById('result-detail').innerText = 'Sıralama bozuldu: ' + JSON.stringify(window.__slots);
+          return;
+        }
+      }
+
+      stepIdx++;
+      if (stepIdx >= SEQUENCE.length) {
+        window.__gameWon = true;
+        document.getElementById('game-view').style.display = 'none';
+        document.getElementById('result-view').style.display = 'block';
+        document.getElementById('result-title').innerText = 'TEBRİKLER! KÖR SIRALAMA TAMAMLANDI (5/5)';
+        document.getElementById('result-detail').innerText = 'Doğru Sıralama: 1 -> 14 -> 25 -> 38 -> 49';
+      } else {
+        triggerRoulette(SEQUENCE[stepIdx]);
+      }
+    }
+  </script>
+</body>
+</html>

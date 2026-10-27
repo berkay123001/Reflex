@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reflex Studio · Hybrid System-1 / System-2 Web Agent</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script>window.__REFLEX_TOKEN__ = "__TOKEN__";</script>
+</head>
+<body>
+<div class="app">
+
+  <!-- LEFT RAIL -->
+  <aside class="rail">
+    <div class="brand" id="brand-home" title="Reflex Studio">R</div>
+    <button class="rail-btn active" data-view="launch" title="New Task / Launch">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <button class="rail-btn" data-view="live" title="Live Run & Real-Time Browser">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M2 5.5h12" stroke="currentColor" stroke-width="1.3"/><circle cx="4.2" cy="4" r="0.6" fill="currentColor"/><circle cx="6.2" cy="4" r="0.6" fill="currentColor"/></svg>
+    </button>
+    <button class="rail-btn" data-view="trajectory" title="Trajectory & Step Inspector">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 4h11M2.5 8h7.5M2.5 12h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.5" cy="8" r="1.4" fill="currentColor"/></svg>
+    </button>
+    <button class="rail-btn" data-view="context" title="Dual-Tier Context & Provenance">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="11" r="2.2" stroke="currentColor" stroke-width="1.3"/><path d="M6.8 6.4l2.4 3.2" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
+    <button class="rail-btn" id="rail-safety" data-view="safety" title="Irreversible Action Safety Guard">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2l5 2v4.2c0 3-2.1 4.9-5 5.8-2.9-.9-5-2.8-5-5.8V4l5-2z" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
+    <button class="rail-btn" data-view="memory" title="Site Memory Store">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M3 3.5h10v9H3z" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6.5h5M5.5 9.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </button>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn" data-view="settings" title="API Keys (Meta / OpenRouter) & Calibration">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v1.6M8 12.4V14M2 8h1.6M12.4 8H14M3.8 3.8l1.1 1.1M11.1 11.1l1.1 1.1M12.2 3.8l-1.1 1.1M4.9 11.1l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </button>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="crumb">
+      <span>Reflex Studio</span>
+      <span class="slash">/</span>
+      <span class="sub" id="top-goal-crumb">Hybrid System-1 / System-2 Autonomous Runtime</span>
+    </div>
+
+    <div class="status-pill" id="status-badge">
+      <span class="dot"></span>
+      <span id="status-text">IDLE</span>
+    </div>
+
+    <div class="top-spacer"></div>
+
+    <!-- Live S1 & S2 Switchers -->
+    <div class="SysSwitch s1" title="System 1 Fast Reflex Model">
+      <span class="tag">S1</span>
+      <select id="top-s1-select">
+        <option value="local_turnike">Turnike-4B · Web3 FP8 (:8794)</option>
+        <option value="openrouter_jev">OpenRouter · Jev (~typesafe)</option>
+      </select>
+    </div>
+
+    <div class="SysSwitch s2" title="System 2 Supervisor Model">
+      <span class="tag">S2</span>
+      <select id="top-s2-select">
+        <option value="muse-spark-1.3-contributor">Meta Muse Spark 1.3 (muse-spark-1.3-contributor)</option>
+        <option value="muse-wonder-1.0">Meta Muse Wonder 1.0 Fast (muse-wonder-1.0)</option>
+        <option value="muse-spark-1.3">Meta Muse Spark 1.3 (muse-spark-1.3)</option>
+        <option value="qwen/qwen3.8-flash">Qwen 3.8 Flash (OpenRouter)</option>
+        <option value="qwen/qwen3.8-omni-flash">Qwen 3.8 Omni Flash (OpenRouter)</option>
+        <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5 (OpenRouter)</option>
+      </select>
+    </div>
+
+    <div class="stat-strip">
+      <div class="kv"><span class="k">steps</span><span class="v" id="m-steps">0</span></div>
+      <div class="kv"><span class="k">s1</span><span class="v s1" id="m-s1">0</span></div>
+      <div class="kv"><span class="k">s2</span><span class="v s2" id="m-s2">0</span></div>
+      <div class="kv"><span class="k">p50</span><span class="v" id="m-lat">0 ms</span></div>
+      <div class="kv"><span class="k">cost</span><span class="v" id="m-cost">$0.0000</span></div>
+    </div>
+  </header>
+
+  <!-- VIEW 1: LAUNCH -->
+  <section class="view-pane active" id="view-launch">
+    <div class="launch-wrap">
+      <div class="launch-col">
+        <div>
+          <div class="eyebrow">Hybrid System-1 / System-2 Runtime · Meta AI Hackathon</div>
+          <h1 class="hero-h1">
+            Fast reflex by <span class="s1-w">Turnike-4B</span>.<br/>
+            Deliberate supervision by <span class="s2-w">Meta Muse Spark &amp; Llama 4</span>.
+          </h1>
+        </div>
+
+        <div class="composer-card">
+          <div class="url-row">
+            <span class="lbl">Target URL</span>
+            <input type="text" id="input-url" value="https://www.google.com" placeholder="https://www.google.com" />
+          </div>
+          <textarea class="goal-area" id="input-goal" placeholder="Örn: Özal Yıldırım'ın kişisel sitesine gir, blog yazılarına bak ve sayfada paylaştığı tüm blog yazılarını bana getir.">Özal Yıldırım'ın kişisel sitesine gir, blog yazılarına bak ve sayfada paylaştığı tüm blog yazılarını bana getir.</textarea>
+          <div class="composer-foot">
+            <div class="composer-chips">
+              <span class="mini-badge"><span class="dot-s1"></span> S1: Turnike 4B (Web3 FP8)</span>
+              <span class="mini-badge"><span class="dot-s2"></span> S2: Stateful Anti-Loop Supervisor</span>
+              <span class="mini-badge" id="launch-meta-badge">Meta API Ready</span>
+            </div>
+            <button class="btn-primary" id="btn-launch">
+              <span>▶ Launch &amp; Run</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-head">
+            <span class="t">Quick Scenarios (Live Web &amp; Obstacle Tests)</span>
+            <span class="t" style="color:var(--ink-4)">Click to load &amp; launch</span>
+          </div>
+          <div class="scenario-grid">
+            <button class="scen-card" data-preset="ozal">
+              <div class="scen-top"><span>google.com → ozalyildirim.com</span><span class="scen-tag s2">S1+S2</span></div>
+              <div class="scen-title">📝 Özal Yıldırım · Kişisel Blog</div>
+              <div class="scen-desc">Google'da aratır, üniversite profilini atlayıp kişisel blog yazılarını çıkarır.</div>
+            </button>
+            <button class="scen-card" data-preset="gemini_chat">
+              <div class="scen-top"><span>gemini.google.com</span><span class="scen-tag s2">MULTI-TURN</span></div>
+              <div class="scen-title">🤖 Gemini · 2 Tur Sohbet</div>
+              <div class="scen-desc">Gemini ile bilmece ve felsefi soru üzerine 2 tur canlı sohbet yapar.</div>
+            </button>
+            <button class="scen-card" data-preset="books">
+              <div class="scen-top"><span>books.toscrape.com</span><span class="scen-tag s1">S1 FAST</span></div>
+              <div class="scen-title">📚 Books · Sharp Objects</div>
+              <div class="scen-desc">Mystery kategorisine girip Sharp Objects kitabının fiyat ve stok bilgisini doğrular.</div>
+            </button>
+            <button class="scen-card" data-preset="wiki">
+              <div class="scen-top"><span>wikipedia.org</span><span class="scen-tag s1">S1 + VERIFY</span></div>
+              <div class="scen-title">🌐 Wiki · Hagia Sophia</div>
+              <div class="scen-desc">Hagia Sophia makalesini aratıp mimari ve kubbe detaylarını özetler.</div>
+            </button>
+            <button class="scen-card" data-preset="fixture_modal">
+              <div class="scen-top"><span>/fixture.html</span><span class="scen-tag s2">RECOVERY</span></div>
+              <div class="scen-title">🚧 Modal Obstacle + Stay</div>
+              <div class="scen-desc">Promosyon modalını kapatır, Tokyo ve Stay 2026-05-14 seçip arama yapar.</div>
+            </button>
+            <button class="scen-card" data-preset="fixture_ask">
+              <div class="scen-top"><span>/fixture.html</span><span class="scen-tag s2">ASK_USER</span></div>
+              <div class="scen-title">💬 Missing Email (HITL)</div>
+              <div class="scen-title" style="display:none"></div>
+              <div class="scen-desc">Eksik e-posta bilgisini uydurmak yerine durup kullanıcıya sorar.</div>
+            </button>
+            <button class="scen-card" data-preset="fixture_guard">
+              <div class="scen-top"><span>/fixture.html</span><span class="scen-tag guard">SAFETY GUARD</span></div>
+              <div class="scen-title">🛡️ Pay $420 (Safety Guard)</div>
+              <div class="scen-desc">Geri döndürülemez $420 ödeme aksiyonunu yakalayıp insan onayı ister.</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Config Column on Launch -->
+      <div class="cfg-card">
+        <div class="sec-head" style="margin-bottom:2px">
+          <span class="t">Runtime Gates &amp; Safety</span>
+        </div>
+        <label class="cfg-row">
+          <div>
+            <div class="cfg-lbl">Irreversible Safety Guard</div>
+            <div class="cfg-sub">Hold payment / delete actions for human approval</div>
+          </div>
+          <input type="checkbox" id="chk-safety" checked />
+        </label>
+        <label class="cfg-row">
+          <div>
+            <div class="cfg-lbl">Verify DONE with Supervisor</div>
+            <div class="cfg-sub">System 2 verifies completion &amp; writes summary</div>
+          </div>
+          <input type="checkbox" id="chk-verify-done" checked />
+        </label>
+        <label class="cfg-row">
+          <div>
+            <div class="cfg-lbl">Domain Site Memory</div>
+            <div class="cfg-sub">Persist learned structural rules per domain</div>
+          </div>
+          <input type="checkbox" id="chk-memory" />
+        </label>
+        <div class="cfg-row">
+          <div>
+            <div class="cfg-lbl">Max Steps Limit</div>
+            <div class="cfg-sub">Hard cap per task trajectory</div>
+          </div>
+          <input type="number" id="input-max-steps" value="60" min="5" max="200" style="width:68px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:12px;text-align:center;" />
+        </div>
+        <div style="margin-top:6px;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line-soft);font-size:11.5px;color:var(--ink-2);">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--s2);text-transform:uppercase;margin-bottom:4px;">Meta Model API ($150 Credits)</div>
+          <div id="launch-key-status">Sol alttaki ⚙ Settings sekmesinden Meta API Key (`META_API_KEY`) girebilirsin.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 2: LIVE RUN -->
+  <section class="view-pane" id="view-live">
+    <div class="live-grid">
+      <!-- Left: Browser Stage -->
+      <div class="stage">
+        <div class="bbar">
+          <button class="bbar-btn" id="btn-toggle-boxes" title="Toggle DOM Bounding Boxes">🎯 DOM [<span id="dom-count">0</span>]</button>
+          <div class="urlbar">
+            <span class="lock">●</span>
+            <span class="u-txt" id="page-url-badge">about:blank</span>
+          </div>
+          <div class="stream-badge" id="stream-live-pill">
+            <span class="s-dot"></span>
+            <span id="stream-fps-txt">LIVE STREAM</span>
+          </div>
+        </div>
+
+        <div class="viewport-wrap">
+          <div class="viewport-stage" id="viewport-container">
+            <div class="viewport-empty" id="viewport-empty">
+              <div class="big">Canlı Chromium Oturumu Hazır</div>
+              <div>Sol menüden yeni görev başlatın veya <b>▶ Run</b> tuşuna basın.</div>
+            </div>
+            <img id="viewport-img" alt="Live Browser Stream" style="display:none;" />
+            <div class="dom-overlay" id="dom-overlay"></div>
+
+            <!-- Live Gliding Cursor & Click Ripple -->
+            <div class="rx-cursor" id="rx-cursor">
+              <div class="rx-ripple"></div>
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 3L11.5 20L14.2 13.2L21 10.5L4 3Z" fill="#C8F169" stroke="#08090C" stroke-width="1.8" stroke-linejoin="round"/>
+              </svg>
+              <div class="rx-callout" id="rx-callout">S1 · CLICK</div>
+            </div>
+
+            <!-- In-Viewport Safety Guard / ASK_USER Modal -->
+            <div class="stage-modal" id="guard-modal">
+              <div class="sm-head">
+                <span id="guard-modal-tag">🛡️ SAFETY GUARD HOLD · IRREVERSIBLE ACTION</span>
+                <span id="guard-modal-sig"></span>
+              </div>
+              <div class="sm-title" id="guard-modal-summary">Confirmation required</div>
+              <div class="sm-desc" id="guard-modal-reason"></div>
+              <div class="sm-actions">
+                <button class="btn-approve" id="btn-approve">✓ Approve &amp; Execute</button>
+                <button class="btn-reject" id="btn-reject">✕ Decline</button>
+                <input type="text" id="input-alt-instruction" class="inp-text" placeholder="Veya alternatif talimat yaz..." style="flex:1;padding:5px 9px;font-size:11.5px;" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scrubber & Action Space Footer -->
+        <div class="stage-foot">
+          <div class="scrub-row">
+            <span class="scrub-lbl" id="scrub-label">STEP 0</span>
+            <div class="scrub-track" id="scrubber-track"></div>
+          </div>
+          <div class="aspace-row" id="aspace-row">
+            <span class="aspace-chip">Waiting for first System 1 distribution…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Controls + Decision Stack + Co-Pilot Chat -->
+      <div class="rcol">
+        <div class="ctrl-bar">
+          <button class="cbtn run" id="btn-continue">▶ Run</button>
+          <button class="cbtn" id="btn-step">⏭ Step</button>
+          <button class="cbtn pause" id="btn-pause" disabled>⏸ Pause</button>
+          <div style="flex:1"></div>
+          <button class="cbtn" id="btn-new-task" title="Open Launch Screen">+ New</button>
+          <button class="cbtn" id="btn-reset" title="Close Browser Session">✕</button>
+        </div>
+
+        <div class="dstack-sec">
+          <div class="dstack-head">
+            <span>Execution &amp; Escalation Stack</span>
+            <span id="dstack-count">0 steps</span>
+          </div>
+          <div id="decision-stack">
+            <div class="dcard s1">
+              <div class="dcard-top">
+                <span class="actor-badge s1">READY</span>
+                <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">3-Layer Verification</span>
+              </div>
+              <div class="dcard-reason">Henüz adım çalıştırılmadı. Canlı akışı başlatmak için <b>▶ Run</b> veya <b>⏭ Step</b> tuşuna basın.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-sec">
+          <div class="chat-head">
+            <span>Interactive Co-Pilot Chat</span>
+            <span style="color:var(--s2)">HITL · Multi-Turn</span>
+          </div>
+          <div class="chat-log" id="chat-messages"></div>
+          <form class="chat-form" id="chat-form">
+            <input type="text" id="input-chat" placeholder="Ajanı yönlendir, soru sor veya ASK_USER yanıtla..." autocomplete="off" />
+            <button type="submit" class="chat-send">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 3: TRAJECTORY -->
+  <section class="view-pane" id="view-trajectory">
+    <div class="page-scroll">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="page-title">Full Execution &amp; Escalation Trajectory</div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)" id="traj-summary-lbl">0 steps</span>
+      </div>
+      <div id="trajectory-full-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </section>
+
+  <!-- VIEW 4: CONTEXT & PROVENANCE -->
+  <section class="view-pane" id="view-context">
+    <div class="page-scroll">
+      <div class="page-title">Dual-Tier Bounded Context &amp; Provenance</div>
+      <div class="grid-2">
+        <div class="pbox">
+          <div class="pbox-h"><span>Compiled System 1 Goal (Turnike-4B Input)</span><span style="color:var(--s1)">S1 FAST</span></div>
+          <div class="mono-block" id="ctx-compiled-goal">-</div>
+          <div class="pbox-h"><span>Active Subgoal &amp; Tactical Hint</span></div>
+          <div class="mono-block" id="ctx-subgoal-hint">-</div>
+        </div>
+        <div class="pbox">
+          <div class="pbox-h"><span>Supervisor Working Memory &amp; Anti-Loop Lock</span><span style="color:var(--s2)">S2 STATEFUL</span></div>
+          <div class="mono-block" id="ctx-working-memory">-</div>
+          <div class="pbox-h"><span>Rejected Links &amp; Visited URLs</span></div>
+          <div class="mono-block" id="ctx-rejected-links">-</div>
+        </div>
+        <div class="pbox">
+          <div class="pbox-h"><span>Verified User Facts &amp; DOM Facts</span></div>
+          <div class="mono-block" id="ctx-facts-block">-</div>
+        </div>
+        <div class="pbox">
+          <div class="pbox-h"><span>Observed Interactive DOM Elements</span><span id="ctx-elem-count">0</span></div>
+          <div class="mono-block" id="ctx-elements-block">-</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 5: SAFETY GUARD -->
+  <section class="view-pane" id="view-safety">
+    <div class="page-scroll">
+      <div class="page-title">Irreversible Action Safety Guard &amp; Untrusted DOM Isolation</div>
+      <div class="grid-2">
+        <div class="pbox">
+          <div class="pbox-h"><span>Active Safety Hold</span><span style="color:var(--guard)">HUMAN-IN-THE-LOOP</span></div>
+          <div class="mono-block" id="safety-active-box">No pending destructive action hold.</div>
+        </div>
+        <div class="pbox">
+          <div class="pbox-h"><span>Approved Signatures in Current Session</span></div>
+          <div class="mono-block" id="safety-approved-box">None</div>
+        </div>
+      </div>
+      <div class="pbox">
+        <div class="pbox-h"><span>Guarded Financial &amp; Destructive Patterns (TR + EN)</span></div>
+        <div class="mono-block">pay now | complete purchase/order/payment | place order | buy now | confirm payment/transfer/deletion | delete account/repository/permanently | siparişi tamamla/onayla | ödemeyi yap/onayla | hemen satın al | kalıcı olarak sil | hesabı sil</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 6: SITE MEMORY -->
+  <section class="view-pane" id="view-memory">
+    <div class="page-scroll">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="page-title">Persistent Domain Site Memory</div>
+        <button class="cbtn" id="btn-clear-memory">🗑️ Clear All Site Rules</button>
+      </div>
+      <div class="pbox">
+        <div class="pbox-h"><span>Learned Structural Rules per Domain</span></div>
+        <div class="mono-block" id="memory-rules-box">No domain rules recorded yet.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 7: SETTINGS & API KEYS -->
+  <section class="view-pane" id="view-settings">
+    <div class="page-scroll">
+      <div class="page-title">API Keys (Meta Model API $150 Credits &amp; OpenRouter) &amp; Runtime Calibration</div>
+      <div class="grid-2">
+        <div class="pbox">
+          <div class="pbox-h"><span>Official Meta Model API (`api.llama.com`)</span><span style="color:var(--s2)" id="meta-key-badge">CHECKING</span></div>
+          <div style="font-size:12px;color:var(--ink-2)">
+            Meta AI Developer Hackathon $150 ücretsiz kredisini (`META_API_KEY` / `LLAMA_API_KEY`) buraya girdiğinde System 2 Supervisor doğrudan resmi `https://api.llama.com/compat/v1/chat/completions` üzerinden çalışır.
+          </div>
+          <input type="password" id="input-meta-key" class="inp-text" placeholder="LLM|... veya meta-... API anahtarını yapıştır" />
+          <div class="pbox-h" style="margin-top:8px;"><span>OpenRouter API Key (`OPENROUTER_API_KEY`)</span><span style="color:var(--s1)" id="or-key-badge">CHECKING</span></div>
+          <input type="password" id="input-or-key" class="inp-text" placeholder="sk-or-v1-..." />
+          <div style="display:flex;gap:10px;align-items:center;margin-top:6px;">
+            <button class="btn-primary" id="btn-save-keys">💾 Save API Keys to .env</button>
+            <span id="save-keys-msg" style="font-family:var(--mono);font-size:11px;color:var(--ok);"></span>
+          </div>
+        </div>
+
+        <div class="pbox">
+          <div class="pbox-h"><span>Active Calibration Thresholds</span></div>
+          <div class="mono-block" id="settings-thresholds-box">CLICK: 0.42 | TYPE_TEXT: 0.42 | SELECT: 0.42 | SCROLL_DOWN: 0.15 (Never Escalate on low_op_conf) | DONE: Verified by System 2 Supervisor</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

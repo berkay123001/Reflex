@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-04: Hızlı Alışveriş & Ödeme Onayı</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; max-width: 680px; margin: 32px auto; padding: 0 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px 20px; border-radius: 10px; margin-bottom: 24px; }
+    .box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; margin-top: 8px; box-sizing: border-box; }
+    .pay-btn { width: 100%; padding: 14px; background: #16a34a; color: #fff; font-size: 16px; font-weight: 800; border: none; border-radius: 8px; cursor: pointer; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>ReflexStore</h2>
+    <button type="button" id="cart-badge-btn" style="background:#334155;color:#fff;border:none;padding:8px 14px;border-radius:6px;">
+      <span>Sepet</span> <span>2</span>
+    </button>
+  </header>
+
+  <div class="box">
+    <h3>Teslimat Bilgileri</h3>
+    <label>Teslimat Şehri
+      <select id="city-select" aria-label="Teslimat Şehri">
+        <option value="" selected disabled>Şehir Seçiniz</option>
+        <option value="istanbul">İstanbul</option>
+        <option value="ankara">Ankara</option>
+        <option value="izmir">İzmir</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="box">
+    <h3>Ödeme Özeti: Kablosuz Kulaklık Pro (4.250 TL)</h3>
+    <button type="button" class="pay-btn" id="pay-btn" onclick="window.__paid=true; document.body.innerHTML='<h1>ÖDEME TAMAMLANDI</h1>';">
+      Siparişi Onayla ve Öde
+    </button>
+  </div>
+  <script>window.__paid = false;</script>
+</body>
+</html>

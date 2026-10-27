@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-01: Çalışan Memnuniyet Anketi</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 20px; background: #0f172a; color: #f8fafc; }
+    .q-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+    h3 { margin: 0 0 12px 0; font-size: 16px; color: #e2e8f0; }
+    label { display: inline-flex; align-items: center; gap: 8px; margin-right: 20px; cursor: pointer; font-size: 15px; }
+    select, input[type="text"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 14px; box-sizing: border-box; }
+    .actions { margin-top: 24px; display: flex; gap: 16px; }
+    button { padding: 12px 24px; border-radius: 8px; border: none; background: #ef4444; color: white; font-weight: 700; cursor: pointer; font-size: 15px; }
+    #status-banner { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>2026 Çalışma Modeli Geri Bildirim Formu</h1>
+  <p>Lütfen aşağıdaki 3 soruyu yanıtlayın.</p>
+
+  <form id="qa-form" onsubmit="window.__submitted=true; document.getElementById('status-banner').style.display='block'; document.getElementById('status-banner').innerText='FORM GÖNDERİLDİ!'; return false;">
+    <div class="q-card" role="listitem">
+      <h3 role="heading">1. Uzaktan çalışma modelini destekliyor musunuz? *</h3>
+      <label><input type="radio" name="q1" value="Evet"> Evet</label>
+      <label><input type="radio" name="q1" value="Hayır"> Hayır</label>
+    </div>
+
+    <div class="q-card" role="listitem">
+      <h3 role="heading">2. Haftalık 4 gün çalışma sistemine geçilmeli mi? *</h3>
+      <label><input type="radio" name="q2" value="Evet"> Evet</label>
+      <label><input type="radio" name="q2" value="Hayır"> Hayır</label>
+    </div>
+
+    <div class="q-card" role="listitem">
+      <h3 role="heading">3. Çalıştığınız Departman *</h3>
+      <select id="dept-select" name="dept" aria-label="Çalıştığınız Departman">
+        <option value="" selected disabled>Seçiniz</option>
+        <option value="muhendislik">Yazılım Mühendisliği</option>
+        <option value="urun">Ürün Yönetimi</option>
+        <option value="tasarim">Tasarım & UX</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button type="submit" id="submit-btn">Gönder</button>
+    </div>
+  </form>
+  <div id="status-banner"></div>
+  <script>window.__submitted = false;</script>
+</body>
+</html>

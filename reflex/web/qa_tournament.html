@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-05: 2000 Yılının En Önemli Olayı Nedir? (VS Turnuvası)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; text-align: center; }
+    .header { max-width: 820px; margin: 0 auto 20px auto; display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px 24px; border-radius: 12px; }
+    .arena { max-width: 820px; margin: 0 auto; display: flex; gap: 24px; justify-content: center; align-items: stretch; }
+    .vs-card { flex: 1; background: #1e293b; border: 2px solid #3b82f6; border-radius: 16px; padding: 32px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 20px; font-weight: 700; transition: transform 0.1s; }
+    .vs-card:hover { transform: scale(1.02); border-color: #eab308; }
+    .start-btn { background: #eab308; color: #0f172a; border: none; padding: 16px 36px; font-size: 18px; font-weight: 800; border-radius: 10px; cursor: pointer; margin-top: 32px; }
+    .badge { background: #334155; padding: 6px 14px; border-radius: 999px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2 style="margin:0;font-size:20px;">2000 YILININ EN ÖNEMLİ OLAYI NEDİR?</h2>
+    <span class="badge" id="round-badge">HAZIR</span>
+  </div>
+
+  <div id="intro-screen">
+    <p>6 maçlık VS turnuvasını başlatın ve her turda iki olaydan birini seçerek şampiyonu belirleyin.</p>
+    <button class="start-btn" onclick="startTournament()">Başla</button>
+  </div>
+
+  <div id="match-screen" class="arena" style="display:none;">
+    <button class="vs-card" id="left-card" onclick="pickOption(0)"></button>
+    <div style="display:flex;align-items:center;font-weight:900;color:#eab308;font-size:24px;">VS</div>
+    <button class="vs-card" id="right-card" onclick="pickOption(1)"></button>
+  </div>
+
+  <div id="winner-screen" style="display:none;margin-top:32px;">
+    <h1 style="color:#facc15;">TURNUVA TAMAMLANDI! ŞAMPİYON SEÇİLDİ</h1>
+    <h2 id="winner-name"></h2>
+  </div>
+
+  <script>
+    const MATCHES = [
+      ["PlayStation 2'nin Çıkışı (Mart 2000)", "Dot-Com Balonunun Patlaması (Mart 2000)"],
+      ["Galatasaray'ın UEFA Kupası Zaferi (Mayıs 2000)", "İnsan Genom Taslağının Açıklanması (Haziran 2000)"],
+      ["Sydney 2000 Olimpiyat Oyunları (Eylül 2000)", "Uluslararası Uzay İstasyonu'na İlk Mürettebat (Kasım 2000)"],
+      ["PlayStation 2'nin Çıkışı (Yarı Final 1)", "Galatasaray'ın UEFA Kupası Zaferi (Yarı Final 1)"],
+      ["İnsan Genom Taslağı (Yarı Final 2)", "Uluslararası Uzay İstasyonu (Yarı Final 2)"],
+      ["Galatasaray'ın UEFA Kupası Zaferi (FİNAL)", "İnsan Genom Taslağının Açıklanması (FİNAL)"]
+    ];
+    let roundIdx = 0;
+    window.__tournamentDone = false;
+    window.__picks = [];
+
+    function renderRound() {
+      document.getElementById('round-badge').innerText = `MAÇ ${roundIdx + 1} / ${MATCHES.length}`;
+      document.getElementById('left-card').innerText = MATCHES[roundIdx][0];
+      document.getElementById('right-card').innerText = MATCHES[roundIdx][1];
+    }
+
+    function startTournament() {
+      document.getElementById('intro-screen').style.display = 'none';
+      document.getElementById('match-screen').style.display = 'flex';
+      renderRound();
+    }
+
+    function pickOption(side) {
+      const chosen = MATCHES[roundIdx][side];
+      window.__picks.push(chosen);
+      roundIdx++;
+      if (roundIdx >= MATCHES.length) {
+        window.__tournamentDone = true;
+        document.getElementById('match-screen').style.display = 'none';
+        document.getElementById('winner-screen').style.display = 'block';
+        document.getElementById('round-badge').innerText = 'TAMAMLANDI (6/6)';
+        document.getElementById('winner-name').innerText = 'Şampiyon: ' + chosen;
+      } else {
+        renderRound();
+      }
+    }
+  </script>
+</body>
+</html>

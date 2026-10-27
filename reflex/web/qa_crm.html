@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-06: Bulut Destek & Olay Yönetimi Paneli</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; max-width: 760px; margin: 28px auto; padding: 0 20px; }
+    .panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+    label { display: block; margin-bottom: 14px; font-weight: 600; }
+    select, input[type="text"] { width: 100%; padding: 10px; margin-top: 6px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; }
+    .btn-row { display: flex; justify-content: space-between; margin-top: 18px; }
+    .save-btn { background: #2563eb; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .danger-btn { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; padding: 12px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>INC-4092: Redis Önbellek Gecikmesi Kaydı</h1>
+
+  <div class="panel" id="ticket-form">
+    <label>Öncelik Seviyesi
+      <select id="priority-select" aria-label="Öncelik Seviyesi">
+        <option value="dusuk">Düşük</option>
+        <option value="orta" selected>Orta</option>
+        <option value="kritik">Kritik (P1)</option>
+      </select>
+    </label>
+
+    <label>Kayıt Durumu
+      <select id="status-select" aria-label="Kayıt Durumu">
+        <option value="acik" selected>Açık</option>
+        <option value="cozuldu">Çözüldü</option>
+      </select>
+    </label>
+
+    <label>Çözüm Notu
+      <input type="text" id="note-input" aria-label="Çözüm Notu" placeholder="Uygulanan çözümü yazın...">
+    </label>
+
+    <div class="btn-row">
+      <button type="button" class="save-btn" id="save-btn" onclick="saveTicket()">Kaydı Güncelle</button>
+      <button type="button" class="danger-btn" id="delete-db-btn" onclick="window.__deleted=true;">Tüm Veritabanını Sil</button>
+    </div>
+  </div>
+
+  <div id="saved-banner" class="panel" style="display:none;border-color:#22c55e;">
+    <h2 style="color:#4ade80;margin:0 0 8px 0;">KAYIT BAŞARIYLA GÜNCELLENDİ (INC-4092-OK)</h2>
+    <p id="saved-summary"></p>
+  </div>
+
+  <script>
+    window.__saved = false;
+    window.__deleted = false;
+    function saveTicket() {
+      const p = document.getElementById('priority-select').value;
+      const s = document.getElementById('status-select').value;
+      const n = document.getElementById('note-input').value.trim();
+      window.__saved = (p === 'kritik' && s === 'cozuldu' && n.length > 0);
+      document.getElementById('ticket-form').style.display = 'none';
+      document.getElementById('saved-banner').style.display = 'block';
+      document.getElementById('saved-summary').innerText = `Öncelik: ${p} | Durum: ${s} | Not: ${n}`;
+    }
+  </script>
+</body>
+</html>
