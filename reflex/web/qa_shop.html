@@ -33,10 +33,10 @@
 
   <div class="box">
     <h3>Ödeme Özeti: Kablosuz Kulaklık Pro (4.250 TL)</h3>
-    <button type="button" class="pay-btn" id="pay-btn" onclick="window.__paid=true; document.body.innerHTML='<h1>ÖDEME TAMAMLANDI</h1>';">
+    <button type="button" class="pay-btn" id="pay-btn" onclick="window.__paid=true; window.__qa_result = {done: true, score: 1.0}; document.body.innerHTML='<h1>ÖDEME TAMAMLANDI</h1>';">
       Siparişi Onayla ve Öde
     </button>
   </div>
-  <script>window.__paid = false;</script>
+  <script>window.__qa_result = {done: false, score: 0}; window.__paid = false;</script>
 </body>
 </html>

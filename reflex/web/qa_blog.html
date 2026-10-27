@@ -19,6 +19,7 @@
 <body>
   <div class="container" id="main-content"></div>
   <script>
+    window.__qa_result = {done: false, score: 0};
     const params = new URLSearchParams(location.search);
     const root = document.getElementById('main-content');
     if (params.get('decoy') === '1') {
@@ -28,6 +29,7 @@
         <a href="/qa/blog" class="btn">Blog Ana Sayfasına Dön</a>
       `;
     } else if (params.get('post') === 'transformer') {
+      window.__qa_result = {done: true, score: 1.0};
       root.innerHTML = `
         <article class="card">
           <h1>Derin Öğrenme ve Transformer Mimarisi (2026)</h1>

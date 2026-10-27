@@ -50,6 +50,7 @@
     let stepIdx = 0;
     let currentNumber = null;
     let spinning = false;
+    window.__qa_result = {done: false, score: 0};
     window.__slots = {1: null, 2: null, 3: null, 4: null, 5: null};
     window.__gameWon = false;
 
@@ -93,6 +94,7 @@
       const filled = Object.entries(window.__slots).filter(([_, v]) => v !== null).map(([k, v]) => Number(v));
       for (let i = 1; i < filled.length; i++) {
         if (filled[i] < filled[i - 1]) {
+          window.__qa_result = {done: true, score: 0.0};
           document.getElementById('game-view').style.display = 'none';
           document.getElementById('result-view').style.display = 'block';
           document.getElementById('result-title').innerText = 'OYUN BİTTİ - YANLIŞ SIRALAMA!';
@@ -104,6 +106,7 @@
       stepIdx++;
       if (stepIdx >= SEQUENCE.length) {
         window.__gameWon = true;
+        window.__qa_result = {done: true, score: 1.0};
         document.getElementById('game-view').style.display = 'none';
         document.getElementById('result-view').style.display = 'block';
         document.getElementById('result-title').innerText = 'TEBRİKLER! KÖR SIRALAMA TAMAMLANDI (5/5)';

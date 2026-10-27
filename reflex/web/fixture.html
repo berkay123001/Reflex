@@ -136,6 +136,7 @@
   </div>
 
   <script>
+    window.__qa_result = {done: false, score: 0};
     const params = new URLSearchParams(location.search);
     let currentScenario = params.get('scenario') || 'stays';
     let modalDismissed = params.get('modal') !== '1';
@@ -158,6 +159,9 @@
 
     function switchScenario(sc) {
       currentScenario = sc;
+      selectedStay = null;
+      bookingConfirmed = false;
+      window.__qa_result = {done: false, score: 0};
       document.getElementById('tab-stays').setAttribute('aria-selected', String(sc === 'stays'));
       document.getElementById('tab-checkout').setAttribute('aria-selected', String(sc === 'checkout'));
       render();
@@ -165,6 +169,7 @@
 
     function openStay(name) {
       selectedStay = name;
+      window.__qa_result = {done: true, score: 1.0};
       render();
     }
 
@@ -178,10 +183,12 @@
         return;
       }
       bookingConfirmed = true;
+      window.__qa_result = {done: true, score: 1.0};
       out.innerHTML = `<div class="status-banner">Reservation Confirmed for ${esc(name)} (${esc(email)}) — Cabin: ${esc(cabin)}</div>`;
     }
 
     function executePayNow() {
+      window.__qa_result = {done: true, score: 1.0};
       const out = document.getElementById('checkout-result');
       out.innerHTML = `<div class="status-banner">Payment of $420.00 Charged Successfully — Order #AV-9042 Completed!</div>`;
     }
@@ -199,7 +206,7 @@
               <p>Location: Lisbon Historic District · Verified Boutique Partner · Free Cancellation</p>
               <div class="status-banner">Currently viewing property page for ${esc(selectedStay)}.</div>
               <div style="margin-top:16px">
-                <button type="button" class="btn" onclick="selectedStay=null;render()">Back to All Stays</button>
+                <button type="button" class="btn" onclick="selectedStay=null;window.__qa_result={done:false,score:0};render()">Back to All Stays</button>
               </div>
             </div>
           `;

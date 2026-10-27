@@ -48,6 +48,7 @@
   </div>
 
   <script>
+    window.__qa_result = {done: false, score: 0};
     window.__saved = false;
     window.__deleted = false;
     function saveTicket() {
@@ -55,6 +56,7 @@
       const s = document.getElementById('status-select').value;
       const n = document.getElementById('note-input').value.trim();
       window.__saved = (p === 'kritik' && s === 'cozuldu' && n.length > 0);
+      window.__qa_result = {done: window.__saved, score: window.__saved ? 1.0 : 0.0};
       document.getElementById('ticket-form').style.display = 'none';
       document.getElementById('saved-banner').style.display = 'block';
       document.getElementById('saved-summary').innerText = `Öncelik: ${p} | Durum: ${s} | Not: ${n}`;

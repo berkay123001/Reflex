@@ -18,7 +18,7 @@
   <h1>2026 Çalışma Modeli Geri Bildirim Formu</h1>
   <p>Lütfen aşağıdaki 3 soruyu yanıtlayın.</p>
 
-  <form id="qa-form" onsubmit="window.__submitted=true; document.getElementById('status-banner').style.display='block'; document.getElementById('status-banner').innerText='FORM GÖNDERİLDİ!'; return false;">
+  <form id="qa-form" onsubmit="window.__submitted=true; window.__qa_result = {done: true, score: 1.0}; document.getElementById('status-banner').style.display='block'; document.getElementById('status-banner').innerText='FORM GÖNDERİLDİ!'; return false;">
     <div class="q-card" role="listitem">
       <h3 role="heading">1. Uzaktan çalışma modelini destekliyor musunuz? *</h3>
       <label><input type="radio" name="q1" value="Evet"> Evet</label>
@@ -46,6 +46,6 @@
     </div>
   </form>
   <div id="status-banner"></div>
-  <script>window.__submitted = false;</script>
+  <script>window.__qa_result = {done: false, score: 0}; window.__submitted = false;</script>
 </body>
 </html>

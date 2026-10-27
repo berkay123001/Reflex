@@ -45,6 +45,7 @@
       ["Galatasaray'ın UEFA Kupası Zaferi (FİNAL)", "İnsan Genom Taslağının Açıklanması (FİNAL)"]
     ];
     let roundIdx = 0;
+    window.__qa_result = {done: false, score: 0};
     window.__tournamentDone = false;
     window.__picks = [];
 
@@ -66,6 +67,7 @@
       roundIdx++;
       if (roundIdx >= MATCHES.length) {
         window.__tournamentDone = true;
+        window.__qa_result = {done: true, score: 1.0};
         document.getElementById('match-screen').style.display = 'none';
         document.getElementById('winner-screen').style.display = 'block';
         document.getElementById('round-badge').innerText = 'TAMAMLANDI (6/6)';
