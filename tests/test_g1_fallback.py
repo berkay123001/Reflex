@@ -534,3 +534,108 @@ def test_session_allow_model_fallback_wires_to_interpret_user_message(fallback_e
     mock_interp.assert_called_once()
     assert mock_interp.call_args.kwargs["allow_model_fallback"] is fallback_enabled
     assert snap["status"] == "waiting_user"
+
+
+def test_session_step_resolve_escalation_error_sets_status_error():
+    """When resolve_escalation raises an error during step(),
+
+    step() must catch it cleanly, set status='error', populate last_error, and return snapshot.
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig()
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    with (
+        patch("reflex.agent.choose_action", side_effect=ValueError("Invalid S1 model JSON")),
+        patch("reflex.agent.resolve_escalation", side_effect=RuntimeError("Supervisor failed: 500")),
+    ):
+        snap = session.step()
+
+    assert snap["status"] == "error"
+    assert session.status == "error"
+    assert "Supervisor failed: 500" in snap["last_error"]
+    assert session.last_error == "Supervisor failed: 500"
+
+
+def test_session_step_generate_field_text_error_sets_status_error():
+    """When generate_field_text raises an error during fill execution,
+
+    step() must catch it cleanly, set status='error', populate last_error, and return snapshot.
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig()
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    s1_decision = {
+        "operation": "TYPE_TEXT",
+        "target": "2",
+        "choice": "inp_1",
+        "confidence": 0.95,
+        "target_confidence": 0.95,
+        "target_probabilities": {"2": 0.95},
+        "operation_probabilities": {"TYPE_TEXT": 0.95},
+        "latency_ms": 50,
+        "model": "turnike-4b",
+        "usage": {},
+    }
+
+    with (
+        patch("reflex.agent.choose_action", return_value=s1_decision),
+        patch("reflex.agent.generate_field_text", side_effect=RuntimeError("Field text service unavailable: 503")),
+    ):
+        snap = session.step()
+
+    assert snap["status"] == "error"
+    assert session.status == "error"
+    assert "Field text service unavailable: 503" in snap["last_error"]
+    assert session.last_error == "Field text service unavailable: 503"
+
+
+def test_session_reply_user_interpret_error_sets_status_error():
+    """When interpret_user_message raises an error during reply_user(),
+
+    reply_user() must catch it cleanly, set status='error', populate last_error, and return snapshot.
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig()
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    with patch("reflex.agent.interpret_user_message", side_effect=RuntimeError("Interpret service failed: 429")):
+        snap = session.reply_user("Help me with this page")
+
+    assert snap["status"] == "error"
+    assert session.status == "error"
+    assert "Interpret service failed: 429" in snap["last_error"]
+    assert session.last_error == "Interpret service failed: 429"
+
+
+@pytest.mark.parametrize("exc_to_raise", [KeyError("missing_field"), TypeError("unsupported operand")])
+def test_session_step_unexpected_s1_exception_sets_status_error_without_escalation(exc_to_raise: Exception):
+    """When choose_action raises an unexpected non-ValueError exception (e.g. KeyError or TypeError),
+
+    step() must set status='error', populate last_error, and NOT escalate to S2.
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig()
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    with (
+        patch("reflex.agent.choose_action", side_effect=exc_to_raise),
+        patch("reflex.agent.resolve_escalation") as mock_resolve_esc,
+    ):
+        snap = session.step()
+
+    assert snap["status"] == "error"
+    assert session.status == "error"
+    assert str(exc_to_raise) in snap["last_error"]
+    assert snap["metrics"]["s1_errors"] == 0
+    mock_resolve_esc.assert_not_called()
+

@@ -11,8 +11,6 @@ import re
 import time
 from typing import Any
 
-import httpx
-
 from .browser import Browser, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
 from .config import ReflexConfig
@@ -210,7 +208,7 @@ class ReflexSession:
                 reason=f"System 1 error: {exc}",
                 s1_decision=None,
             )
-        except (RuntimeError, httpx.HTTPError) as exc:
+        except Exception as exc:
             self.status = "error"
             self.last_error = str(exc)
             return self.snapshot()
@@ -427,17 +425,22 @@ class ReflexSession:
             return self.snapshot()
 
         elements, targets, controls = action_space(self.page.get("actions", []))
-        sup: SupervisorDecision = resolve_escalation(
-            ctx=self.ctx,
-            page=self.page,
-            elements=elements,
-            history=self.history,
-            escalation_reason=reason,
-            trigger_type=trigger_type,
-            s1_decision=s1_decision,
-            supervisor_model=self.config.supervisor_model,
-            allow_model_fallback=self.config.allow_model_fallback,
-        )
+        try:
+            sup: SupervisorDecision = resolve_escalation(
+                ctx=self.ctx,
+                page=self.page,
+                elements=elements,
+                history=self.history,
+                escalation_reason=reason,
+                trigger_type=trigger_type,
+                s1_decision=s1_decision,
+                supervisor_model=self.config.supervisor_model,
+                allow_model_fallback=self.config.allow_model_fallback,
+            )
+        except Exception as exc:
+            self.status = "error"
+            self.last_error = str(exc)
+            return self.snapshot()
 
         if sup.memory:
             self.ctx.working_memory = sup.memory
@@ -703,14 +706,19 @@ class ReflexSession:
         text_helper_model = None
         text_latency_ms = 0
         if action.get("kind") == "fill" and not typed_text:
-            outcome = generate_field_text(
-                ctx=self.ctx,
-                action=action,
-                page=self.page,
-                history=self.history,
-                supervisor_model=self.config.supervisor_model,
-                allow_model_fallback=self.config.allow_model_fallback,
-            )
+            try:
+                outcome = generate_field_text(
+                    ctx=self.ctx,
+                    action=action,
+                    page=self.page,
+                    history=self.history,
+                    supervisor_model=self.config.supervisor_model,
+                    allow_model_fallback=self.config.allow_model_fallback,
+                )
+            except Exception as exc:
+                self.status = "error"
+                self.last_error = str(exc)
+                return self.snapshot()
             self.text_calls.append(outcome.model_dump())
             text_helper_model = outcome.model
             text_latency_ms = outcome.latency_ms
@@ -846,15 +854,20 @@ class ReflexSession:
         if not text:
             raise ValueError("Enter a non-empty message")
 
-        interp = interpret_user_message(
-            user_message=text,
-            ctx=self.ctx,
-            page=self.page,
-            history=self.history,
-            pending_fact_key=self.pending_fact_key,
-            supervisor_model=self.config.supervisor_model,
-            allow_model_fallback=self.config.allow_model_fallback,
-        )
+        try:
+            interp = interpret_user_message(
+                user_message=text,
+                ctx=self.ctx,
+                page=self.page,
+                history=self.history,
+                pending_fact_key=self.pending_fact_key,
+                supervisor_model=self.config.supervisor_model,
+                allow_model_fallback=self.config.allow_model_fallback,
+            )
+        except Exception as exc:
+            self.status = "error"
+            self.last_error = str(exc)
+            return self.snapshot()
 
         # Case 1: User is asking the Supervisor a question or chatting (do NOT touch the browser!)
         if interp.intent == "CHAT_ONLY":
