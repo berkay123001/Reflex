@@ -253,15 +253,13 @@ class Browser:
                     """(() => ({
                         count: document.querySelectorAll('a[href],button,input,textarea,select,[contenteditable="true"],[role="button"],[role="textbox"],[role="searchbox"],[role="combobox"]').length,
                         textLen: (document.body?.innerText || '').trim().length,
-                        isGoogleSearch: location.hostname.includes('google.') && location.pathname.startsWith('/search'),
-                        hasSearchResults: Boolean(document.querySelector('#search a[href], #rso a[href], #botstuff'))
+                        busy: Boolean(document.querySelector('[aria-busy="true"]'))
                     }))()"""
                 ) or {}
                 count = int(state.get("count") or 0)
                 text_len = int(state.get("textLen") or 0)
-                is_google_search = bool(state.get("isGoogleSearch"))
-                has_results = bool(state.get("hasSearchResults"))
-                if is_google_search and not has_results and text_len < 300:
+                busy = bool(state.get("busy"))
+                if busy:
                     stable_hits = 0
                 elif count > 0 and count == last_count and text_len > 80:
                     stable_hits += 1
@@ -333,61 +331,70 @@ class Browser:
                 self.call(
                     "Runtime.evaluate",
                     expression="""(action => new Promise(resolve => {
-                      const field=window.__jevFast?.nodes.get(action.node);
-                      const isFill=action.kind==='fill';
-                      const isClick=action.kind==='click';
-                      const startHref=location.href;
-                      const autocomplete=isFill && field?.getAttribute('role')==='combobox';
-                      let frames=0, idleFrames=0, stopped=false, mutated=false;
-                      const obs=isClick && document.body ? new MutationObserver(()=>{ mutated=true; idleFrames=0; }) : null;
-                      if (obs) obs.observe(document.body,{childList:true,subtree:true,attributes:true});
-                      const finish=()=>{
+                      const field = window.__jevFast?.nodes.get(action.node);
+                      const isFill = action.kind === 'fill';
+                      const isClick = action.kind === 'click';
+                      const startHref = location.href;
+                      const autocomplete = isFill && field?.getAttribute('role') === 'combobox';
+                      const maxWait = autocomplete ? 260 : (isFill ? 200 : (isClick ? 2000 : 90));
+                      const quietMs = isFill ? 60 : 100;
+
+                      let stopped = false;
+                      let lastActivity = performance.now();
+                      let lastResourceCount = performance.getEntriesByType('resource').length;
+                      const startTime = performance.now();
+
+                      const obs = document.body ? new MutationObserver(() => {
+                        lastActivity = performance.now();
+                      }) : null;
+                      if (obs) obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+                      const finish = () => {
                         if (stopped) return;
-                        stopped=true;
+                        stopped = true;
                         try { obs?.disconnect(); } catch (_) {}
                         try { document.getAnimations().forEach(a => a.finish()); } catch (_) {}
                         resolve();
                       };
-                      setTimeout(finish, autocomplete ? 260 : (isFill ? 200 : (isClick ? 2400 : 90)));
-                      const ready=()=>{
+
+                      const timer = setTimeout(finish, maxWait);
+
+                      const check = () => {
                         if (stopped) return;
-                        frames++;
-                        let rouletteSpinning=false;
-                        if (isClick && frames<140) {
-                          const posCounts=new Map();
-                          for (const img of document.querySelectorAll('img.opacity-0,[aria-busy="true"]')) {
-                            const r=img.getBoundingClientRect();
-                            if (r.width>24 && r.height>24 && r.bottom>0 && r.top<innerHeight) {
-                              if (img.getAttribute('aria-busy')==='true') { rouletteSpinning=true; break; }
-                              const posKey=`${Math.round(r.left/12)},${Math.round(r.top/12)}`;
-                              const c=(posCounts.get(posKey)||0)+1;
-                              posCounts.set(posKey,c);
-                              if (c>=3) { rouletteSpinning=true; break; }
-                            }
+                        const now = performance.now();
+
+                        const resCount = performance.getEntriesByType('resource').length;
+                        if (resCount !== lastResourceCount) {
+                          lastResourceCount = resCount;
+                          lastActivity = now;
+                        }
+
+                        if (document.querySelector('[aria-busy="true"]')) {
+                          lastActivity = now;
+                        }
+
+                        if (autocomplete) {
+                          const ids = (field?.getAttribute('aria-controls') || field?.getAttribute('aria-owns') || '').split(/\\s+/).filter(Boolean);
+                          const roots = ids.length ? ids.map(id => document.getElementById(id)).filter(Boolean) : [document];
+                          const hasOption = roots.some(r => r.querySelector('[role="option"]'));
+                          if (hasOption && now - lastActivity >= 40) {
+                            clearTimeout(timer);
+                            finish();
+                            return;
                           }
                         }
-                        if (rouletteSpinning) {
-                          idleFrames=0;
-                          requestAnimationFrame(ready);
+
+                        if (location.href !== startHref || (now - startTime >= 40 && now - lastActivity >= quietMs)) {
+                          clearTimeout(timer);
+                          finish();
                           return;
                         }
-                        idleFrames++;
-                        const ids=(field?.getAttribute('aria-controls')||field?.getAttribute('aria-owns')||'')
-                          .split(/\\s+/).filter(Boolean);
-                        const roots=ids.length ? ids.map(id=>document.getElementById(id)).filter(Boolean) : [document];
-                        const options=roots.flatMap(root=>[...root.querySelectorAll('[role="option"]')]);
-                        const hasVisibleOption=options.some(e=>{
-                          const r=e.getBoundingClientRect();
-                          return r.width && r.height && r.bottom>0 && r.top<innerHeight &&
-                            e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
-                        });
-                        const clickSettled=!isClick || (location.href!==startHref && frames>=5) || (mutated && (idleFrames>=2 || frames>=24) && frames>=5) || (!mutated && frames>=8);
-                        const fillSettled=!isFill || (autocomplete ? (frames>=3 && hasVisibleOption) : (frames>=4 && idleFrames>=2));
-                        if (frames>=3 && clickSettled && fillSettled) finish();
-                        else requestAnimationFrame(ready);
+
+                        requestAnimationFrame(check);
                       };
-                      requestAnimationFrame(ready);
-                    }))(""" + json.dumps(action) + ")",
+
+                      requestAnimationFrame(check);
+                    }))""" + json.dumps(action) + ")",
                     awaitPromise=True,
                     returnByValue=True,
                 )
@@ -664,29 +671,23 @@ class Browser:
                     pass
                 self.call("Input.insertText", text=text)
                 try:
-                    submit_kind = str(
+                    is_search = bool(
                         self.evaluate(
                             """(nodeId => {
                               const e = window.__jevFast?.nodes.get(nodeId);
-                              if (!e) return '';
+                              if (!e) return false;
                               try {
                                 e.dispatchEvent(new Event('input', {bubbles: true}));
                                 e.dispatchEvent(new Event('change', {bubbles: true}));
                               } catch (_) {}
-                              const aria = (e.getAttribute('aria-label') || e.placeholder || e.title || '').toLowerCase();
-                              if (e.type === 'search' || e.getAttribute('role') === 'searchbox' ||
-                                  e.name === 'q' || /(^|\\b)(search|ara)(\\b|$)/i.test(aria) ||
-                                  Boolean(e.closest('form[role="search"], form[action*="search"]'))) {
-                                return 'search';
+                              if (e.getAttribute('role') === 'combobox' || e.getAttribute('aria-autocomplete') || e.getAttribute('aria-haspopup') === 'listbox') {
+                                return false;
                               }
-                              if (/(istem girin|mesaj yaz|send a message|ask anything|ask gemini|message chatgpt|bir soru sorun|sohbet)/i.test(aria)) {
-                                return 'chat';
-                              }
-                              return '';
+                              return e.type === 'search' || e.getAttribute('role') === 'searchbox' || Boolean(e.closest('form[role="search"]'));
                             })(""" + json.dumps(action.get("node")) + ")"
-                        ) or ""
+                        )
                     )
-                    if submit_kind == "search":
+                    if is_search:
                         try:
                             prev_origin = self.evaluate("performance.timeOrigin")
                         except Exception:
@@ -697,43 +698,12 @@ class Browser:
                         self._wait_for_navigation_and_settle(prev_origin=prev_origin, max_wait=8.0)
                         self.after_input = None
                         return {"executed": action["id"], "auto_submitted": True, "rect": self.last_action_rect}
-                    if submit_kind == "chat":
-                        time.sleep(0.08)
-                        self.call("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
-                        self.call("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
-                        time.sleep(0.25)
-                        # If the chat input still has text and a Send button is enabled, click the Send button
-                        self.evaluate(
-                            """(() => {
-                              const btn = document.querySelector('button[aria-label*="Mesaj gönder" i]:not([disabled]), button[aria-label*="Send message" i]:not([disabled]), button[aria-label*="Gönder" i]:not([disabled])');
-                              if (btn) { try { btn.click(); } catch (_) {} }
-                            })()"""
-                        )
-                        # Wait up to 4.5s for the AI chat response to stream and settle
-                        for _ in range(18):
-                            time.sleep(0.25)
-                            busy = self.evaluate(
-                                """Boolean(document.querySelector('[aria-busy="true"], button[aria-label*="durdur" i], button[aria-label*="Stop" i]'))"""
-                            )
-                            if not busy and _ >= 5:
-                                break
-                        self.after_input = None
-                        return {"executed": action["id"], "auto_submitted": True, "rect": self.last_action_rect}
                 except Exception:
                     pass
 
         if kind == "click":
             link_href = str(action.get("href") or "").strip()
-            if link_href.startswith(("http://", "https://")) and "#google_vignette" not in link_href:
-                try:
-                    time.sleep(0.08)
-                    cur_hash = str(self.evaluate("location.hash || ''") or "")
-                    if "google_vignette" in cur_hash:
-                        self.navigate(link_href)
-                        self.after_input = None
-                        return {"executed": action["id"], "rect": self.last_action_rect}
-                except Exception:
-                    pass
+            if link_href.startswith(("http://", "https://")):
                 cur_base = str(page.get("url") or "").split("#")[0]
                 target_base = link_href.split("#")[0]
                 if target_base and target_base != cur_base:
