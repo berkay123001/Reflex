@@ -21,5 +21,6 @@ build/
 
 # Runtime logs & local site memory
 *.log
+*.zip
 .reflex_site_memory.json
 artifacts/

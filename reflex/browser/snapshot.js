@@ -98,6 +98,16 @@
   );
   const isSerp=/(^|\.)(google|bing|duckduckgo)\./i.test(location.hostname) &&
     (location.pathname.includes('/search') || location.search.includes('q='));
+  const isFormSubmitter=el=>{
+    if (!el) return false;
+    if ((el.tagName==='BUTTON' || el.tagName==='INPUT') && el.type==='submit') return true;
+    if (el.tagName==='BUTTON' && (!el.type || el.type==='submit') && el.closest('form')) return true;
+    if (el.tagName==='INPUT' && el.type==='image' && el.closest('form')) return true;
+    if (el.getAttribute('role')==='button' && (el.getAttribute('type')==='submit' || el.closest('form'))) {
+      if (el.getAttribute('type')!=='button' && el.getAttribute('type')!=='reset') return true;
+    }
+    return false;
+  };
   const seenCardLinks=new Set();
   const actions=[];
   for (const e of document.querySelectorAll(selector)) {
@@ -164,6 +174,7 @@
     const base={node:identity(e),role:rname,label:lbl,
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
     if (rawHref) base.href=rawHref;
+    if (isFormSubmitter(e)) base.submits_form=true;
     for (const key of ['checked','selected','expanded']) {
       const value=e.getAttribute('aria-'+key);
       if (value!==null) base[key]=value;

@@ -67,6 +67,9 @@ class DualTierContext(BaseModel):
     # Structured arbitrary/subjective choices permission
     allow_arbitrary_choices: bool = False
 
+    # Goal & user constraints (e.g. "do not submit form", "only add to cart")
+    constraints: list[str] = Field(default_factory=list)
+
     def add_user_message(self, content: str, kind: str = "chat", fact_key: str | None = None) -> None:
         """Record a user message and store structured facts in `user_facts` when `fact_key` is provided."""
         text = content.strip()

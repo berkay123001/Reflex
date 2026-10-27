@@ -313,6 +313,12 @@ def test_rejected_target_exact_match():
         {"kind": "click", "role": "link", "label": "Blog", "href": "https://ozalyildirim.com/blog"},
         "https://ozalyildirim.com/",
     ) is False
+    # Short numeric label '1' must not be blocked when '10' is rejected
+    sess.ctx.rejected_links.append("10 (https://example.com/item/10)")
+    assert sess._is_rejected_target(
+        {"kind": "click", "role": "link", "label": "1", "href": "https://example.com/item/1"},
+        "https://example.com/",
+    ) is False
 
 
 

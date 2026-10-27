@@ -50,6 +50,8 @@ def evaluate_decision(
     verify_done_with_supervisor: bool = True,
     allow_subjective: bool = False,
     allow_arbitrary_choices: bool = False,
+    constraints: list[str] | None = None,
+    action: dict[str, Any] | None = None,
 ) -> GateEvaluation:
     """Decide whether a System 1 prediction is safe to execute directly or should escalate to System 2."""
     arbitrary_allowed = allow_arbitrary_choices or allow_subjective
@@ -59,6 +61,23 @@ def evaluate_decision(
     target_conf = float(decision.get("target_confidence") if decision.get("target_confidence") is not None else 1.0)
     joint_conf = round(op_conf * target_conf, 4)
     target_margin, second_best = compute_margin(target_probs)
+
+    # 0. Submission Constraint Check:
+    # If active constraints exist and the selected action submits a form (or press_enter on form),
+    # escalate to System 2 so Supervisor verifies whether submitting is permitted by the constraints.
+    if constraints and action:
+        submits = bool(action.get("submits_form", False))
+        if submits or (operation == "PRESS_ENTER" and action.get("role") in {"textbox", "searchbox", "combobox"}):
+            return GateEvaluation(
+                should_escalate=True,
+                reason=f"Action '{action.get('label', '')}' submits form while constraints are active: {constraints}",
+                trigger_type="constraint_check",
+                op_confidence=op_conf,
+                target_confidence=target_conf,
+                joint_confidence=joint_conf,
+                target_margin=target_margin,
+                second_best_target=second_best,
+            )
 
     # 1. Explicit BLOCKED -> Escalate to Supervisor (never abort directly!)
     if operation == "BLOCKED":

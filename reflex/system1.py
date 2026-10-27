@@ -162,18 +162,6 @@ def choose_action(
 ) -> dict[str, Any]:
     """Query System 1 (OpenRouter Jev or Local Turnike) for the next operation and target."""
     elements, targets, controls = action_space(page.get("actions", []))
-    goal_l = compiled_goal.lower()
-    if "CLICK" in targets and any(
-        neg in goal_l for neg in ("gönderme", "göndermeden", "do not submit", "don't submit", "without submitting")
-    ):
-        targets["CLICK"] = {
-            idx: act
-            for idx, act in targets["CLICK"].items()
-            if str(act.get("label", "")).strip().lower() not in {"gönder", "submit", "formu gönder"}
-            and not str(act.get("label", "")).strip().lower().endswith("→ gönder")
-        }
-        if not targets["CLICK"]:
-            del targets["CLICK"]
 
     if history and history[-1].get("operation") == "SCROLL_DOWN" and history[-1].get("page_changed"):
         controls.pop("SCROLL_UP", None)

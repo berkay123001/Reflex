@@ -69,7 +69,8 @@ Return ONLY a valid JSON object with these keys:
   "tactical_hint": "short hint for System 1, or null",
   "target_url": "full https:// URL if the user wants to open a different site/URL, or null",
   "fact_value": "extracted fact value if intent is PROVIDE_FACT, or null",
-  "allow_arbitrary_choices": "true if the user permits arbitrary, sample, random, or subjective choices, else false"
+  "allow_arbitrary_choices": "true if the user permits arbitrary, sample, random, or subjective choices, else false",
+  "constraints": ["extracted constraints or negative instructions, e.g. 'do not submit', 'without submitting', etc."]
 }"""
 
 ESCALATION_SYSTEM_PROMPT = """You are the System 2 Supervisor of Reflex, a Kahneman-inspired hybrid browser agent.
@@ -450,6 +451,7 @@ class UserMessageInterpretation(BaseModel):
     target_url: str | None = None
     fact_value: str | None = None
     allow_arbitrary_choices: bool = False
+    constraints: list[str] = Field(default_factory=list)
     model: str = ""
     latency_ms: int = 0
     cost_usd: float = 0.0
@@ -491,6 +493,10 @@ def interpret_user_message(
     if intent not in {"CHAT_ONLY", "NEW_GOAL", "CONTINUE_OR_STEER", "PROVIDE_FACT"}:
         intent = "CONTINUE_OR_STEER"
     allow_arb = bool(parsed.get("allow_arbitrary_choices", False))
+    raw_constraints = parsed.get("constraints") or []
+    if isinstance(raw_constraints, str):
+        raw_constraints = [raw_constraints]
+    extracted_constraints = [str(c).strip() for c in raw_constraints if str(c).strip()]
     return UserMessageInterpretation(
         intent=intent,
         direct_reply=str(parsed["direct_reply"]).strip() if isinstance(parsed.get("direct_reply"), str) and parsed["direct_reply"].strip() else None,
@@ -500,6 +506,7 @@ def interpret_user_message(
         target_url=str(parsed["target_url"]).strip() if isinstance(parsed.get("target_url"), str) and parsed["target_url"].strip() else None,
         fact_value=str(parsed["fact_value"]).strip() if isinstance(parsed.get("fact_value"), str) and parsed["fact_value"].strip() else None,
         allow_arbitrary_choices=allow_arb,
+        constraints=extracted_constraints,
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,

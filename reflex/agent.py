@@ -72,10 +72,15 @@ class ReflexSession:
             kw in goal.lower()
             for kw in ("kafana göre", "rastgele", "kendi yorumuna", "istediğin", "random", "arbitrary")
         )
+        initial_constraints: list[str] = []
+        goal_l = goal.lower()
+        if any(neg in goal_l for neg in ("gönderme", "göndermeden", "do not submit", "don't submit", "without submitting", "formu gönderme")):
+            initial_constraints.append("do not submit form")
         self.ctx = DualTierContext(
             primary_goal=goal.strip(),
             active_subgoal=goal.strip(),
             allow_arbitrary_choices=allow_arb,
+            constraints=initial_constraints,
         )
         self.ctx.add_user_message(goal.strip(), kind="chat")
         self.site_memory = SiteMemoryStore()
@@ -216,12 +221,17 @@ class ReflexSession:
             self.last_error = str(exc)
             return self.snapshot()
 
+        selected_id = s1_decision.get("choice")
+        selected_action = next((a for a in self.page.get("actions", []) if a.get("id") == selected_id), None)
+
         gate_eval = evaluate_decision(
             s1_decision,
             self.config.thresholds,
             step_count=len(self.history),
             verify_done_with_supervisor=self.config.verify_done_with_supervisor,
             allow_arbitrary_choices=self.ctx.allow_arbitrary_choices,
+            constraints=self.ctx.constraints,
+            action=selected_action,
         )
 
         self.decisions.append(
@@ -312,13 +322,7 @@ class ReflexSession:
         lbl = str(action.get("label", "")).strip().lower()
         href = str(action.get("href", "")).strip().rstrip("/").lower()
 
-        # 1. Never click Submit / Gönder if the user's goal explicitly says not to submit
-        goal_l = (self.ctx.primary_goal + " " + self.ctx.active_subgoal).lower()
-        if any(neg in goal_l for neg in ("gönderme", "göndermeden", "do not submit", "don't submit", "without submitting")):
-            if lbl in {"gönder", "submit", "formu gönder"} or lbl.endswith("→ gönder"):
-                return True
-
-        # 2. Never re-click a radio option that is already checked="true"
+        # 1. Never re-click a radio option that is already checked="true"
         if role in {"radio", "menuitemradio"} and str(action.get("checked", "")).lower() == "true":
             return True
 
@@ -887,6 +891,10 @@ class ReflexSession:
 
         if interp.allow_arbitrary_choices:
             self.ctx.allow_arbitrary_choices = True
+        if interp.constraints:
+            for c in interp.constraints:
+                if c not in self.ctx.constraints:
+                    self.ctx.constraints.append(c)
 
         # Case 3: User is switching to a new task/goal
         if interp.intent == "NEW_GOAL":
@@ -898,6 +906,7 @@ class ReflexSession:
             self.ctx.working_memory = ""
             self.ctx.rejected_links.clear()
             self.ctx.approved_actions.clear()
+            self.ctx.constraints = list(interp.constraints)
             self._done_rejected_url = None
             self.pending_fact_key = None
             self.pending_confirmation = None
