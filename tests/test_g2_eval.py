@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -13,8 +14,10 @@ from reflex.config import ReflexConfig
 from scripts.eval import (
     compute_summary,
     format_summary_report,
+    is_port_open,
     load_tasks,
     main,
+    managed_isolated_browser,
     run_eval,
     run_task,
 )
@@ -736,3 +739,160 @@ def test_eval_cli_main(tmp_path: Path):
     assert exit_code == 0
     assert out_file.is_file()
     assert sum_file.is_file()
+
+
+# ==============================================================================
+# Isolated Browser & Port 9333 Guard Tests (Overnight Rule 2)
+# ==============================================================================
+
+
+def test_is_port_open_utility():
+    """Verify is_port_open accurately probes TCP ports."""
+    assert isinstance(is_port_open("127.0.0.1", 59999, timeout=0.1), bool)
+
+
+def test_managed_isolated_browser_rejects_port_9333():
+    """Port 9333 is strictly reserved for external monitoring and must raise ValueError."""
+    with (
+        pytest.raises(ValueError, match="Port 9333 is reserved for external monitoring; eval runner must not use port 9333."),
+        managed_isolated_browser(port=9333),
+    ):
+        pass
+
+    with (
+        pytest.raises(ValueError, match="Port 9333 is reserved for external monitoring; eval runner must not use port 9333."),
+        managed_isolated_browser(port="9333"),  # type: ignore[arg-type]
+    ):
+        pass
+
+
+def test_main_cli_rejects_port_9333(tmp_path: Path):
+    """CLI main() must reject --cdp-port 9333 before executing evaluation."""
+    tasks = [{"id": "t1", "url": "http://127.0.0.1:8788/fixture", "goal": "Goal"}]
+    f = tmp_path / "tasks.json"
+    f.write_text(json.dumps(tasks), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Port 9333 is reserved for external monitoring; eval runner must not use port 9333."):
+        main([str(f), "--cdp-port", "9333"])
+
+
+def test_managed_isolated_browser_sets_bu_cdp_url_and_isolates(tmp_path: Path):
+    """Verify managed_isolated_browser sets BU_CDP_URL, BU_NAME, and cleans up temp dir and env."""
+    port = 9488
+    fake_profile = tmp_path / "fake_profile"
+    fake_profile.mkdir()
+
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None
+
+    with (
+        patch("scripts.eval.is_port_open", side_effect=[False, True, True]),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+        patch("tempfile.TemporaryDirectory") as mock_td_cls,
+        patch("subprocess.Popen", return_value=mock_proc) as mock_popen,
+    ):
+        mock_td_inst = MagicMock()
+        mock_td_inst.name = str(fake_profile)
+        mock_td_cls.return_value = mock_td_inst
+
+        with managed_isolated_browser(port=port, headless=True) as cdp_url:
+            assert cdp_url == f"http://127.0.0.1:{port}"
+            assert os.environ["BU_CDP_URL"] == f"http://127.0.0.1:{port}"
+            assert os.environ["BU_NAME"] == f"eval_{port}"
+
+            mock_popen.assert_called_once()
+            cmd_args = mock_popen.call_args[0][0]
+            assert cmd_args[0] == "/usr/bin/chromium"
+            assert "--headless=new" in cmd_args
+            assert f"--remote-debugging-port={port}" in cmd_args
+            assert f"--user-data-dir={fake_profile}" in cmd_args
+
+        # Teardown checks
+        mock_proc.terminate.assert_called_once()
+        mock_td_inst.cleanup.assert_called_once()
+
+
+def test_managed_isolated_browser_restores_prior_environment():
+    """Verify pre-existing environment variables are restored upon context exit."""
+    old_url = "http://127.0.0.1:9555"
+    old_name = "prior_daemon"
+    os.environ["BU_CDP_URL"] = old_url
+    os.environ["BU_NAME"] = old_name
+    try:
+        with (
+            patch("scripts.eval.is_port_open", return_value=True),
+            managed_isolated_browser(port=9499, headless=True),
+        ):
+            assert os.environ["BU_CDP_URL"] == "http://127.0.0.1:9499"
+            assert os.environ["BU_NAME"] == "eval_9499"
+
+        assert os.environ["BU_CDP_URL"] == old_url
+        assert os.environ["BU_NAME"] == old_name
+    finally:
+        os.environ.pop("BU_CDP_URL", None)
+        os.environ.pop("BU_NAME", None)
+
+
+def test_managed_isolated_browser_reuses_if_port_already_listening():
+    """If a browser is already listening on the port, do not launch a new subprocess."""
+    with (
+        patch("scripts.eval.is_port_open", return_value=True),
+        patch("subprocess.Popen") as mock_popen,
+    ):
+        with managed_isolated_browser(port=9450):
+            pass
+        mock_popen.assert_not_called()
+
+
+def test_managed_isolated_browser_headed_mode(tmp_path: Path):
+    """Verify headless=False omits --headless=new flag."""
+    fake_profile = tmp_path / "fake_profile_headed"
+    fake_profile.mkdir()
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None
+
+    with (
+        patch("scripts.eval.is_port_open", side_effect=[False, True]),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+        patch("tempfile.TemporaryDirectory") as mock_td_cls,
+        patch("subprocess.Popen", return_value=mock_proc) as mock_popen,
+    ):
+        mock_td_inst = MagicMock()
+        mock_td_inst.name = str(fake_profile)
+        mock_td_cls.return_value = mock_td_inst
+
+        with managed_isolated_browser(port=9451, headless=False):
+            pass
+
+        cmd_args = mock_popen.call_args[0][0]
+        assert "--headless=new" not in cmd_args
+
+
+def test_eval_cli_main_passes_cdp_port_and_headed(tmp_path: Path):
+    """Verify main() CLI passes configured cdp_port and headed mode to managed_isolated_browser."""
+    tasks = [{"id": "cli-iso", "url": "http://127.0.0.1:8788/fixture", "goal": "Goal", "check": "true"}]
+    tasks_file = tmp_path / "cli_tasks.json"
+    tasks_file.write_text(json.dumps(tasks), encoding="utf-8")
+    out_file = tmp_path / "cli_out.jsonl"
+    sum_file = tmp_path / "cli_sum.json"
+
+    mock_session = _make_mock_session(statuses=["ready", "done"], browser_eval_return=True)
+
+    with (
+        patch("scripts.eval.ReflexSession", return_value=mock_session),
+        patch("scripts.eval.managed_isolated_browser") as mock_mgr,
+    ):
+        mock_mgr.return_value.__enter__.return_value = "http://127.0.0.1:9455"
+        mock_mgr.return_value.__exit__.return_value = None
+
+        exit_code = main([
+            str(tasks_file),
+            "-o", str(out_file),
+            "-s", str(sum_file),
+            "--cdp-port", "9455",
+            "--headed",
+            "--quiet",
+        ])
+
+    assert exit_code == 0
+    mock_mgr.assert_called_once_with(port=9455, headless=False)

@@ -10,10 +10,17 @@ and outputs JSONL results plus aggregate summary metrics.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
+import os
+import shutil
+import socket
+import subprocess
 import sys
+import tempfile
 import time
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
@@ -459,6 +466,139 @@ def run_eval(
     return task_results, summary
 
 
+def is_port_open(host: str, port: int, timeout: float = 0.4) -> bool:
+    """Check if a TCP port is currently open and accepting connections."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        return sock.connect_ex((host, port)) == 0
+
+
+@contextlib.contextmanager
+def managed_isolated_browser(
+    port: int = 9444,
+    headless: bool = True,
+) -> Generator[str, None, None]:
+    """Provide an isolated Chromium browser instance and environment lifecycle for evaluation.
+
+    Guarantees:
+    - Rejects port 9333 with ValueError.
+    - Sets BU_CDP_URL to http://127.0.0.1:{port} and BU_NAME to eval_{port}.
+    - If no process is listening on {port}, launches an isolated Chromium subprocess
+      with a dedicated temporary --user-data-dir.
+    - Cleanly shuts down the subprocess and removes the temporary profile directory on exit.
+    - Restores previous environment variables and CDP hooks in finally:.
+    """
+    if int(port) == 9333:
+        raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
+
+    cdp_url = f"http://127.0.0.1:{port}"
+    old_cdp_url = os.environ.get("BU_CDP_URL")
+    old_bu_name = os.environ.get("BU_NAME")
+    os.environ["BU_CDP_URL"] = cdp_url
+    os.environ["BU_NAME"] = f"eval_{port}"
+
+    old_ensure = None
+    try:
+        import reflex.browser.cdp as r_cdp
+        old_ensure = r_cdp.ensure_chromium_cdp
+        r_cdp.ensure_chromium_cdp = lambda p=port: None
+    except Exception:
+        pass
+
+    temp_dir_obj: tempfile.TemporaryDirectory[str] | None = None
+    proc: subprocess.Popen[Any] | None = None
+
+    try:
+        if not is_port_open("127.0.0.1", port):
+            binary = (
+                shutil.which("chromium")
+                or shutil.which("chromium-browser")
+                or shutil.which("google-chrome")
+            )
+            if binary:
+                temp_dir_obj = tempfile.TemporaryDirectory(prefix="reflex_eval_profile_")
+                user_data_dir = temp_dir_obj.name
+
+                cmd = [
+                    binary,
+                    f"--remote-debugging-port={port}",
+                    f"--user-data-dir={user_data_dir}",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-gpu",
+                    "--disk-cache-size=1048576",
+                    "--media-cache-size=1048576",
+                    "--window-size=1280,900",
+                    "--lang=tr-TR",
+                ]
+                if headless:
+                    cmd.insert(1, "--headless=new")
+
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+
+                deadline = time.monotonic() + 10.0
+                while time.monotonic() < deadline:
+                    if is_port_open("127.0.0.1", port):
+                        time.sleep(0.2)
+                        break
+                    if proc.poll() is not None:
+                        logger.warning("Chromium process exited prematurely with code %s", proc.returncode)
+                        break
+                    time.sleep(0.1)
+            else:
+                logger.warning("No Chromium executable found in PATH; running without spawned browser.")
+
+        yield cdp_url
+
+    finally:
+        if proc is not None:
+            try:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=3.0)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=2.0)
+            except Exception as exc:
+                logger.warning("Error terminating Chromium subprocess: %s", exc)
+
+        if temp_dir_obj is not None:
+            try:
+                temp_dir_obj.cleanup()
+            except Exception as exc:
+                logger.warning("Error cleaning up temporary directory: %s", exc)
+
+        try:
+            from browser_harness import admin
+            if hasattr(admin, "stop_remote_daemon"):
+                admin.stop_remote_daemon(f"eval_{port}")
+        except Exception:
+            pass
+
+        if old_ensure is not None:
+            try:
+                import reflex.browser.cdp as r_cdp
+                r_cdp.ensure_chromium_cdp = old_ensure
+            except Exception:
+                pass
+
+        if old_cdp_url is not None:
+            os.environ["BU_CDP_URL"] = old_cdp_url
+        else:
+            os.environ.pop("BU_CDP_URL", None)
+
+        if old_bu_name is not None:
+            os.environ["BU_NAME"] = old_bu_name
+        else:
+            os.environ.pop("BU_NAME", None)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Reflex Autonomous Agent Evaluation Runner")
     parser.add_argument("tasks", nargs="?", help="Path to JSON or JSONL tasks file")
@@ -471,11 +611,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-steps", type=int, default=25, help="Default maximum steps per task (default: 25)")
     parser.add_argument("--screenshots", action="store_true", help="Capture screenshots during observe")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+    parser.add_argument("--cdp-port", type=int, default=9444, help="CDP port for isolated Chromium instance (default: 9444; 9333 is forbidden)")
+    parser.add_argument("--headed", action="store_true", help="Run browser in headed mode (default: headless)")
 
     args = parser.parse_args(argv)
     tasks_file = args.tasks or args.tasks_flag
     if not tasks_file:
         parser.error("A tasks file must be provided either as positional argument or via --tasks.")
+
+    if args.cdp_port == 9333:
+        raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
 
     cfg = ReflexConfig()
     if args.decision_backend:
@@ -488,15 +633,16 @@ def main(argv: list[str] | None = None) -> int:
         cfg.screenshots = True
 
     try:
-        _, summary = run_eval(
-            tasks_path=tasks_file,
-            output_path=args.output,
-            summary_path=args.summary,
-            config=cfg,
-            default_max_steps=args.max_steps,
-            verbose=not args.quiet,
-        )
-        return 0 if summary["failed_tasks"] == 0 else 1
+        with managed_isolated_browser(port=args.cdp_port, headless=not args.headed):
+            _, summary = run_eval(
+                tasks_path=tasks_file,
+                output_path=args.output,
+                summary_path=args.summary,
+                config=cfg,
+                default_max_steps=args.max_steps,
+                verbose=not args.quiet,
+            )
+            return 0 if summary["failed_tasks"] == 0 else 1
     except Exception as exc:
         print(f"[eval] Fatal evaluation runner error: {exc}", file=sys.stderr)
         return 2
