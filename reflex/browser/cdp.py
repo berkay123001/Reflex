@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -13,12 +14,15 @@ import subprocess
 import sys
 import threading
 import time
+import warnings
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from browser_harness.admin import ensure_daemon
 from browser_harness.helpers import cdp
+
+logger = logging.getLogger(__name__)
 
 READ_STATE = Path(__file__).with_name("snapshot.js").read_text(encoding="utf-8")
 MARKER = f"(() => {{ const state={READ_STATE}; return state?.marker ?? null; }})()"
@@ -72,7 +76,13 @@ def _port_open(host: str, port: int) -> bool:
 
 def ensure_chromium_cdp(port: int = DEFAULT_CDP_PORT) -> None:
     """Ensure a headless Chromium instance is listening on `port` and `BU_CDP_URL` is set."""
-    os.environ.setdefault("BU_CDP_URL", f"http://127.0.0.1:{port}")
+    expected_url = f"http://127.0.0.1:{port}"
+    existing_url = os.environ.get("BU_CDP_URL")
+    if existing_url and existing_url != expected_url:
+        msg = f"BU_CDP_URL is already set to {existing_url!r}, which differs from expected {expected_url!r}"
+        logger.warning(msg)
+        warnings.warn(msg, UserWarning, stacklevel=2)
+    os.environ.setdefault("BU_CDP_URL", expected_url)
     if _port_open("127.0.0.1", port):
         return
     binary = (
@@ -179,18 +189,7 @@ class Browser:
         self.last_jpeg_bytes: bytes | None = None
         self.last_action_rect: dict[str, Any] | None = None
         self.target: str | None = cdp("Target.createTarget", url="about:blank", background=False)["targetId"]
-        # Close any leaked/orphan page tabs from previous sessions so Chromium RAM never grows
-        try:
-            infos = cdp("Target.getTargets").get("targetInfos", [])
-            for info in infos:
-                tid = info.get("targetId")
-                if info.get("type") == "page" and tid and tid != self.target:
-                    try:
-                        cdp("Target.closeTarget", targetId=tid)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+        self._owned_targets: set[str] = {self.target} if self.target else set()
         self.session: str = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
         self.after_input: dict[str, Any] | None = None
         self.call("Page.bringToFront")
@@ -768,12 +767,17 @@ class Browser:
         raise ValueError(f"Unsupported recovery action: {kind}")
 
     def close(self) -> None:
+        targets_to_close = set(self._owned_targets) if hasattr(self, "_owned_targets") else set()
         if self.target:
+            targets_to_close.add(self.target)
+        for tid in targets_to_close:
             try:
-                cdp("Target.closeTarget", targetId=self.target)
+                cdp("Target.closeTarget", targetId=tid)
             except Exception:
                 pass
-            self.target = None
+        if hasattr(self, "_owned_targets"):
+            self._owned_targets.clear()
+        self.target = None
 
     def __enter__(self) -> Browser:
         return self
