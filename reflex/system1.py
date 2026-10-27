@@ -56,14 +56,6 @@ def action_space(
     controls: dict[str, dict[str, Any]] = {}
     operations = {"click": "CLICK", "fill": "TYPE_TEXT", "select": "SELECT"}
 
-    # Identify radio question groups that already have a checked="true" option
-    answered_radio_groups: set[str] = set()
-    for a in actions:
-        if str(a.get("role", "")).lower() in {"radio", "menuitemradio"} and str(a.get("checked", "")).lower() == "true":
-            lbl_str = str(a.get("label", ""))
-            if " → " in lbl_str:
-                answered_radio_groups.add(lbl_str.split(" → ", 1)[0].strip().lower())
-
     for action in actions:
         kind = action.get("kind", "")
         if kind not in operations:
@@ -95,16 +87,10 @@ def action_space(
         operation = operations[kind]
         lbl_full = str(action.get("label", "")).strip()
         role_l = str(action.get("role", "")).lower()
-        # Keep occupied ranking slots and already-answered radio groups in `elements` for context,
+        # Keep already-checked radio options in `elements` for context,
         # but exclude them from actionable `CLICK` targets so System 1 never wastes steps re-clicking them
-        if operation == "CLICK":
-            if lbl_full.startswith("[DOLU:"):
-                continue
-            if role_l in {"radio", "menuitemradio"}:
-                if str(action.get("checked", "")).lower() == "true":
-                    continue
-                if " → " in lbl_full and lbl_full.split(" → ", 1)[0].strip().lower() in answered_radio_groups:
-                    continue
+        if operation == "CLICK" and role_l in {"radio", "menuitemradio"} and str(action.get("checked", "")).lower() == "true":
+            continue
         group = targets.setdefault(operation, {})
         if len(group) >= max_elements:
             continue
@@ -162,35 +148,6 @@ def choose_action(
 ) -> dict[str, Any]:
     """Query System 1 (OpenRouter Jev or Local Turnike) for the next operation and target."""
     elements, targets, controls = action_space(page.get("actions", []))
-
-    if history and history[-1].get("operation") == "SCROLL_DOWN" and history[-1].get("page_changed"):
-        controls.pop("SCROLL_UP", None)
-
-    page_url_l = str(page.get("url", "")).lower()
-    is_serp = any(se in page_url_l for se in ("google.", "bing.", "duckduckgo.")) and (
-        "/search" in page_url_l or "q=" in page_url_l
-    )
-    if is_serp and "note:" not in goal_l:
-        if "TYPE_TEXT" in targets:
-            targets["TYPE_TEXT"] = {
-                idx: act
-                for idx, act in targets["TYPE_TEXT"].items()
-                if not (
-                    str(act.get("label", "")).strip().lower() in {"ara", "search", "arama"}
-                    and str(act.get("value", "")).strip()
-                )
-            }
-            if not targets["TYPE_TEXT"]:
-                del targets["TYPE_TEXT"]
-        if "CLICK" in targets:
-            targets["CLICK"] = {
-                idx: act
-                for idx, act in targets["CLICK"].items()
-                if str(act.get("label", "")).strip().lower()
-                not in {"open ara", "open search", "temizle", "clear", "google ana sayfasına git", "go to google home"}
-            }
-            if not targets["CLICK"]:
-                del targets["CLICK"]
 
     labels = {
         "CLICK": "Click an element, button, menu option, autocomplete suggestion, or calendar day.",
