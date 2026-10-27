@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from .config import (
     META_API_CHAT_URL,
     OPENROUTER_CHAT_URL,
+    ReflexConfig,
     get_meta_api_key,
     get_openrouter_api_key,
 )
@@ -184,17 +185,31 @@ def _extract_json(raw_text: str) -> dict[str, Any]:
     raise ValueError(f"Supervisor response did not contain valid JSON: {raw_text[:200]}")
 
 
-def _chat_completion(model: str, system_prompt: str, user_prompt: str, max_tokens: int = 750) -> tuple[dict[str, Any], int, float, str]:
+def _chat_completion(
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = 750,
+    allow_model_fallback: bool = False,
+    config: ReflexConfig | None = None,
+) -> tuple[dict[str, Any], int, float, str]:
     """Call Official Meta Model API (`https://api.meta.ai/v1/chat/completions`) or OpenRouter."""
+    if config is not None:
+        allow_model_fallback = config.allow_model_fallback
+
     last_err: Exception | None = None
 
     meta_key = get_meta_api_key()
     if meta_key and (model.startswith("meta") or "llama" in model.lower() or "muse" in model.lower()):
         meta_headers = {"Authorization": f"Bearer {meta_key}", "Content-Type": "application/json"}
-        meta_candidates = _META_MODEL_MAP.get(
-            model,
-            [model, "muse-spark-1.3-contributor", "muse-wonder-1.0"],
-        )
+        if allow_model_fallback:
+            meta_candidates = _META_MODEL_MAP.get(
+                model,
+                [model, "muse-spark-1.3-contributor", "muse-wonder-1.0"],
+            )
+        else:
+            meta_candidates = [model]
+
         for meta_model_id in meta_candidates:
             call_started = time.perf_counter()
             payload: dict[str, Any] = {
@@ -223,17 +238,24 @@ def _chat_completion(model: str, system_prompt: str, user_prompt: str, max_token
                     parsed = _extract_json(str(content or ""))
                     latency_ms = round((time.perf_counter() - call_started) * 1000)
                     return parsed, latency_ms, 0.0, str(data.get("model") or meta_model_id)
+                resp.raise_for_status()
             except Exception as exc:
                 last_err = exc
 
+        if not allow_model_fallback:
+            raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}")
+
     key = get_openrouter_api_key()
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-    fallback_models: list[str] = []
-    if "/" in model and not model.startswith("meta/"):
-        fallback_models.append(model)
-    for fb in ("qwen/qwen3.8-flash", "anthropic/claude-haiku-4.5"):
-        if fb not in fallback_models:
-            fallback_models.append(fb)
+    if allow_model_fallback:
+        fallback_models: list[str] = []
+        if "/" in model and not model.startswith("meta/"):
+            fallback_models.append(model)
+        for fb in ("qwen/qwen3.8-flash", "anthropic/claude-haiku-4.5"):
+            if fb not in fallback_models:
+                fallback_models.append(fb)
+    else:
+        fallback_models = [model]
 
     for candidate_model in fallback_models:
         call_started = time.perf_counter()
@@ -278,8 +300,12 @@ def generate_field_text(
     page: dict[str, Any],
     history: list[dict[str, Any]],
     supervisor_model: str,
+    allow_model_fallback: bool = False,
+    config: ReflexConfig | None = None,
 ) -> FieldTextOutcome:
     """Generate the value to type into `action`, or return an `ask_user` prompt if missing."""
+    if config is not None:
+        allow_model_fallback = config.allow_model_fallback
     field_info = {
         "label": sanitize_untrusted_text(str(action.get("label", "")), 140),
         "role": sanitize_untrusted_text(str(action.get("role", "")), 40),
@@ -304,7 +330,11 @@ def generate_field_text(
         f"</untrusted_page_data>"
     )
     parsed, latency_ms, cost, used_model = _chat_completion(
-        supervisor_model, FIELD_TEXT_SYSTEM_PROMPT, user_payload, max_tokens=300
+        supervisor_model,
+        FIELD_TEXT_SYSTEM_PROMPT,
+        user_payload,
+        max_tokens=300,
+        allow_model_fallback=allow_model_fallback,
     )
     val = parsed.get("text")
     ask = parsed.get("ask_user")
@@ -343,8 +373,12 @@ def resolve_escalation(
     trigger_type: str,
     s1_decision: dict[str, Any] | None,
     supervisor_model: str,
+    allow_model_fallback: bool = False,
+    config: ReflexConfig | None = None,
 ) -> SupervisorDecision:
     """Invoke System 2 (`qwen/qwen3.8-omni-flash` or selected Supervisor) to recover from an escalation."""
+    if config is not None:
+        allow_model_fallback = config.allow_model_fallback
     s1_summary = "None"
     if s1_decision:
         s1_summary = json.dumps(
@@ -366,7 +400,11 @@ def resolve_escalation(
     )
 
     parsed, latency_ms, cost, used_model = _chat_completion(
-        supervisor_model, ESCALATION_SYSTEM_PROMPT, user_prompt, max_tokens=1500
+        supervisor_model,
+        ESCALATION_SYSTEM_PROMPT,
+        user_prompt,
+        max_tokens=1500,
+        allow_model_fallback=allow_model_fallback,
     )
 
     action_type = str(parsed.get("action_type", "OVERRIDE_ACTION")).upper()
@@ -433,8 +471,12 @@ def interpret_user_message(
     history: list[dict[str, Any]],
     pending_fact_key: str | None,
     supervisor_model: str,
+    allow_model_fallback: bool = False,
+    config: ReflexConfig | None = None,
 ) -> UserMessageInterpretation:
     """Classify a user chat message so conversational questions are answered directly without polluting System 1."""
+    if config is not None:
+        allow_model_fallback = config.allow_model_fallback
     full_page_txt = str(page.get("full_text") or page.get("text") or "")
     headings_list = page.get("headings") or []
     headings_str = " | ".join(sanitize_untrusted_text(str(h), 120) for h in headings_list[:35]) if headings_list else "None"
@@ -450,7 +492,11 @@ def interpret_user_message(
         f"</untrusted_page_data>"
     )
     parsed, latency_ms, cost, used_model = _chat_completion(
-        supervisor_model, USER_MESSAGE_SYSTEM_PROMPT, user_prompt, max_tokens=500
+        supervisor_model,
+        USER_MESSAGE_SYSTEM_PROMPT,
+        user_prompt,
+        max_tokens=500,
+        allow_model_fallback=allow_model_fallback,
     )
     intent = str(parsed.get("intent") or "CONTINUE_OR_STEER").upper().strip()
     if intent not in {"CHAT_ONLY", "NEW_GOAL", "CONTINUE_OR_STEER", "PROVIDE_FACT"}:

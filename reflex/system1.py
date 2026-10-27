@@ -277,15 +277,9 @@ def choose_action(
         except Exception as exc:
             last_err = exc
             if config.decision_backend == "local_turnike" and isinstance(exc, httpx.TransportError):
-                # Automatic laptop fallback: if local Turnike (:8794) is not running, switch to OpenRouter Jev seamlessly
-                try:
-                    or_key = get_openrouter_api_key()
-                    config.decision_backend = "openrouter_jev"
-                    url = OPENROUTER_DECISIONS_URL
-                    headers = {"Authorization": f"Bearer {or_key}"}
-                    continue
-                except Exception:
-                    pass
+                raise RuntimeError(
+                    f"System 1 ({config.decision_backend}) transport failed: {exc}"
+                ) from exc
             if attempt < 2:
                 time.sleep(0.3 * (2**attempt))
     else:

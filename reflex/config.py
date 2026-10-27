@@ -125,6 +125,7 @@ class ReflexConfig(BaseModel):
     jev_model: str = DEFAULT_JEV_MODEL
     local_turnike_url: str = LOCAL_TURNIKE_URL
     supervisor_model: str = DEFAULT_SUPERVISOR_MODEL
+    allow_model_fallback: bool = False
     max_steps: int = 80
     max_escalations: int = 40
     require_confirmation_for_destructive: bool = True
