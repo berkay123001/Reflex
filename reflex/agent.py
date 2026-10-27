@@ -17,7 +17,7 @@ from .config import ReflexConfig
 from .context import DualTierContext
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
-from .safety import check_action_safety
+from .safety import check_action_safety, extract_origin
 from .supervisor import (
     SupervisorDecision,
     generate_field_text,
@@ -651,6 +651,29 @@ class ReflexSession:
 
         return None
 
+    def _get_focused_form_submit_label(self) -> str | None:
+        """Inspect the currently focused form in the browser to retrieve its submit button label."""
+        if not hasattr(self, "browser") or not hasattr(self.browser, "evaluate"):
+            return None
+        js = (
+            "(() => {"
+            "  const active = document.activeElement;"
+            "  if (!active) return null;"
+            "  const form = active.closest('form');"
+            "  if (!form) return null;"
+            "  const btn = form.querySelector('button[type=\"submit\"], input[type=\"submit\"], button:not([type=\"button\"]):not([type=\"reset\"])');"
+            "  if (!btn) return null;"
+            "  return (btn.innerText || btn.value || btn.getAttribute('aria-label') || '').trim();"
+            "})()"
+        )
+        try:
+            res = self.browser.evaluate(js)
+            if isinstance(res, str) and res.strip():
+                return res.strip()
+        except Exception:
+            pass
+        return None
+
     def _execute_and_verify(
         self,
         *,
@@ -670,12 +693,22 @@ class ReflexSession:
     ) -> dict[str, Any]:
         """Run safety check, text generation (if fill), CDP action execution, and 3-layer verification."""
         # 1. Irreversible Action Safety Guard
+        origin = extract_origin(action.get("origin")) or extract_origin(self.page.get("url"))
+        if action.get("kind") == "press_enter":
+            submit_label = action.get("submit_label") or self._get_focused_form_submit_label()
+            if submit_label:
+                action["submit_label"] = submit_label
+                if not action.get("label") or action.get("label") in {"Press Enter", "press_enter"}:
+                    action["label"] = submit_label
+
         safety = check_action_safety(
             action,
+            origin=origin,
             approved_signatures=self.ctx.approved_actions,
             enabled=self.config.require_confirmation_for_destructive,
         )
         if safety.requires_confirmation:
+            sig = safety.action_signature or (f"{action.get('kind')}:{action.get('label')}:{origin}" if origin else f"{action.get('kind')}:{action.get('label')}")
             self.pending_confirmation = {
                 "action": action,
                 "actor": actor,
@@ -692,7 +725,7 @@ class ReflexSession:
                 "escalation_note": escalation_note,
                 "summary": safety.action_summary,
                 "reason": safety.reason,
-                "signature": f"{action.get('kind')}:{action.get('label')}",
+                "signature": sig,
             }
             self.status = "waiting_confirmation"
             self.ctx.add_agent_message(
@@ -913,6 +946,7 @@ class ReflexSession:
             self.ctx.tactical_hint = interp.tactical_hint or ""
             self.ctx.working_memory = ""
             self.ctx.rejected_links.clear()
+            self.ctx.approved_actions.clear()
             self._done_rejected_url = None
             self.pending_fact_key = None
             self.pending_confirmation = None
@@ -961,13 +995,14 @@ class ReflexSession:
         self.pending_confirmation = None
 
         if approved:
-            self.ctx.approved_actions.add(pending["signature"])
+            sig = pending["signature"]
+            self.ctx.approved_actions.add(sig)
             self.ctx.add_user_message(
                 f"Approved action: {pending['summary']}",
                 kind="user_reply",
             )
             self.status = "ready"
-            return self._execute_and_verify(
+            res = self._execute_and_verify(
                 action=pending["action"],
                 actor=pending["actor"],
                 operation=pending["operation"],
@@ -982,6 +1017,8 @@ class ReflexSession:
                 preset_text=pending["preset_text"],
                 escalation_note=pending["escalation_note"],
             )
+            self.ctx.approved_actions.discard(sig)
+            return res
 
         # User rejected the destructive action
         reason_msg = alternative_instruction.strip() or f"User declined executing {pending['summary']}."

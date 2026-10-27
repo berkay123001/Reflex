@@ -4,28 +4,90 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel
 
+
+def extract_origin(url: str | None) -> str:
+    """Extract scheme + netloc (e.g. 'https://example.com' or 'http://localhost:3000') from a URL.
+
+    Returns an empty string if url is missing, invalid, or relative.
+    """
+    if not url:
+        return ""
+    try:
+        parts = urlsplit(str(url).strip())
+        if parts.scheme and parts.netloc:
+            return f"{parts.scheme}://{parts.netloc}".lower()
+        return ""
+    except Exception:
+        return ""
+
+
 # Patterns that represent irreversible financial, destructive, or external-transmission actions
-IRREVERSIBLE_PATTERNS = [
+PAYMENT_PATTERNS = [
+    r"\bpay\b",
     r"\bpay\s+now\b",
+    r"\bcheckout\b",
+    r"\bcheck\s*out\b",
+    r"\bbuy\b",
+    r"\bbuy\s+now\b",
+    r"\bpurchase\b",
     r"\bcomplete\s+(?:purchase|order|payment)\b",
     r"\bplace\s+order\b",
-    r"\bbuy\s+now\b",
-    r"\bconfirm\s+(?:payment|purchase|order|transfer|deletion)\b",
-    r"\bdelete\s+(?:account|permanently|repository|project|all)\b",
-    r"\bremove\s+account\b",
     r"\bsend\s+(?:money|payment|transfer|wire)\b",
     r"\bauthorize\s+payment\b",
-    r"\bsiparişi\s+(?:tamamla|onayla)\b",
-    r"\bödeme(?:yi)?\s+(?:yap|onayla|tamamla)\b",
-    r"\bhemen\s+satın\s+al\b",
-    r"\bkalıcı\s+olarak\s+sil\b",
-    r"\bhesabı\s+sil\b",
+    r"\bconfirm\s+(?:payment|purchase|order|transfer)\b",
+    r"\böde(?:yin|yiniz)?\b",
+    r"\bödeme(?:yi)?\s+(?:yap|onayla|tamamla|et)\b",
+    r"\bödeme\b",
+    r"\bsat[ıi]n\s+al(?:[ıi]n|[ıi]n[ıi]z)?\b",
+    r"\bsat[ıi]n\s+alma\b",
+    r"\bhemen\s+sat[ıi]n\s+al\b",
+    r"\bsipari[şs]\b",
+    r"\bsipari[şs](?:i|ini)?\s+(?:ver|tamamla|onayla|olu[şs]tur)\b",
+    r"\bsipari[şs]\s*ver\b",
 ]
 
+DELETION_PATTERNS = [
+    r"\bdelete\b",
+    r"\bdelete\s+(?:account|permanently|repository|project|all)\b",
+    r"\bremove\b",
+    r"\bremove\s+account\b",
+    r"\bdestroy\b",
+    r"\berase\b",
+    r"\bpurge\b",
+    r"\bsil(?:in|iniz)?\b",
+    r"\bkal[ıi]c[ıi]\s+olarak\s+sil\b",
+    r"\bkald[ıi]r(?:[ıi]n|[ıi]n[ıi]z)?\b",
+    r"\btemizle(?:yin|yiniz)?\b",
+    r"\bçöpe?\s*at\b",
+    r"\bçöp\b",
+]
+
+ACCOUNT_PATTERNS = [
+    r"\bclose\s+account\b",
+    r"\bdelete\s+account\b",
+    r"\bcancel\s+subscription\b",
+    r"\brevoke\b",
+    r"\brevoke\s+access\b",
+    r"\bterminate\s+account\b",
+    r"\bhesab[ıi](?:m[ıi]|n[ıi])?\s+(?:kapat|sil|sonland[ıi]r)\b",
+    r"\büyeli[ğg](?:i|imi|ini)?\s+(?:iptal\s+et|kapat|sil)\b",
+    r"\baboneli[ğg](?:i|imi|ini)?\s+(?:iptal\s+et|sonland[ıi]r)\b",
+]
+
+IRREVERSIBLE_PATTERNS = PAYMENT_PATTERNS + DELETION_PATTERNS + ACCOUNT_PATTERNS
+
+_COMPILED_CATEGORIZED_PATTERNS: list[tuple[re.Pattern, str]] = (
+    [(re.compile(pat, re.IGNORECASE), "account") for pat in ACCOUNT_PATTERNS]
+    + [(re.compile(pat, re.IGNORECASE), "payment") for pat in PAYMENT_PATTERNS]
+    + [(re.compile(pat, re.IGNORECASE), "deletion") for pat in DELETION_PATTERNS]
+)
 _COMPILED_PATTERNS = [re.compile(pat, re.IGNORECASE) for pat in IRREVERSIBLE_PATTERNS]
+
+DESTRUCTIVE_KINDS = {"click", "select", "press_enter", "goto_url"}
 
 
 class SafetyCheckResult(BaseModel):
@@ -35,11 +97,14 @@ class SafetyCheckResult(BaseModel):
     reason: str = ""
     matched_pattern: str | None = None
     action_summary: str = ""
+    action_signature: str = ""
+    category: str | None = None
 
 
 def check_action_safety(
     action: dict[str, Any],
     *,
+    origin: str | None = None,
     approved_signatures: set[str] | None = None,
     enabled: bool = True,
 ) -> SafetyCheckResult:
@@ -47,26 +112,80 @@ def check_action_safety(
     if not enabled:
         return SafetyCheckResult(requires_confirmation=False)
 
-    kind = str(action.get("kind", ""))
+    kind = str(action.get("kind", "")).strip().lower()
     label = str(action.get("label", "")).strip()
-    signature = f"{kind}:{label}"
+    submit_label = str(action.get("submit_label", "")).strip()
+    effective_label = label or submit_label
 
-    if approved_signatures and signature in approved_signatures:
-        return SafetyCheckResult(requires_confirmation=False, action_summary=signature)
+    # Determine origin: explicit arg -> action["origin"] -> action["url"]
+    action_origin = origin
+    if action_origin is None:
+        if action.get("origin"):
+            action_origin = str(action["origin"]).strip()
+        elif action.get("url"):
+            action_origin = extract_origin(action["url"])
 
-    if kind not in {"click", "select"}:
-        return SafetyCheckResult(requires_confirmation=False, action_summary=signature)
+    norm_origin = extract_origin(action_origin) if action_origin else ""
 
-    for pattern in _COMPILED_PATTERNS:
-        if pattern.search(label):
+    # Signatures
+    sig_origin = f"{kind}:{effective_label}:{norm_origin}" if norm_origin else f"{kind}:{effective_label}"
+    sig_legacy = f"{kind}:{effective_label}"
+
+    # Check for approval (single-use consumption)
+    if approved_signatures is not None:
+        if norm_origin and sig_origin in approved_signatures:
+            if hasattr(approved_signatures, "discard"):
+                approved_signatures.discard(sig_origin)
+            elif hasattr(approved_signatures, "remove"):
+                approved_signatures.remove(sig_origin)
             return SafetyCheckResult(
-                requires_confirmation=True,
-                reason=f"Irreversible or high-impact action detected on '{label}'",
-                matched_pattern=pattern.pattern,
-                action_summary=f"{kind.upper()} '{label}'",
+                requires_confirmation=False,
+                action_summary=sig_origin,
+                action_signature=sig_origin,
+            )
+        if sig_legacy in approved_signatures:
+            if hasattr(approved_signatures, "discard"):
+                approved_signatures.discard(sig_legacy)
+            elif hasattr(approved_signatures, "remove"):
+                approved_signatures.remove(sig_legacy)
+            return SafetyCheckResult(
+                requires_confirmation=False,
+                action_summary=sig_legacy,
+                action_signature=sig_legacy,
             )
 
-    return SafetyCheckResult(requires_confirmation=False, action_summary=signature)
+    if kind not in DESTRUCTIVE_KINDS:
+        return SafetyCheckResult(
+            requires_confirmation=False,
+            action_summary=sig_origin,
+            action_signature=sig_origin,
+        )
+
+    texts_to_check: list[str] = []
+    if label:
+        texts_to_check.append(label)
+    if submit_label and submit_label != label:
+        texts_to_check.append(submit_label)
+    if kind == "goto_url" and action.get("url"):
+        texts_to_check.append(re.sub(r"[/_\-?&=]", " ", str(action["url"])))
+
+    for pat, cat in _COMPILED_CATEGORIZED_PATTERNS:
+        for txt in texts_to_check:
+            if pat.search(txt):
+                return SafetyCheckResult(
+                    requires_confirmation=True,
+                    reason=f"Irreversible or high-impact {cat} action detected on '{txt}'",
+                    matched_pattern=pat.pattern,
+                    action_summary=f"{kind.upper()} '{txt}'",
+                    action_signature=sig_origin,
+                    category=cat,
+                )
+
+    return SafetyCheckResult(
+        requires_confirmation=False,
+        action_summary=sig_origin,
+        action_signature=sig_origin,
+    )
 
 
 def sanitize_untrusted_text(raw: str, max_chars: int = 4000) -> str:
