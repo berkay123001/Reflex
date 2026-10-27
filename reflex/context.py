@@ -64,6 +64,9 @@ class DualTierContext(BaseModel):
     # Approved irreversible action signatures ("click:Place Order")
     approved_actions: set[str] = Field(default_factory=set)
 
+    # Structured arbitrary/subjective choices permission
+    allow_arbitrary_choices: bool = False
+
     def add_user_message(self, content: str, kind: str = "chat", fact_key: str | None = None) -> None:
         """Record a user message and store structured facts in `user_facts` when `fact_key` is provided."""
         text = content.strip()

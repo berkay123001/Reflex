@@ -291,8 +291,8 @@ def test_gate_allows_subjective_vs_choice():
     assert eval_subj.should_escalate is False
 
 
-def test_rejected_target_exact_match_and_occupied_slots():
-    """Ensure _is_rejected_target blocks [DOLU: ...] slots and exact rejected URLs without substring false positives."""
+def test_rejected_target_exact_match():
+    """Ensure _is_rejected_target blocks exact rejected URLs without substring false positives."""
     from reflex.agent import ReflexSession
 
     sess = ReflexSession.__new__(ReflexSession)
@@ -303,10 +303,6 @@ def test_rejected_target_exact_match_and_occupied_slots():
     )
     sess.history = []
 
-    # Occupied ranking slot is always blocked
-    assert sess._is_rejected_target({"kind": "click", "role": "button", "label": "[DOLU: 5] Slot 5"}, "https://quizei.com/play") is True
-    # Empty ranking slot is not blocked
-    assert sess._is_rejected_target({"kind": "click", "role": "button", "label": "5"}, "https://quizei.com/play") is False
     # Exact rejected URL is blocked
     assert sess._is_rejected_target(
         {"kind": "click", "role": "link", "label": "Post 1 — Devamını Oku", "href": "https://ozalyildirim.com/blog/post-1/"},

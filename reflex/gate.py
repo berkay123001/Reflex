@@ -49,8 +49,10 @@ def evaluate_decision(
     step_count: int = 0,
     verify_done_with_supervisor: bool = True,
     allow_subjective: bool = False,
+    allow_arbitrary_choices: bool = False,
 ) -> GateEvaluation:
     """Decide whether a System 1 prediction is safe to execute directly or should escalate to System 2."""
+    arbitrary_allowed = allow_arbitrary_choices or allow_subjective
     operation = str(decision.get("operation", ""))
     op_conf = float(decision.get("confidence", 0.0) or 0.0)
     target_probs = decision.get("target_probabilities") or {}
@@ -105,7 +107,7 @@ def evaluate_decision(
     # 3. Operation-specific confidence threshold (never block exploratory SCROLL/WAIT on low_op_conf)
     if operation not in {"SCROLL_DOWN", "SCROLL_UP", "WAIT"}:
         op_min = thresholds.op_min_conf.get(operation, 0.42)
-        if allow_subjective and operation == "CLICK":
+        if arbitrary_allowed and operation == "CLICK":
             op_min = min(op_min, 0.34)
         if op_conf < op_min:
             return GateEvaluation(
@@ -121,9 +123,9 @@ def evaluate_decision(
 
     # 4. Target confidence & ambiguity margin check (when an element target is selected)
     if decision.get("target") is not None:
-        eff_target_min = 0.22 if allow_subjective else thresholds.target_min_conf
-        eff_margin_min = 0.01 if allow_subjective else thresholds.target_min_margin
-        eff_joint_min = 0.13 if allow_subjective else thresholds.joint_min_conf
+        eff_target_min = 0.22 if arbitrary_allowed else thresholds.target_min_conf
+        eff_margin_min = 0.01 if arbitrary_allowed else thresholds.target_min_margin
+        eff_joint_min = 0.13 if arbitrary_allowed else thresholds.joint_min_conf
         if target_conf < eff_target_min:
             return GateEvaluation(
                 should_escalate=True,

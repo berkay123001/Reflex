@@ -67,13 +67,16 @@ class ReflexSession:
             raise ValueError("Supply a non-empty goal")
         self.config = config or ReflexConfig()
         clean_url = url.strip()
-        goal_lower = goal.lower()
-        if clean_url.rstrip("/") == "https://books.toscrape.com" and not any(
-            kw in goal_lower for kw in ("toscrape", "sharp objects", "mystery", "books to scrape")
-        ):
-            clean_url = "https://www.google.com"
         self.url = clean_url
-        self.ctx = DualTierContext(primary_goal=goal.strip(), active_subgoal=goal.strip())
+        allow_arb = any(
+            kw in goal.lower()
+            for kw in ("kafana göre", "rastgele", "kendi yorumuna", "istediğin", "random", "arbitrary")
+        )
+        self.ctx = DualTierContext(
+            primary_goal=goal.strip(),
+            active_subgoal=goal.strip(),
+            allow_arbitrary_choices=allow_arb,
+        )
         self.ctx.add_user_message(goal.strip(), kind="chat")
         self.site_memory = SiteMemoryStore()
         self.browser = Browser(self.url)
@@ -213,26 +216,12 @@ class ReflexSession:
             self.last_error = str(exc)
             return self.snapshot()
 
-        goal_l = (self.ctx.primary_goal + " " + self.ctx.active_subgoal).lower()
-        page_meta_l = (str(self.page.get("title", "")) + " " + cur_norm_url).lower()
-        is_ordering_puzzle = any(
-            k in page_meta_l or k in goal_l
-            for k in ("küçükten büyüğe", "büyükten küçüğe", "1-50", "1-100", "blind-ranking", "kor-siralama", "kör sıralama")
-        )
-        allow_subjective = (
-            not is_ordering_puzzle
-            and any(
-                kw in goal_l
-                for kw in ("kafana göre", "rastgele", "kendi yorumuna", "istediğin", "random", "tercih")
-            )
-        )
-
         gate_eval = evaluate_decision(
             s1_decision,
             self.config.thresholds,
             step_count=len(self.history),
             verify_done_with_supervisor=self.config.verify_done_with_supervisor,
-            allow_subjective=allow_subjective,
+            allow_arbitrary_choices=self.ctx.allow_arbitrary_choices,
         )
 
         self.decisions.append(
@@ -283,30 +272,7 @@ class ReflexSession:
                 gate_eval=gate_eval,
             )
 
-        if s1_decision["operation"] == "CLICK" and str(action.get("label", "")).strip() in {str(i) for i in range(1, 11)}:
-            slot_btn_count = sum(
-                1
-                for a in self.page.get("actions", [])
-                if str(a.get("label", "")).strip() in {str(i) for i in range(1, 11)}
-                or str(a.get("label", "")).startswith("[DOLU:")
-            )
-            rank_ctx = (self.ctx.primary_goal + " " + str(self.page.get("title", ""))).lower()
-            if slot_btn_count >= 4 and any(k in rank_ctx for k in ("sıralama", "siralama", "ranking", "küçükten büyüğe", "büyükten küçüğe")):
-                return self._handle_escalation(
-                    trigger_type="ranking_logic",
-                    reason=f"Blind ranking slot selection (S1 proposed slot '{action.get('label', '')}') requires System 2 interval reasoning",
-                    s1_decision=s1_decision,
-                    gate_eval=gate_eval,
-                )
-
         if s1_decision["operation"] == "CLICK" and self._is_rejected_target(action, self.page.get("url", "")):
-            if str(action.get("label", "")).startswith("[DOLU:"):
-                return self._handle_escalation(
-                    trigger_type="revisit_blocked",
-                    reason=f"Slot '{action.get('label', '')}' is already occupied; pick an empty slot.",
-                    s1_decision=s1_decision,
-                    gate_eval=gate_eval,
-                )
             scroll_act = next((a for a in self.page.get("actions", []) if a.get("id") == "scroll_down"), None)
             if scroll_act is not None:
                 action = scroll_act
@@ -352,12 +318,8 @@ class ReflexSession:
             if lbl in {"gönder", "submit", "formu gönder"} or lbl.endswith("→ gönder"):
                 return True
 
-        # 2. Never re-click a radio option that is already checked="true" or an occupied ranking slot
-        if lbl.startswith("[dolu:"):
-            return True
+        # 2. Never re-click a radio option that is already checked="true"
         if role in {"radio", "menuitemradio"} and str(action.get("checked", "")).lower() == "true":
-            return True
-        if lbl in {"google ana sayfasına git", "go to google home"} and "/search" in (current_url or "").lower():
             return True
 
         # 3. Never block unselected in-page form controls (radio, checkbox, option, button without href)
@@ -600,11 +562,6 @@ class ReflexSession:
             cand = targets[op].get(target)
             if cand:
                 if op == "CLICK" and self._is_rejected_target(cand, cur_url):
-                    if str(cand.get("label", "")).startswith("[DOLU:"):
-                        for alt_idx, alt_cand in targets["CLICK"].items():
-                            if str(alt_cand.get("label", "")).strip().isdigit():
-                                sup.target = alt_idx
-                                return alt_cand
                     if "SCROLL_DOWN" in controls:
                         sup.operation = "SCROLL_DOWN"
                         sup.target = None
@@ -928,14 +885,8 @@ class ReflexSession:
             self.status = "ready"
             return self.snapshot()
 
-        cur_url_lower = str(self.page.get("url", "")).lower()
-        text_lower = text.lower()
-        if not interp.target_url and any(
-            kw in text_lower
-            for kw in ("internette", "genel arat", "webde ara", "web'de ara", "google'da", "googleda", "search the web", "search online")
-        ):
-            if not any(se in cur_url_lower for se in ("google.", "bing.", "duckduckgo.")):
-                interp.target_url = "https://www.google.com"
+        if interp.allow_arbitrary_choices:
+            self.ctx.allow_arbitrary_choices = True
 
         # Case 3: User is switching to a new task/goal
         if interp.intent == "NEW_GOAL":
