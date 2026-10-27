@@ -31,7 +31,7 @@
       (e.tagName==='INPUT' ? '' : [...e.childNodes].map(n=>n.nodeType===3 ? n.textContent :
         n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' ? name(n,seen) : '').join(' ').trim()) ||
       e.getAttribute('title') || e.getAttribute('placeholder') || '';
-    return raw.replace(/\s+/g, ' ').trim();
+    return raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
   };
   const roles=['button','link','checkbox','radio','switch','tab','menuitem','menuitemradio',
     'option','gridcell','combobox','textbox','searchbox','spinbutton'];
@@ -96,6 +96,8 @@
   const allCards=[...document.querySelectorAll('article,section,li,[class*="Card-root"],[class*="card"]')].filter(
     c=>c.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]')
   );
+  const isSerp=/(^|\.)(google|bing|duckduckgo)\./i.test(location.hostname) &&
+    (location.pathname.includes('/search') || location.search.includes('q='));
   const seenCardLinks=new Set();
   const actions=[];
   for (const e of document.querySelectorAll(selector)) {
@@ -110,6 +112,7 @@
     if (!rname || r.width<=0 || r.height<=0 || visW<Math.min(16,r.width*0.5) || visH<Math.min(20,r.height*0.35)) continue;
     if (rname==='gridcell' && e.querySelector('button,[role="button"]')) continue;
     let lbl=(e.tagName==='IFRAME'?'Verify you are human (Security Challenge)':name(e))||rname;
+    if (isSerp && /^(google ana sayfasına git|go to google home|harf çevirme aracı|sesle arama|görselle arama|hızlı ayarlar|google uygulamaları|geri bildirim)$/i.test(lbl.trim())) continue;
     if (rname==='button' && slotLikeCount>=3) {
       const spans=[...e.querySelectorAll('span')].map(s=>s.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
       if (spans.length===2 && /^(?:[1-9]|10)$/.test(spans[1])) {
@@ -123,7 +126,7 @@
     }
     if (rname==='link' && lbl.length>35) {
       const hEl=e.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
-      const hTxt=hEl?.innerText?.replace(/\s+/g,' ').trim();
+      const hTxt=hEl?.innerText?.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g,'').replace(/\s+/g,' ').trim();
       if (hTxt && hTxt.length>=4 && !lbl.toLowerCase().startsWith(hTxt.toLowerCase())) {
         lbl=`${hTxt} · ${lbl}`;
       }

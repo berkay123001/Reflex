@@ -12,6 +12,7 @@ import time
 from typing import Any
 
 from .browser import Browser, StalePage, TargetCoveredError
+from .browser.cdp import canonical_url
 from .config import ReflexConfig
 from .context import DualTierContext
 from .gate import GateEvaluation, evaluate_decision
@@ -350,18 +351,20 @@ class ReflexSession:
             return True
         if role in {"radio", "menuitemradio"} and str(action.get("checked", "")).lower() == "true":
             return True
+        if lbl in {"google ana sayfasına git", "go to google home"} and "/search" in (current_url or "").lower():
+            return True
 
         # 3. Never block unselected in-page form controls (radio, checkbox, option, button without href)
         if role in {"radio", "checkbox", "switch", "option", "menuitemradio", "tab", "combobox", "textbox", "searchbox"}:
             return False
         if not href and role != "link":
             return False
-        href_norm = href.split("#")[0].rstrip("/").lower()
+        href_norm = canonical_url(href)
         for rej in self.ctx.rejected_links:
             rej_l = rej.strip().lower()
             if " (" in rej_l and rej_l.endswith(")"):
                 rej_lbl, rej_href = rej_l.rsplit(" (", 1)
-                rej_href_norm = rej_href[:-1].split("#")[0].rstrip("/").strip()
+                rej_href_norm = canonical_url(rej_href[:-1].strip())
             else:
                 rej_lbl, rej_href_norm = rej_l, ""
             if href_norm and len(href_norm) >= 8 and rej_href_norm and href_norm == rej_href_norm:
@@ -369,10 +372,10 @@ class ReflexSession:
             if lbl and len(lbl) >= 4 and lbl == rej_lbl and (not href_norm or not rej_href_norm or href_norm == rej_href_norm):
                 return True
         # Also check if we already clicked this exact link on this exact URL, navigated to a DIFFERENT URL, and later returned
-        cur_norm = (current_url or "").split("#")[0].rstrip("/").lower()
+        cur_norm = canonical_url(current_url or "")
         clicked_idx = -1
         for idx, h in enumerate(self.history):
-            h_before = str(h.get("before_url") or "").split("#")[0].rstrip("/").lower()
+            h_before = canonical_url(str(h.get("before_url") or ""))
             if (
                 h.get("kind") == "click"
                 and h.get("url_changed")
@@ -382,7 +385,7 @@ class ReflexSession:
                 clicked_idx = idx
         if clicked_idx >= 0 and clicked_idx < len(self.history) - 1:
             for later in self.history[clicked_idx + 1 :]:
-                if later.get("kind") == "go_back" or str(later.get("url", "")).split("#")[0].rstrip("/").lower() == cur_norm:
+                if later.get("kind") == "go_back" or canonical_url(str(later.get("url", ""))) == cur_norm:
                     return True
         return False
 

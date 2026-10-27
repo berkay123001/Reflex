@@ -178,6 +178,32 @@ def choose_action(
     if history and history[-1].get("operation") == "SCROLL_DOWN" and history[-1].get("page_changed"):
         controls.pop("SCROLL_UP", None)
 
+    page_url_l = str(page.get("url", "")).lower()
+    is_serp = any(se in page_url_l for se in ("google.", "bing.", "duckduckgo.")) and (
+        "/search" in page_url_l or "q=" in page_url_l
+    )
+    if is_serp and "note:" not in goal_l:
+        if "TYPE_TEXT" in targets:
+            targets["TYPE_TEXT"] = {
+                idx: act
+                for idx, act in targets["TYPE_TEXT"].items()
+                if not (
+                    str(act.get("label", "")).strip().lower() in {"ara", "search", "arama"}
+                    and str(act.get("value", "")).strip()
+                )
+            }
+            if not targets["TYPE_TEXT"]:
+                del targets["TYPE_TEXT"]
+        if "CLICK" in targets:
+            targets["CLICK"] = {
+                idx: act
+                for idx, act in targets["CLICK"].items()
+                if str(act.get("label", "")).strip().lower()
+                not in {"open ara", "open search", "temizle", "clear", "google ana sayfasına git", "go to google home"}
+            }
+            if not targets["CLICK"]:
+                del targets["CLICK"]
+
     labels = {
         "CLICK": "Click an element, button, menu option, autocomplete suggestion, or calendar day.",
         "TYPE_TEXT": "Enter or replace text in an editable field. A small LLM will supply the value from the goal.",

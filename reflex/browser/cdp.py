@@ -15,6 +15,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from browser_harness.admin import ensure_daemon
 from browser_harness.helpers import cdp
@@ -119,14 +120,48 @@ class TargetCoveredError(RuntimeError):
     """Raised when the target element is obscured by a modal/overlay at hit-test time."""
 
 
+_EPHEMERAL_QUERY_PARAMS = {
+    "sxsrf", "ei", "ved", "iflsig", "sca_esv", "gs_lp", "uact", "oq",
+    "sclient", "atvm", "ictx", "sa", "source", "sourceid", "aqs",
+    "fbclid", "gclid", "msclkid", "_ga", "_gl", "ref", "ref_",
+}
+
+
+def canonical_url(raw_url: str) -> str:
+    """Normalize URL by stripping ephemeral tracking query parameters and `/webhp` aliases."""
+    u = (raw_url or "").strip()
+    if not u:
+        return ""
+    try:
+        parts = urlsplit(u)
+        path = parts.path or "/"
+        if "google." in parts.netloc.lower() and path == "/webhp":
+            path = "/"
+        if path != "/" and path.endswith("/"):
+            path = path.rstrip("/")
+        kept_qs = [
+            (k, v)
+            for k, v in parse_qsl(parts.query, keep_blank_values=False)
+            if k.lower() not in _EPHEMERAL_QUERY_PARAMS and not k.lower().startswith("utm_")
+        ]
+        kept_qs.sort()
+        return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, urlencode(kept_qs), ""))
+    except Exception:
+        return u.split("#")[0].rstrip("/").lower()
+
+
 def fingerprint(state: dict[str, Any]) -> str:
     """Compute a deterministic SHA256 digest of semantic page state (excluding bounding boxes and ephemeral node IDs)."""
     actions_semantic = [
-        {k: v for k, v in a.items() if k not in ("rect", "node", "guard")}
+        {
+            k: (canonical_url(str(v)) if k == "href" else v)
+            for k, v in a.items()
+            if k not in ("rect", "node", "guard")
+        }
         for a in state.get("actions", [])
     ]
     content = {
-        "url": state.get("url", ""),
+        "url": canonical_url(str(state.get("url", ""))),
         "text": state.get("text", ""),
         "actions": actions_semantic,
         "scroll": state.get("scroll", {}),
@@ -210,7 +245,7 @@ class Browser:
                 pass
             time.sleep(0.06)
 
-        settle_deadline = time.monotonic() + float(os.environ.get("REFLEX_SETTLE_WAIT", "1.8") or 1.8)
+        settle_deadline = time.monotonic() + float(os.environ.get("REFLEX_SETTLE_WAIT", "2.2") or 2.2)
         last_count = -1
         stable_hits = 0
         while time.monotonic() < settle_deadline:
@@ -231,7 +266,8 @@ class Browser:
                     stable_hits = 0
                 elif count > 0 and count == last_count and text_len > 80:
                     stable_hits += 1
-                    if stable_hits >= 2:
+                    needed_hits = 2 if count >= 6 else 5
+                    if stable_hits >= needed_hits:
                         break
                 else:
                     stable_hits = 0
@@ -556,8 +592,9 @@ class Browser:
                 if (action.kind==='click') {
                   try {
                     if (document.activeElement && document.activeElement!==document.body) document.activeElement.blur();
+                    const prevOrigin = performance.timeOrigin;
                     e.click();
-                    return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:true};
+                    return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:true,prevOrigin};
                   } catch (_) {
                     return null;
                   }
@@ -574,7 +611,7 @@ class Browser:
                 e.dispatchEvent(new Event('input',{bubbles:true}));
                 e.dispatchEvent(new Event('change',{bubbles:true}));
               }
-              return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:false};
+              return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:false,prevOrigin:performance.timeOrigin};
             })("""
             + json.dumps(action)
             + ")"
@@ -628,23 +665,29 @@ class Browser:
                     pass
                 self.call("Input.insertText", text=text)
                 try:
-                    is_search = bool(
+                    submit_kind = str(
                         self.evaluate(
                             """(nodeId => {
                               const e = window.__jevFast?.nodes.get(nodeId);
-                              if (!e) return false;
+                              if (!e) return '';
                               try {
                                 e.dispatchEvent(new Event('input', {bubbles: true}));
                                 e.dispatchEvent(new Event('change', {bubbles: true}));
                               } catch (_) {}
                               const aria = (e.getAttribute('aria-label') || e.placeholder || e.title || '').toLowerCase();
-                              return e.type === 'search' || e.getAttribute('role') === 'searchbox' ||
-                                e.name === 'q' || /(^|\\b)(search|ara)(\\b|$)/i.test(aria) ||
-                                Boolean(e.closest('form[role="search"], form[action*="search"]'));
+                              if (e.type === 'search' || e.getAttribute('role') === 'searchbox' ||
+                                  e.name === 'q' || /(^|\\b)(search|ara)(\\b|$)/i.test(aria) ||
+                                  Boolean(e.closest('form[role="search"], form[action*="search"]'))) {
+                                return 'search';
+                              }
+                              if (/(istem girin|mesaj yaz|send a message|ask anything|ask gemini|message chatgpt|bir soru sorun|sohbet)/i.test(aria)) {
+                                return 'chat';
+                              }
+                              return '';
                             })(""" + json.dumps(action.get("node")) + ")"
-                        )
+                        ) or ""
                     )
-                    if is_search:
+                    if submit_kind == "search":
                         try:
                             prev_origin = self.evaluate("performance.timeOrigin")
                         except Exception:
@@ -653,6 +696,28 @@ class Browser:
                         self.call("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
                         self.call("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
                         self._wait_for_navigation_and_settle(prev_origin=prev_origin, max_wait=8.0)
+                        self.after_input = None
+                        return {"executed": action["id"], "auto_submitted": True, "rect": self.last_action_rect}
+                    if submit_kind == "chat":
+                        time.sleep(0.08)
+                        self.call("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
+                        self.call("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
+                        time.sleep(0.25)
+                        # If the chat input still has text and a Send button is enabled, click the Send button
+                        self.evaluate(
+                            """(() => {
+                              const btn = document.querySelector('button[aria-label*="Mesaj gönder" i]:not([disabled]), button[aria-label*="Send message" i]:not([disabled]), button[aria-label*="Gönder" i]:not([disabled])');
+                              if (btn) { try { btn.click(); } catch (_) {} }
+                            })()"""
+                        )
+                        # Wait up to 4.5s for the AI chat response to stream and settle
+                        for _ in range(18):
+                            time.sleep(0.25)
+                            busy = self.evaluate(
+                                """Boolean(document.querySelector('[aria-busy="true"], button[aria-label*="durdur" i], button[aria-label*="Stop" i]'))"""
+                            )
+                            if not busy and _ >= 5:
+                                break
                         self.after_input = None
                         return {"executed": action["id"], "auto_submitted": True, "rect": self.last_action_rect}
                 except Exception:
@@ -670,6 +735,12 @@ class Browser:
                         return {"executed": action["id"], "rect": self.last_action_rect}
                 except Exception:
                     pass
+                cur_base = str(page.get("url") or "").split("#")[0]
+                target_base = link_href.split("#")[0]
+                if target_base and target_base != cur_base:
+                    self._wait_for_navigation_and_settle(prev_origin=target.get("prevOrigin"), max_wait=8.0)
+                    self.after_input = None
+                    return {"executed": action["id"], "rect": self.last_action_rect}
 
         self.after_input = action
         return {"executed": action["id"], "rect": self.last_action_rect}
