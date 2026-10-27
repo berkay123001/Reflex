@@ -1,16 +1,5 @@
 (() => {
   if (!document.body) return null;
-  try {
-    const adSel = 'ins.adsbygoogle, [id^="google_ads_iframe"], [id^="aswift_"], iframe[src*="googleads"], iframe[src*="doubleclick"], [aria-label="Advertisement"], [id*="google_vignette"]';
-    document.querySelectorAll(adSel).forEach(el => {
-      const wrapper = el.closest('ins.adsbygoogle, [id^="aswift_"]') || el;
-      wrapper.remove();
-    });
-    if (document.body.style.overflow === 'hidden' && location.hash === '#google_vignette') {
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-    }
-  } catch (_) {}
   const cache = window.__jevFast ||= {ids:new WeakMap(), nodes:new Map(), next:1};
   const identity = e => {
     if (!cache.ids.has(e)) cache.ids.set(e,cache.next++);
@@ -87,17 +76,6 @@
     clipRectCache.set(el,res);
     return res;
   };
-  let slotLikeCount=0;
-  for (const b of document.querySelectorAll('button,[role="button"]')) {
-    const sp=[...b.querySelectorAll('span')].map(s=>s.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
-    const bt=(b.innerText||'').replace(/\s+/g,' ').trim();
-    if (/^(?:[1-9]|10)$/.test(bt) || (sp.length===2 && /^(?:[1-9]|10)$/.test(sp[1]))) slotLikeCount++;
-  }
-  const allCards=[...document.querySelectorAll('article,section,li,[class*="Card-root"],[class*="card"]')].filter(
-    c=>c.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]')
-  );
-  const isSerp=/(^|\.)(google|bing|duckduckgo)\./i.test(location.hostname) &&
-    (location.pathname.includes('/search') || location.search.includes('q='));
   const isFormSubmitter=el=>{
     if (!el) return false;
     if ((el.tagName==='BUTTON' || el.tagName==='INPUT') && el.type==='submit') return true;
@@ -122,37 +100,12 @@
     if (!rname || r.width<=0 || r.height<=0 || visW<Math.min(16,r.width*0.5) || visH<Math.min(20,r.height*0.35)) continue;
     if (rname==='gridcell' && e.querySelector('button,[role="button"]')) continue;
     let lbl=(e.tagName==='IFRAME'?'Verify you are human (Security Challenge)':name(e))||rname;
-    if (isSerp && /^(google ana sayfasına git|go to google home|harf çevirme aracı|sesle arama|görselle arama|hızlı ayarlar|google uygulamaları|geri bildirim)$/i.test(lbl.trim())) continue;
-    if (rname==='button' && slotLikeCount>=3) {
-      const spans=[...e.querySelectorAll('span')].map(s=>s.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
-      if (spans.length===2 && /^(?:[1-9]|10)$/.test(spans[1])) {
-        lbl=`[DOLU: ${spans[0]}] Slot ${spans[1]}`;
-      } else {
-        const m=/^(.+?)\s+([1-9]|10)$/.exec(lbl.replace(/\s+/g,' ').trim());
-        if (m && !/^(?:slot|başla|tekrar)/i.test(m[1])) {
-          lbl=`[DOLU: ${m[1]}] Slot ${m[2]}`;
-        }
-      }
-    }
     if (rname==='link' && lbl.length>35) {
       const hEl=e.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
       const hTxt=hEl?.innerText?.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g,'').replace(/\s+/g,' ').trim();
       if (hTxt && hTxt.length>=4 && !lbl.toLowerCase().startsWith(hTxt.toLowerCase())) {
         lbl=`${hTxt} · ${lbl}`;
       }
-    }
-    if (/^(devamını oku|read more|detay|detaylar|incele|open|view|daha fazla)$/i.test(lbl.trim())) {
-      let card=e.parentElement;
-      while (card && card!==document.body) {
-        if (card.matches('article,section,li,[class*="Card-root"],[class*="card"]') &&
-            card.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]')) break;
-        card=card.parentElement;
-      }
-      const hEl=card?.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
-      const hTxt=hEl?.innerText?.replace(/\s+/g,' ').trim();
-      const cIdx=card ? allCards.indexOf(card) : -1;
-      const prefix=cIdx>=0 ? `#${cIdx+1}: ` : '';
-      if (hTxt) lbl=`${lbl.trim()} (${prefix}${hTxt.slice(0,90)})`;
     }
     if (['radio','checkbox','textbox'].includes(rname)) {
       const qItem=e.closest('[role="listitem"],[role="group"],fieldset');
@@ -192,6 +145,40 @@
         e.isContentEditable || rname==='combobox' ? e.innerText.trim() : '';
       actions.push({...base,kind:editable?'fill':'click',value});
       if (editable && rname==='combobox' && !value) actions.push({...base,kind:'click',value,label:'Open '+base.label});
+    }
+  }
+  const labelCounts=new Map();
+  for (const a of actions) {
+    if (!a.label) continue;
+    const k=a.label.trim().toLowerCase();
+    labelCounts.set(k,(labelCounts.get(k)||0)+1);
+  }
+  for (const a of actions) {
+    if (!a.label) continue;
+    const k=a.label.trim().toLowerCase();
+    if (labelCounts.get(k)>1) {
+      const el=cache.nodes.get(a.node);
+      let card=el?.parentElement;
+      while (card && card!==document.body && card!==document.documentElement) {
+        if (card.matches('article,section,li,[role="listitem"],[role="article"],fieldset,tr,[class*="Card-root"],[class*="card" i],[class*="item" i]') &&
+            card.querySelector('h1,h2,h3,h4,[role="heading"],legend,[class*="title" i]')) {
+          break;
+        }
+        card=card.parentElement;
+      }
+      if (!card) {
+        let cur=el?.parentElement;
+        while (cur && cur!==document.body && cur!==document.documentElement) {
+          const h=cur.querySelector('h1,h2,h3,h4,[role="heading"],legend');
+          if (h && !h.contains(el)) { card=cur; break; }
+          cur=cur.parentElement;
+        }
+      }
+      const hEl=card?.querySelector('h1,h2,h3,h4,[role="heading"],legend,[class*="title" i]');
+      const hTxt=(hEl?.innerText||hEl?.textContent||'').replace(/\s+/g,' ').trim();
+      if (hTxt && !a.label.toLowerCase().includes(hTxt.slice(0,25).toLowerCase())) {
+        a.label=`${a.label.trim()} (${hTxt.slice(0,90)})`;
+      }
     }
   }
   const clipCache=new Map();
