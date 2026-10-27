@@ -7,9 +7,13 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+from reflex.agent import ReflexSession
 from reflex.config import OPENROUTER_DECISIONS_URL, ReflexConfig
 from reflex.context import DualTierContext
 from reflex.supervisor import (
+    FieldTextOutcome,
+    SupervisorDecision,
+    UserMessageInterpretation,
     _chat_completion,
     generate_field_text,
     interpret_user_message,
@@ -235,11 +239,49 @@ def test_supervisor_meta_model_allows_fallback_when_enabled():
     assert "qwen/qwen3.8-flash" in attempted_models
 
 
-def test_supervisor_functions_respect_config_and_allow_model_fallback():
+def test_supervisor_meta_model_missing_key_raises_runtime_error():
+    """When a Meta model is requested but META_API_KEY is missing,
+
+    Supervisor must raise RuntimeError immediately without contacting OpenRouter.
+    """
+    called_urls: list[str] = []
+
+    def fake_post(url, *args, **kwargs):
+        called_urls.append(url)
+        return MagicMock()
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value=""),
+        patch("reflex.supervisor.get_openrouter_api_key", return_value="fake-or-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post),
+    ):
+        # With allow_model_fallback=False
+        with pytest.raises(RuntimeError) as exc_info:
+            _chat_completion(
+                model="muse-spark-1.3-contributor",
+                system_prompt="sys",
+                user_prompt="usr",
+                allow_model_fallback=False,
+            )
+        assert "META_API_KEY not configured for model muse-spark-1.3-contributor" in str(exc_info.value)
+
+        # And with allow_model_fallback=True
+        with pytest.raises(RuntimeError) as exc_info2:
+            _chat_completion(
+                model="meta/llama-3-70b",
+                system_prompt="sys",
+                user_prompt="usr",
+                allow_model_fallback=True,
+            )
+        assert "META_API_KEY not configured for model meta/llama-3-70b" in str(exc_info2.value)
+
+    assert len(called_urls) == 0
+
+
+def test_supervisor_functions_respect_allow_model_fallback():
     """Verify generate_field_text, resolve_escalation, and interpret_user_message respect allow_model_fallback."""
     ctx = DualTierContext(primary_goal="Goal", active_subgoal="Subgoal")
     page = {"url": "https://example.com", "title": "T", "text": "Body"}
-    cfg = ReflexConfig(allow_model_fallback=False)
 
     attempted_models: list[str] = []
 
@@ -261,7 +303,7 @@ def test_supervisor_functions_respect_config_and_allow_model_fallback():
                 page=page,
                 history=[],
                 supervisor_model="custom/test-model",
-                config=cfg,
+                allow_model_fallback=False,
             )
         assert set(attempted_models) == {"custom/test-model"}
         attempted_models.clear()
@@ -277,7 +319,7 @@ def test_supervisor_functions_respect_config_and_allow_model_fallback():
                 trigger_type="test",
                 s1_decision=None,
                 supervisor_model="custom/test-model",
-                config=cfg,
+                allow_model_fallback=False,
             )
         assert set(attempted_models) == {"custom/test-model"}
         attempted_models.clear()
@@ -291,6 +333,204 @@ def test_supervisor_functions_respect_config_and_allow_model_fallback():
                 history=[],
                 pending_fact_key=None,
                 supervisor_model="custom/test-model",
-                config=cfg,
+                allow_model_fallback=False,
             )
         assert set(attempted_models) == {"custom/test-model"}
+
+
+def _make_fake_browser(page: dict | None = None) -> MagicMock:
+    if page is None:
+        page = {
+            "url": "https://example.com",
+            "title": "Example",
+            "text": "Page content",
+            "fingerprint": "fp_1",
+            "actions": [
+                {"id": "btn_1", "node": 10, "kind": "click", "role": "button", "label": "Submit"},
+                {"id": "inp_1", "node": 11, "kind": "fill", "role": "textbox", "label": "Email", "value": ""},
+            ],
+        }
+    fake_b = MagicMock()
+    fake_b.observe.return_value = page
+    fake_b.fresh.return_value = True
+    fake_b.act.return_value = {
+        "url": page["url"],
+        "title": page["title"],
+        "text": page["text"],
+        "actions": page["actions"],
+        "fingerprint": "fp_2",
+    }
+    return fake_b
+
+
+def test_session_step_runtime_error_sets_status_error_and_does_not_escalate():
+    """End-to-end: On Turnike connection/transport failure (RuntimeError),
+
+    session.step() sets status == 'error', populates last_error, and NEVER calls resolve_escalation.
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(allow_model_fallback=False)
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    with (
+        patch("reflex.agent.choose_action", side_effect=RuntimeError("Turnike server unreachable: ConnectError")),
+        patch("reflex.agent.resolve_escalation") as mock_resolve_esc,
+    ):
+        snap = session.step()
+
+    assert snap["status"] == "error"
+    assert session.status == "error"
+    assert "Turnike server unreachable: ConnectError" in snap["last_error"]
+    assert snap["metrics"]["s1_errors"] == 0
+    mock_resolve_esc.assert_not_called()
+
+
+def test_session_step_httpx_error_sets_status_error_and_does_not_escalate():
+    """End-to-end: On httpx.HTTPError from choose_action,
+
+    session.step() sets status == 'error', populates last_error, and NEVER calls resolve_escalation.
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(allow_model_fallback=False)
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    with (
+        patch("reflex.agent.choose_action", side_effect=httpx.ConnectError("Connection refused to 127.0.0.1:8794")),
+        patch("reflex.agent.resolve_escalation") as mock_resolve_esc,
+    ):
+        snap = session.step()
+
+    assert snap["status"] == "error"
+    assert session.status == "error"
+    assert "Connection refused to 127.0.0.1:8794" in snap["last_error"]
+    assert snap["metrics"]["s1_errors"] == 0
+    mock_resolve_esc.assert_not_called()
+
+
+def test_session_step_value_error_escalates_to_s2_and_increments_s1_errors():
+    """End-to-end: On ValueError from choose_action (invalid model output),
+
+    session.step() escalates to resolve_escalation and increments metrics['s1_errors'].
+    """
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(allow_model_fallback=False)
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    fake_sup = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Recovering from malformed S1 output",
+        model="qwen/qwen3.8-omni-flash",
+    )
+
+    with (
+        patch("reflex.agent.choose_action", side_effect=ValueError("Invalid output")),
+        patch("reflex.agent.resolve_escalation", return_value=fake_sup) as mock_resolve_esc,
+    ):
+        snap = session.step()
+
+    mock_resolve_esc.assert_called_once()
+    assert mock_resolve_esc.call_args.kwargs["trigger_type"] == "s1_error"
+    assert "Invalid output" in mock_resolve_esc.call_args.kwargs["escalation_reason"]
+    assert snap["metrics"]["s1_errors"] == 1
+    assert session.s1_errors == 1
+
+
+@pytest.mark.parametrize("fallback_enabled", [True, False])
+def test_session_allow_model_fallback_wires_to_resolve_escalation(fallback_enabled: bool):
+    """End-to-end: config.allow_model_fallback on ReflexSession is forwarded to resolve_escalation."""
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(allow_model_fallback=fallback_enabled)
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    fake_sup = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Recovery",
+        model="qwen/qwen3.8-omni-flash",
+    )
+
+    with (
+        patch("reflex.agent.choose_action", side_effect=ValueError("Invalid output")),
+        patch("reflex.agent.resolve_escalation", return_value=fake_sup) as mock_resolve_esc,
+    ):
+        session.step()
+
+    mock_resolve_esc.assert_called_once()
+    assert mock_resolve_esc.call_args.kwargs["allow_model_fallback"] is fallback_enabled
+
+
+@pytest.mark.parametrize("fallback_enabled", [True, False])
+def test_session_allow_model_fallback_wires_to_generate_field_text(fallback_enabled: bool):
+    """End-to-end: config.allow_model_fallback on ReflexSession is forwarded to generate_field_text."""
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(allow_model_fallback=fallback_enabled)
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    s1_decision = {
+        "operation": "TYPE_TEXT",
+        "target": "2",
+        "choice": "inp_1",
+        "confidence": 0.95,
+        "target_confidence": 0.95,
+        "target_probabilities": {"2": 0.95},
+        "operation_probabilities": {"TYPE_TEXT": 0.95},
+        "latency_ms": 50,
+        "model": "turnike-4b",
+        "usage": {},
+    }
+
+    fake_outcome = FieldTextOutcome(
+        text="test@example.com",
+        ask_user=None,
+        fact_key="email",
+        model="qwen/qwen3.8-omni-flash",
+        latency_ms=50,
+        cost_usd=0.0001,
+    )
+
+    with (
+        patch("reflex.agent.choose_action", return_value=s1_decision),
+        patch("reflex.agent.generate_field_text", return_value=fake_outcome) as mock_gen_text,
+    ):
+        session.step()
+
+    mock_gen_text.assert_called_once()
+    assert mock_gen_text.call_args.kwargs["allow_model_fallback"] is fallback_enabled
+
+
+@pytest.mark.parametrize("fallback_enabled", [True, False])
+def test_session_allow_model_fallback_wires_to_interpret_user_message(fallback_enabled: bool):
+    """End-to-end: config.allow_model_fallback on ReflexSession is forwarded to interpret_user_message."""
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(allow_model_fallback=fallback_enabled)
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    fake_interp = UserMessageInterpretation(
+        intent="CHAT_ONLY",
+        direct_reply="Bu bir test cevabıdır.",
+        model="qwen/qwen3.8-omni-flash",
+        latency_ms=40,
+        cost_usd=0.0001,
+    )
+
+    with patch("reflex.agent.interpret_user_message", return_value=fake_interp) as mock_interp:
+        snap = session.reply_user("Ne durumdayız?")
+
+    mock_interp.assert_called_once()
+    assert mock_interp.call_args.kwargs["allow_model_fallback"] is fallback_enabled
+    assert snap["status"] == "waiting_user"

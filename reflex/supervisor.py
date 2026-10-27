@@ -19,7 +19,6 @@ from pydantic import BaseModel, Field
 from .config import (
     META_API_CHAT_URL,
     OPENROUTER_CHAT_URL,
-    ReflexConfig,
     get_meta_api_key,
     get_openrouter_api_key,
 )
@@ -191,16 +190,14 @@ def _chat_completion(
     user_prompt: str,
     max_tokens: int = 750,
     allow_model_fallback: bool = False,
-    config: ReflexConfig | None = None,
 ) -> tuple[dict[str, Any], int, float, str]:
     """Call Official Meta Model API (`https://api.meta.ai/v1/chat/completions`) or OpenRouter."""
-    if config is not None:
-        allow_model_fallback = config.allow_model_fallback
-
     last_err: Exception | None = None
 
-    meta_key = get_meta_api_key()
-    if meta_key and (model.startswith("meta") or "llama" in model.lower() or "muse" in model.lower()):
+    if model.startswith("meta") or "llama" in model.lower() or "muse" in model.lower():
+        meta_key = get_meta_api_key()
+        if not meta_key:
+            raise RuntimeError(f"META_API_KEY not configured for model {model}")
         meta_headers = {"Authorization": f"Bearer {meta_key}", "Content-Type": "application/json"}
         if allow_model_fallback:
             meta_candidates = _META_MODEL_MAP.get(
@@ -301,11 +298,8 @@ def generate_field_text(
     history: list[dict[str, Any]],
     supervisor_model: str,
     allow_model_fallback: bool = False,
-    config: ReflexConfig | None = None,
 ) -> FieldTextOutcome:
     """Generate the value to type into `action`, or return an `ask_user` prompt if missing."""
-    if config is not None:
-        allow_model_fallback = config.allow_model_fallback
     field_info = {
         "label": sanitize_untrusted_text(str(action.get("label", "")), 140),
         "role": sanitize_untrusted_text(str(action.get("role", "")), 40),
@@ -374,11 +368,8 @@ def resolve_escalation(
     s1_decision: dict[str, Any] | None,
     supervisor_model: str,
     allow_model_fallback: bool = False,
-    config: ReflexConfig | None = None,
 ) -> SupervisorDecision:
     """Invoke System 2 (`qwen/qwen3.8-omni-flash` or selected Supervisor) to recover from an escalation."""
-    if config is not None:
-        allow_model_fallback = config.allow_model_fallback
     s1_summary = "None"
     if s1_decision:
         s1_summary = json.dumps(
@@ -472,11 +463,8 @@ def interpret_user_message(
     pending_fact_key: str | None,
     supervisor_model: str,
     allow_model_fallback: bool = False,
-    config: ReflexConfig | None = None,
 ) -> UserMessageInterpretation:
     """Classify a user chat message so conversational questions are answered directly without polluting System 1."""
-    if config is not None:
-        allow_model_fallback = config.allow_model_fallback
     full_page_txt = str(page.get("full_text") or page.get("text") or "")
     headings_list = page.get("headings") or []
     headings_str = " | ".join(sanitize_untrusted_text(str(h), 120) for h in headings_list[:35]) if headings_list else "None"

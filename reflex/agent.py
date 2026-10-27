@@ -11,6 +11,8 @@ import re
 import time
 from typing import Any
 
+import httpx
+
 from .browser import Browser, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
 from .config import ReflexConfig
@@ -98,6 +100,7 @@ class ReflexSession:
         self._noop_escalation_counts: dict[str, int] = {}
         self._done_rejected_url: tuple[str, int] | None = None
         self.last_error: str | None = None
+        self.s1_errors: int = 0
 
     def elapsed(self) -> int:
         self.elapsed_ms = round((time.perf_counter() - self.started_at) * 1000)
@@ -147,6 +150,7 @@ class ReflexSession:
                 "steps": len(self.history),
                 "s1_steps": s1_calls,
                 "s2_escalations": s2_calls,
+                "s1_errors": self.s1_errors,
                 "text_helper_calls": len(self.text_calls),
                 "median_decision_ms": median_ms,
                 "total_cost_usd": total_cost,
@@ -199,13 +203,17 @@ class ReflexSession:
                 self.config,
                 suppress_done=suppress_done,
             )
-        except Exception as exc:
-            # If System 1 fails (e.g. local server down or transient API error), escalate to Supervisor!
+        except ValueError as exc:
+            self.s1_errors += 1
             return self._handle_escalation(
                 trigger_type="s1_error",
                 reason=f"System 1 error: {exc}",
                 s1_decision=None,
             )
+        except (RuntimeError, httpx.HTTPError) as exc:
+            self.status = "error"
+            self.last_error = str(exc)
+            return self.snapshot()
 
         goal_l = (self.ctx.primary_goal + " " + self.ctx.active_subgoal).lower()
         page_meta_l = (str(self.page.get("title", "")) + " " + cur_norm_url).lower()
@@ -428,6 +436,7 @@ class ReflexSession:
             trigger_type=trigger_type,
             s1_decision=s1_decision,
             supervisor_model=self.config.supervisor_model,
+            allow_model_fallback=self.config.allow_model_fallback,
         )
 
         if sup.memory:
@@ -700,6 +709,7 @@ class ReflexSession:
                 page=self.page,
                 history=self.history,
                 supervisor_model=self.config.supervisor_model,
+                allow_model_fallback=self.config.allow_model_fallback,
             )
             self.text_calls.append(outcome.model_dump())
             text_helper_model = outcome.model
@@ -843,6 +853,7 @@ class ReflexSession:
             history=self.history,
             pending_fact_key=self.pending_fact_key,
             supervisor_model=self.config.supervisor_model,
+            allow_model_fallback=self.config.allow_model_fallback,
         )
 
         # Case 1: User is asking the Supervisor a question or chatting (do NOT touch the browser!)
