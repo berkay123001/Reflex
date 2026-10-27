@@ -236,6 +236,15 @@ button, input, textarea, select {
   background: var(--guard);
   box-shadow: 0 0 8px var(--guard);
 }
+.status-pill.error {
+  background: var(--guard-tint);
+  border-color: var(--guard-line);
+  color: var(--guard);
+}
+.status-pill.error .dot {
+  background: var(--guard);
+  box-shadow: 0 0 8px var(--guard);
+}
 
 @keyframes pulseDot {
   0%, 100% { opacity: 1; transform: scale(1); }

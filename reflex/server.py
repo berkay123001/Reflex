@@ -20,6 +20,7 @@ import atexit
 import hashlib
 import json
 import os
+import secrets
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -39,7 +40,8 @@ from .memory import SiteMemoryStore
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 DEFAULT_PORT = int(os.environ.get("REFLEX_PORT", "8788"))
-TOKEN = hashlib.sha256(f"reflex-local-{WEB_DIR}".encode("utf-8")).hexdigest()[:32]
+TOKEN = secrets.token_hex(16)
+ALLOW_REMOTE: bool = False
 _LOCK = threading.Lock()
 _SESSION: ReflexSession | None = None
 
@@ -176,6 +178,8 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def _valid_host(self) -> bool:
+        if ALLOW_REMOTE:
+            return True
         host = (self.headers.get("Host") or "").split(":", 1)[0].lower()
         return host in {"127.0.0.1", "localhost", "::1"}
 
@@ -221,12 +225,18 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
         if not self._valid_host() or self.headers.get("X-Reflex-Token") != TOKEN:
             return self._send(403, json.dumps({"error": "Invalid session token or host"}))
 
-        endpoint = urlparse(self.path).path.removeprefix("/api/")
-        if endpoint == "config":
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-                raw = self.rfile.read(length) if 0 < length <= 65536 else b"{}"
-                body = json.loads(raw.decode("utf-8"))
+        if not _LOCK.acquire(timeout=45.0):
+            return self._send(409, json.dumps({"error": "Another browser operation is currently in progress"}))
+
+        try:
+            endpoint = urlparse(self.path).path.removeprefix("/api/")
+            length = int(self.headers.get("Content-Length", "0"))
+            if not (0 <= length <= 65536):
+                raise ValueError("Invalid request body length")
+            raw = self.rfile.read(length) if length > 0 else b"{}"
+            body = json.loads(raw.decode("utf-8")) if raw else {}
+
+            if endpoint == "config":
                 meta_key = body.get("meta_api_key")
                 if isinstance(meta_key, str) and meta_key.strip():
                     save_env_key("META_API_KEY", meta_key.strip())
@@ -251,18 +261,7 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
                     if "enable_site_memory" in body:
                         _SESSION.config.enable_site_memory = bool(body["enable_site_memory"])
                 return self._send(200, json.dumps(current_state(), ensure_ascii=False))
-            except Exception as exc:
-                return self._send(400, json.dumps({"error": str(exc)}))
 
-        if not _LOCK.acquire(timeout=45.0):
-            return self._send(409, json.dumps({"error": "Another browser operation is currently in progress"}))
-
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            if not (0 <= length <= 65536):
-                raise ValueError("Invalid request body length")
-            raw = self.rfile.read(length) if length > 0 else b"{}"
-            body = json.loads(raw.decode("utf-8"))
             result = handle_api_post(endpoint, body)
             self._send(200, json.dumps(result, ensure_ascii=False))
         except (ValueError, RuntimeError) as exc:
@@ -301,10 +300,25 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    global ALLOW_REMOTE
     parser = argparse.ArgumentParser(description="Start Reflex Studio Server")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--allow-remote",
+        action="store_true",
+        default=False,
+        help="Allow remote connections (required if --host is non-loopback)",
+    )
     args = parser.parse_args()
+
+    loopback_hosts = {"127.0.0.1", "localhost", "::1"}
+    if args.host not in loopback_hosts and not args.allow_remote:
+        raise ValueError(
+            f"Binding to non-loopback host '{args.host}' requires the --allow-remote flag."
+        )
+    if args.allow_remote:
+        ALLOW_REMOTE = True
 
     load_env()
     atexit.register(close_session)

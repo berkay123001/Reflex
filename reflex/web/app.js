@@ -463,16 +463,21 @@ function renderState(state) {
   const badge = $("status-badge");
   const stTxt = $("status-text");
   if (badge && stTxt) {
-    stTxt.textContent = runningLoop ? "RUNNING" : st.toUpperCase();
-    badge.className =
-      "status-pill " +
-      (runningLoop || st === "ready"
-        ? "running"
-        : st === "done"
-        ? "done"
-        : st.startsWith("waiting") || st === "blocked"
-        ? "waiting"
-        : "");
+    if (st === "error") {
+      stTxt.textContent = "ERROR: " + (state.last_error || "Session halted");
+      badge.className = "status-pill error";
+    } else {
+      stTxt.textContent = runningLoop ? "RUNNING" : st.toUpperCase();
+      badge.className =
+        "status-pill " +
+        (runningLoop || st === "ready"
+          ? "running"
+          : st === "done"
+          ? "done"
+          : st.startsWith("waiting") || st === "blocked"
+          ? "waiting"
+          : "");
+    }
   }
 
   if ($("top-goal-crumb") && state.goal) {
@@ -533,6 +538,23 @@ async function runContinuousLoop() {
   } catch (err) {
     stepInFlight = false;
     console.error("Step error:", err);
+    const errText = err.message || String(err);
+    if (currentState) {
+      currentState.status = "error";
+      currentState.last_error = errText;
+    }
+    const badge = $("status-badge");
+    const stTxt = $("status-text");
+    if (badge && stTxt) {
+      stTxt.textContent = "ERROR: " + errText;
+      badge.className = "status-pill error";
+    }
+    const chatBox = $("chat-messages");
+    if (chatBox) {
+      const errMsg = `<div class="cmsg error" style="border-left:3px solid var(--guard,#ff6e6e);background:rgba(255,110,110,0.1);"><div class="cmsg-role" style="color:var(--guard,#ff6e6e)">⚠️ RUNTIME ERROR</div>${escapeHtml(errText)}</div>`;
+      chatBox.innerHTML += errMsg;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
   } finally {
     runningLoop = false;
     stepInFlight = false;
