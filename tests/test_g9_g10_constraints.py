@@ -306,3 +306,54 @@ def test_unconstrained_form_submit_does_not_trigger_constraint_check():
         action=submit_action,
     )
     assert eval_res.trigger_type != "constraint_check"
+
+
+def test_l4_interpret_user_message_runs_in_parallel_with_initial_observe_and_blocks_before_first_action():
+    """L4: interpret_user_message starts in parallel while initial page loads/observes, and finishes before first step."""
+    import threading
+    import time
+
+    interp_started = threading.Event()
+    observe_started = threading.Event()
+    concurrent_overlap = [False]
+
+    def slow_observe(*args, **kwargs):
+        observe_started.set()
+        if interp_started.wait(timeout=1.0):
+            concurrent_overlap[0] = True
+        time.sleep(0.05)
+        return {
+            "url": "https://example.com/survey",
+            "title": "Anket Formu",
+            "text": "Lütfen formu doldurunuz.",
+            "actions": [],
+        }
+
+    def slow_interpret(**kwargs):
+        interp_started.set()
+        if observe_started.wait(timeout=1.0):
+            concurrent_overlap[0] = True
+        time.sleep(0.05)
+        return UserMessageInterpretation(
+            intent="CONTINUE_OR_STEER",
+            allow_arbitrary_choices=True,
+            constraints=["do not submit"],
+        )
+
+    fake_b = _make_fake_browser()
+    fake_b.observe.side_effect = slow_observe
+
+    with (
+        patch("reflex.agent.Browser", return_value=fake_b),
+        patch("reflex.agent.interpret_user_message", side_effect=slow_interpret),
+    ):
+        session = ReflexSession(
+            url="https://example.com/survey",
+            goal="Fill survey and do not submit",
+            config=ReflexConfig(),
+        )
+
+    assert concurrent_overlap[0] is True
+    assert session.ctx.constraints == ["do not submit"]
+    assert session.ctx.allow_arbitrary_choices is True
+

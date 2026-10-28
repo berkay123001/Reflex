@@ -7,6 +7,7 @@ escalation gates, irreversible action safety guards, and interactive human-in-th
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import re
 import time
 from typing import Any
@@ -83,12 +84,6 @@ class ReflexSession:
         )
         self.ctx.add_user_message(goal.strip(), kind="chat")
         self.site_memory = SiteMemoryStore()
-        self.browser = Browser(self.url)
-        try:
-            self.page = self.browser.observe(screenshot=self.config.screenshots)
-        except Exception:
-            self.browser.close()
-            raise
 
         self.status: str = "ready"  # "ready" | "waiting_user" | "waiting_confirmation" | "done" | "blocked" | "error"
         self.started_at: float = time.perf_counter()
@@ -109,29 +104,49 @@ class ReflexSession:
         self.last_error: str | None = None
         self.s1_errors: int = 0
 
+        initial_page_stub: dict[str, Any] = {
+            "url": self.url,
+            "title": "",
+            "text": "",
+            "full_text": "",
+            "headings": [],
+        }
+        executor = ThreadPoolExecutor(max_workers=1)
+        interp_future = executor.submit(
+            interpret_user_message,
+            user_message=goal.strip(),
+            ctx=self.ctx,
+            page=initial_page_stub,
+            history=self.history,
+            pending_fact_key=None,
+            supervisor_model=self.config.supervisor_model,
+            allow_model_fallback=self.config.allow_model_fallback,
+            supervisor_timeout_s=self.config.supervisor_timeout_s,
+        )
         try:
-            interp = interpret_user_message(
-                user_message=goal.strip(),
-                ctx=self.ctx,
-                page=self.page,
-                history=self.history,
-                pending_fact_key=None,
-                supervisor_model=self.config.supervisor_model,
-                allow_model_fallback=self.config.allow_model_fallback,
-                supervisor_timeout_s=self.config.supervisor_timeout_s,
-            )
-            self.interpret_calls.append(interp.model_dump())
-            self.ctx.allow_arbitrary_choices = interp.allow_arbitrary_choices
-            self.ctx.constraints = list(interp.constraints or [])
-            if constraints:
-                for c in constraints:
-                    if c not in self.ctx.constraints:
-                        self.ctx.constraints.append(c)
-            if allow_arbitrary_choices:
-                self.ctx.allow_arbitrary_choices = True
-        except Exception as exc:
-            self.status = "error"
-            self.last_error = f"Goal constraint extraction failed: {exc}"
+            self.browser = Browser(self.url)
+            try:
+                self.page = self.browser.observe(screenshot=self.config.screenshots)
+            except Exception:
+                self.browser.close()
+                raise
+
+            try:
+                interp = interp_future.result()
+                self.interpret_calls.append(interp.model_dump())
+                self.ctx.allow_arbitrary_choices = interp.allow_arbitrary_choices
+                self.ctx.constraints = list(interp.constraints or [])
+                if constraints:
+                    for c in constraints:
+                        if c not in self.ctx.constraints:
+                            self.ctx.constraints.append(c)
+                if allow_arbitrary_choices:
+                    self.ctx.allow_arbitrary_choices = True
+            except Exception as exc:
+                self.status = "error"
+                self.last_error = f"Goal constraint extraction failed: {exc}"
+        finally:
+            executor.shutdown(wait=False)
 
     def elapsed(self) -> int:
         self.elapsed_ms = round((time.perf_counter() - self.started_at) * 1000)
