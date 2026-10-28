@@ -393,3 +393,57 @@ def test_run_eval_automatically_serves_fixtures_when_base_present(tmp_path: Path
     assert "/qa/survey" in results[0]["url"]
     assert "{BASE}" not in results[0]["url"]
     assert summary["successful_tasks"] == 1
+
+
+def test_t3_eval_records_asked_question_error_step_and_flushes_stdout(tmp_path: Path):
+    """T3: asked_user records asked_question, error records error_step in JSONL, and stdout prints flush."""
+    tasks = [
+        {"id": "ask-task", "url": "http://127.0.0.1:8788/qa/crm", "goal": "Update ticket", "check": "true"},
+        {"id": "err-task", "url": "http://127.0.0.1:8788/qa/crm", "goal": "Update ticket", "check": "true"},
+    ]
+    tasks_file = tmp_path / "t3_tasks.json"
+    tasks_file.write_text(json.dumps(tasks), encoding="utf-8")
+    out_file = tmp_path / "t3_results.jsonl"
+
+    # Session 1: asks user a question after 1 step
+    sess_ask = _make_mock_session(statuses=["ready", "waiting_user"])
+    sess_ask.last_asked_question = "Çözüm notuna ne yazmamı istersiniz?"
+
+    # Session 2: succeeds on step 1, then errors on step 2
+    sess_err = _make_mock_session(statuses=["ready", "ready"])
+    step_count = [0]
+
+    def err_step_fn():
+        step_count[0] += 1
+        if step_count[0] == 1:
+            sess_err.history.append({"step": 1, "actor": "S1", "operation": "CLICK", "target": "1", "latency_ms": 50})
+            return sess_err.snapshot()
+        raise RuntimeError("CDP connection dropped on step 2")
+
+    sess_err.step.side_effect = err_step_fn
+
+    with (
+        patch("scripts.eval.ReflexSession", side_effect=[sess_ask, sess_err]),
+        patch("builtins.print") as mock_print,
+    ):
+        results, _ = run_eval(tasks_path=tasks_file, output_path=out_file, verbose=True)
+
+    assert len(results) == 2
+    assert results[0]["status"] == "asked_user"
+    assert results[0]["asked_question"] == "Çözüm notuna ne yazmamı istersiniz?"
+    assert results[0]["error_step"] is None
+
+    assert results[1]["status"] == "error"
+    assert results[1]["error_step"] == 2
+    assert results[1]["asked_question"] is None
+
+    # Verify JSONL file has both fields persisted
+    jsonl_rows = [json.loads(line) for line in out_file.read_text(encoding="utf-8").strip().splitlines()]
+    assert jsonl_rows[0]["asked_question"] == "Çözüm notuna ne yazmamı istersiniz?"
+    assert jsonl_rows[1]["error_step"] == 2
+
+    # Verify every console print in run_eval used flush=True
+    assert mock_print.call_count > 0
+    for call in mock_print.call_args_list:
+        assert call.kwargs.get("flush") is True
+

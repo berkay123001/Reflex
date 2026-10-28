@@ -193,6 +193,38 @@ def _session_has_unknown_cost(session: ReflexSession) -> bool:
     return False
 
 
+def _extract_asked_question(session: ReflexSession | None, snap: dict[str, Any]) -> str | None:
+    """Extract the question text asked by the agent when terminating with status == 'asked_user'."""
+    if isinstance(snap.get("asked_question"), str) and snap["asked_question"].strip():
+        return snap["asked_question"].strip()
+    if session is not None:
+        last_q = getattr(session, "last_asked_question", None)
+        if isinstance(last_q, str) and last_q.strip():
+            return last_q.strip()
+        pending_q = getattr(session, "pending_question", None)
+        if isinstance(pending_q, dict) and isinstance(pending_q.get("question"), str) and pending_q["question"].strip():
+            return pending_q["question"].strip()
+        if isinstance(pending_q, str) and pending_q.strip():
+            return pending_q.strip()
+    ctx_dict = snap.get("context") or {}
+    chat_msgs = ctx_dict.get("chat_messages") if isinstance(ctx_dict, dict) else None
+    if isinstance(chat_msgs, list):
+        for msg in reversed(chat_msgs):
+            if isinstance(msg, dict) and msg.get("role") == "agent":
+                txt = msg.get("text") or msg.get("content") or msg.get("message")
+                if isinstance(txt, str) and txt.strip():
+                    return txt.strip()
+    for tc in reversed(snap.get("text_calls") or []):
+        if isinstance(tc, dict) and isinstance(tc.get("ask_user"), str) and tc["ask_user"].strip():
+            return tc["ask_user"].strip()
+    for esc in reversed(snap.get("escalations") or []):
+        if isinstance(esc, dict):
+            for k in ("question_for_user", "question"):
+                if isinstance(esc.get(k), str) and esc[k].strip():
+                    return esc[k].strip()
+    return None
+
+
 def run_task(
     task: dict[str, Any],
     config: ReflexConfig | None = None,
@@ -232,6 +264,8 @@ def run_task(
     step_details: list[dict[str, Any]] = []
     task_status: str = "ready"
     last_error: str | None = None
+    error_step: int | None = None
+    asked_question: str | None = None
     check_result: Any = None
     check_error: str | None = None
 
@@ -241,6 +275,7 @@ def run_task(
             session = ReflexSession(url=url, goal=goal, config=cfg)
         except Exception as exc:
             task_status = "error"
+            error_step = 0
             last_error = f"Session initialization failed: {exc}"
             elapsed_ms = round((time.perf_counter() - start_time) * 1000)
             return {
@@ -260,11 +295,16 @@ def run_task(
                 "median_latency_ms": 0,
                 "models_used": [],
                 "step_details": [],
+                "asked_question": None,
+                "error_step": error_step,
                 "last_error": last_error,
                 "check_result": None,
                 "check_error": None,
                 "elapsed_ms": elapsed_ms,
             }
+
+        if session.status == "error":
+            error_step = len(session.history)
 
         # Check if initial session setup (e.g. constraint extraction) already exceeded budget or has unknown cost
         if budget_usd is not None:
@@ -302,6 +342,7 @@ def run_task(
                     )
                     break
 
+            attempt_step = len(session.history) + 1
             if session.status == "waiting_user":
                 if not user_replies:
                     task_status = "asked_user"
@@ -313,24 +354,33 @@ def run_task(
                 except Exception as exc:
                     task_status = "error"
                     session.status = "error"
+                    error_step = attempt_step
                     session.last_error = f"reply_user failed: {exc}"
                     break
+                if session.status == "error" and error_step is None:
+                    error_step = attempt_step
             elif session.status == "waiting_confirmation":
                 try:
                     session.confirm_action(approved=auto_confirm)
                 except Exception as exc:
                     task_status = "error"
                     session.status = "error"
+                    error_step = attempt_step
                     session.last_error = f"confirm_action failed: {exc}"
                     break
+                if session.status == "error" and error_step is None:
+                    error_step = attempt_step
             elif session.status == "ready":
                 try:
                     session.step()
                 except Exception as exc:
                     task_status = "error"
                     session.status = "error"
+                    error_step = attempt_step
                     session.last_error = f"step failed: {exc}"
                     break
+                if session.status == "error" and error_step is None:
+                    error_step = attempt_step
             else:
                 break
 
@@ -406,6 +456,11 @@ def run_task(
         escalations = snap.get("escalations", [])
         text_calls = snap.get("text_calls", [])
         interpret_calls = snap.get("interpret_calls", [])
+
+        if task_status == "asked_user":
+            asked_question = _extract_asked_question(session, snap)
+        if task_status == "error" and error_step is None:
+            error_step = len(history)
 
         # Track models used across every step and tier
         models_used_set: set[str] = set()
@@ -486,6 +541,8 @@ def run_task(
             "median_latency_ms": median_lat,
             "models_used": sorted(models_used_set),
             "step_details": step_details,
+            "asked_question": asked_question,
+            "error_step": error_step,
             "last_error": last_error,
             "check_result": check_result,
             "check_error": check_error,
@@ -513,6 +570,8 @@ def run_task(
             "median_latency_ms": 0,
             "models_used": [],
             "step_details": step_details,
+            "asked_question": None,
+            "error_step": error_step if error_step is not None else len(step_details),
             "last_error": last_error,
             "check_result": check_result,
             "check_error": check_error,
@@ -676,7 +735,7 @@ def run_eval(
     """Execute complete evaluation suite, save JSONL results and return summary."""
     tasks = load_tasks(tasks_path)
     if verbose:
-        print(f"[eval] Loaded {len(tasks)} tasks from {tasks_path}")
+        print(f"[eval] Loaded {len(tasks)} tasks from {tasks_path}", flush=True)
 
     has_base = any("{BASE}" in t["url"] for t in tasks)
     if has_base and base_url is None:
@@ -707,7 +766,7 @@ def run_eval(
 
         if verbose:
             task_display_url = task["url"].replace("{BASE}", base_url) if base_url else task["url"]
-            print(f"[eval] [{idx}/{len(tasks)}] Starting task {task['id']} ({task_display_url})...")
+            print(f"[eval] [{idx}/{len(tasks)}] Starting task {task['id']} ({task_display_url})...", flush=True)
 
         remaining_budget = (budget_usd - cumulative_cost) if budget_usd is not None else None
         res = run_task(
@@ -742,6 +801,7 @@ def run_eval(
         if output_file:
             with output_file.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(res, ensure_ascii=False) + "\n")
+                f.flush()
 
         if verbose:
             status_symbol = "✓" if res["success"] else "✗"
@@ -753,18 +813,22 @@ def run_eval(
             print(
                 f"[eval] [{idx}/{len(tasks)}] {status_symbol} {res['id']}: "
                 f"status={res['status']}, steps={res['steps']}, "
-                f"score={res['score']}, cost={cost_disp}"
+                f"score={res['score']}, cost={cost_disp}",
+                flush=True,
             )
+            if res.get("asked_question"):
+                print(f"       asked_question: {res['asked_question']}", flush=True)
             if res.get("last_error"):
-                print(f"       last_error: {res['last_error']}")
+                err_step_suffix = f" (step {res['error_step']})" if res.get("error_step") is not None else ""
+                print(f"       last_error{err_step_suffix}: {res['last_error']}", flush=True)
 
         if res.get("status") == "budget_exceeded":
             if verbose:
-                print(f"[eval] Stopping evaluation: budget_exceeded (${cumulative_cost:.6f} > ${budget_usd:.6f})")
+                print(f"[eval] Stopping evaluation: budget_exceeded (${cumulative_cost:.6f} > ${budget_usd:.6f})", flush=True)
             break
         if res.get("status") == "budget_unknown":
             if verbose:
-                print("[eval] Stopping evaluation: budget_unknown (unknown cost 'bilinmiyor' encountered with --budget-usd)")
+                print("[eval] Stopping evaluation: budget_unknown (unknown cost 'bilinmiyor' encountered with --budget-usd)", flush=True)
             break
 
     summary = compute_summary(task_results, budget_usd=budget_usd)
@@ -775,7 +839,7 @@ def run_eval(
         sum_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
 
     if verbose:
-        print("\n" + format_summary_report(summary))
+        print("\n" + format_summary_report(summary), flush=True)
 
     return task_results, summary
 
@@ -980,7 +1044,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             return 0 if summary["failed_tasks"] == 0 else 1
     except Exception as exc:
-        print(f"[eval] Fatal evaluation runner error: {exc}", file=sys.stderr)
+        print(f"[eval] Fatal evaluation runner error: {exc}", file=sys.stderr, flush=True)
         return 2
 
 

@@ -101,6 +101,7 @@ class ReflexSession:
 
         # Pending state for pause/resume & post-verification escalation
         self.pending_fact_key: str | None = None
+        self.last_asked_question: str | None = None
         self.pending_confirmation: dict[str, Any] | None = None
         self.pending_escalation_reason: tuple[str, str] | None = None  # (trigger_type, reason)
         self._noop_escalation_counts: dict[str, int] = {}
@@ -218,6 +219,7 @@ class ReflexSession:
                 else None
             ),
             "pending_fact_key": self.pending_fact_key,
+            "asked_question": self.last_asked_question,
             "last_error": self.last_error,
             "metrics": {
                 "elapsed_ms": self.elapsed(),
@@ -545,6 +547,7 @@ class ReflexSession:
             self.status = "waiting_user"
             question = sup.question_for_user or sup.reasoning or "Could you clarify how you want to proceed?"
             self.pending_fact_key = sup.fact_key or "user_clarification"
+            self.last_asked_question = question
             self.ctx.add_agent_message(question, kind="ask_user")
             return self.snapshot()
 
@@ -559,10 +562,9 @@ class ReflexSession:
                 if self._noop_escalation_counts[current_fp] >= 2:
                     self.status = "waiting_user"
                     self.pending_fact_key = "user_guidance"
-                    self.ctx.add_agent_message(
-                        f"I am stuck on this page ({sup.reasoning}). Could you clarify or provide a different instruction?",
-                        kind="ask_user",
-                    )
+                    ask_msg = f"I am stuck on this page ({sup.reasoning}). Could you clarify or provide a different instruction?"
+                    self.last_asked_question = ask_msg
+                    self.ctx.add_agent_message(ask_msg, kind="ask_user")
                     return self.snapshot()
                 self.ctx.add_agent_message(
                     f"Supervisor updated subgoal: {self.ctx.active_subgoal} ({sup.reasoning})",
@@ -578,10 +580,9 @@ class ReflexSession:
             if self._noop_escalation_counts[current_fp] >= 2:
                 self.status = "waiting_user"
                 self.pending_fact_key = "user_guidance"
-                self.ctx.add_agent_message(
-                    f"Supervisor could not resolve a valid browser action on this page ({sup.reasoning}). How should I proceed?",
-                    kind="ask_user",
-                )
+                ask_msg = f"Supervisor could not resolve a valid browser action on this page ({sup.reasoning}). How should I proceed?"
+                self.last_asked_question = ask_msg
+                self.ctx.add_agent_message(ask_msg, kind="ask_user")
                 return self.snapshot()
             # If supervisor gave a subgoal update or invalid target once, let System 1 try with updated hint
             self.ctx.add_agent_message(
@@ -800,10 +801,9 @@ class ReflexSession:
                 # Required value missing -> Pause and ask the user instead of crashing!
                 self.status = "waiting_user"
                 self.pending_fact_key = outcome.fact_key or "field_value"
-                self.ctx.add_agent_message(
-                    outcome.ask_user or f"What value should I enter into '{action.get('label')}'?",
-                    kind="ask_user",
-                )
+                ask_msg = outcome.ask_user or f"What value should I enter into '{action.get('label')}'?"
+                self.last_asked_question = ask_msg
+                self.ctx.add_agent_message(ask_msg, kind="ask_user")
                 return self.snapshot()
             typed_text = outcome.text
 
@@ -952,6 +952,7 @@ class ReflexSession:
             self.ctx.add_agent_message(reply_msg, kind="chat")
             if self.status == "ready":
                 self.status = "waiting_user"
+                self.last_asked_question = reply_msg
             return self.snapshot()
 
         # Case 2: User is providing a requested fact (`ASK_USER` response)
