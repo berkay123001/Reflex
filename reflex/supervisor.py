@@ -127,6 +127,8 @@ class FieldTextOutcome(BaseModel):
     model: str = ""
     latency_ms: int = 0
     cost_usd: float = 0.0
+    retries: int = 0
+    finish_reason: str | None = None
 
 
 class SupervisorDecision(BaseModel):
@@ -152,7 +154,60 @@ class SupervisorDecision(BaseModel):
     model: str = ""
     latency_ms: int = 0
     cost_usd: float = 0.0
+    retries: int = 0
+    finish_reason: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class _ParsedDict(dict[str, Any]):
+    """Dictionary of parsed JSON output carrying `retries` and `finish_reason` attributes."""
+
+    retries: int = 0
+    retry_count: int = 0
+    finish_reason: str | None = None
+
+
+class CompletionResult(tuple):
+    """4-tuple `(parsed, latency_ms, cost_usd, model)` carrying `retries` and `finish_reason` metadata."""
+
+    retries: int
+    retry_count: int
+    finish_reason: str | None
+
+    def __new__(
+        cls,
+        parsed: dict[str, Any],
+        latency_ms: int,
+        cost_usd: Any,
+        model: str,
+        *,
+        retries: int = 0,
+        finish_reason: str | None = None,
+    ) -> CompletionResult:
+        wrapped_parsed = _ParsedDict(parsed)
+        wrapped_parsed.retries = retries
+        wrapped_parsed.retry_count = retries
+        wrapped_parsed.finish_reason = finish_reason
+        instance = super().__new__(cls, (wrapped_parsed, latency_ms, cost_usd, model))
+        instance.retries = retries
+        instance.retry_count = retries
+        instance.finish_reason = finish_reason
+        return instance
+
+    def __getitem__(self, key: int | slice | str) -> Any:
+        if isinstance(key, str):
+            if key in {"retries", "retry_count", "finish_reason"}:
+                return getattr(self, key)
+            if key == "parsed":
+                return super().__getitem__(0)
+            if key == "latency_ms":
+                return super().__getitem__(1)
+            if key in {"cost", "cost_usd"}:
+                return super().__getitem__(2)
+            if key == "model":
+                return super().__getitem__(3)
+            raise KeyError(key)
+        return super().__getitem__(key)
 
 
 _META_MODEL_MAP: dict[str, list[str]] = {
@@ -191,7 +246,7 @@ def _chat_completion(
     user_prompt: str,
     max_tokens: int = 750,
     allow_model_fallback: bool = False,
-) -> tuple[dict[str, Any], int, float, str]:
+) -> CompletionResult:
     """Call Official Meta Model API (`https://api.meta.ai/v1/chat/completions`) or OpenRouter."""
     last_err: Exception | None = None
 
@@ -210,35 +265,60 @@ def _chat_completion(
 
         for meta_model_id in meta_candidates:
             call_started = time.perf_counter()
-            payload: dict[str, Any] = {
-                "model": meta_model_id,
-                "max_tokens": max(max_tokens, 1400),
-                "temperature": 0.1,
-                "reasoning_effort": "low",
-                "response_format": {"type": "json_object"},
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            }
-            try:
-                resp = _HTTP_CLIENT.post(META_API_CHAT_URL, headers=meta_headers, json=payload)
-                if resp.status_code == 400:
-                    payload.pop("reasoning_effort", None)
-                    payload.pop("response_format", None)
+            current_max_tokens = max(max_tokens, 1400)
+            retries_used = 0
+            last_finish_reason: str | None = None
+            for attempt in range(2):
+                payload: dict[str, Any] = {
+                    "model": meta_model_id,
+                    "max_tokens": current_max_tokens,
+                    "temperature": 0.1,
+                    "reasoning_effort": "low",
+                    "response_format": {"type": "json_object"},
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                }
+                try:
                     resp = _HTTP_CLIENT.post(META_API_CHAT_URL, headers=meta_headers, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    msg_obj = data["choices"][0]["message"]
-                    content = msg_obj.get("content")
-                    if isinstance(content, list):
-                        content = "".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
-                    parsed = _extract_json(str(content or ""))
-                    latency_ms = round((time.perf_counter() - call_started) * 1000)
-                    return parsed, latency_ms, 0.0, str(data.get("model") or meta_model_id)
-                resp.raise_for_status()
-            except Exception as exc:
-                last_err = exc
+                    if resp.status_code == 400:
+                        payload.pop("reasoning_effort", None)
+                        payload.pop("response_format", None)
+                        resp = _HTTP_CLIENT.post(META_API_CHAT_URL, headers=meta_headers, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        choice0 = (data.get("choices") or [{}])[0]
+                        last_finish_reason = choice0.get("finish_reason")
+                        msg_obj = choice0.get("message") or {}
+                        content = msg_obj.get("content")
+                        if isinstance(content, list):
+                            content = "".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
+                        content_str = str(content or "").strip()
+                        if not content_str:
+                            raise ValueError("Supervisor response content is empty")
+                        parsed = _extract_json(content_str)
+                        latency_ms = round((time.perf_counter() - call_started) * 1000)
+                        return CompletionResult(
+                            parsed,
+                            latency_ms,
+                            0.0,
+                            str(data.get("model") or meta_model_id),
+                            retries=retries_used,
+                            finish_reason=last_finish_reason,
+                        )
+                    resp.raise_for_status()
+                except (ValueError, json.JSONDecodeError, KeyError, IndexError) as exc:
+                    last_err = exc
+                    if attempt == 0:
+                        retries_used += 1
+                        if last_finish_reason == "length":
+                            current_max_tokens = current_max_tokens * 2
+                        continue
+                    raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}") from exc
+                except Exception as exc:
+                    last_err = exc
+                    break
 
         if not allow_model_fallback:
             raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}")
@@ -257,35 +337,61 @@ def _chat_completion(
 
     for candidate_model in fallback_models:
         call_started = time.perf_counter()
-        payload = {
-            "model": candidate_model,
-            "max_tokens": max(max_tokens, 1000),
-            "temperature": 0.1,
-            "reasoning": {"enabled": False},
-            "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        }
+        current_max_tokens = max(max_tokens, 1000)
+        retries_used = 0
+        last_finish_reason: str | None = None
         for attempt in range(2):
+            payload = {
+                "model": candidate_model,
+                "max_tokens": current_max_tokens,
+                "temperature": 0.1,
+                "reasoning": {"enabled": False},
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            }
             try:
                 resp = _HTTP_CLIENT.post(OPENROUTER_CHAT_URL, headers=headers, json=payload)
                 if resp.status_code in {429, 502, 503, 529} and attempt == 0:
+                    retries_used += 1
                     time.sleep(0.5)
                     continue
                 resp.raise_for_status()
                 data = resp.json()
-                content = data["choices"][0]["message"]["content"]
+                choice0 = (data.get("choices") or [{}])[0]
+                last_finish_reason = choice0.get("finish_reason")
+                msg_obj = choice0.get("message") or {}
+                content = msg_obj.get("content")
                 if isinstance(content, list):
                     content = "".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
-                parsed = _extract_json(str(content or ""))
+                content_str = str(content or "").strip()
+                if not content_str:
+                    raise ValueError("Supervisor response content is empty")
+                parsed = _extract_json(content_str)
                 latency_ms = round((time.perf_counter() - call_started) * 1000)
                 usage = data.get("usage") or {}
                 cost = float(usage.get("cost", 0.0) or 0.0)
-                return parsed, latency_ms, cost, data.get("model", candidate_model)
+                return CompletionResult(
+                    parsed,
+                    latency_ms,
+                    cost,
+                    str(data.get("model") or candidate_model),
+                    retries=retries_used,
+                    finish_reason=last_finish_reason,
+                )
+            except (ValueError, json.JSONDecodeError, KeyError, IndexError) as exc:
+                last_err = exc
+                if attempt == 0:
+                    retries_used += 1
+                    if last_finish_reason == "length":
+                        current_max_tokens = current_max_tokens * 2
+                    continue
+                raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}") from exc
             except Exception as exc:
                 last_err = exc
+                retries_used += 1
                 time.sleep(0.25)
 
     raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}")
@@ -324,13 +430,16 @@ def generate_field_text(
         f"Text: {sanitize_untrusted_text(str(page.get('text', '')), 2500)}\n"
         f"</untrusted_page_data>"
     )
-    parsed, latency_ms, cost, used_model = _chat_completion(
+    comp = _chat_completion(
         supervisor_model,
         FIELD_TEXT_SYSTEM_PROMPT,
         user_payload,
         max_tokens=300,
         allow_model_fallback=allow_model_fallback,
     )
+    parsed, latency_ms, cost, used_model = comp
+    retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
+    finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
     val = parsed.get("text")
     ask = parsed.get("ask_user")
     fact_key = parsed.get("fact_key")
@@ -342,6 +451,8 @@ def generate_field_text(
             model=used_model,
             latency_ms=latency_ms,
             cost_usd=cost,
+            retries=retries,
+            finish_reason=finish_reason,
         )
     question = (
         ask.strip()
@@ -355,6 +466,8 @@ def generate_field_text(
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
+        retries=retries,
+        finish_reason=finish_reason,
     )
 
 
@@ -391,13 +504,16 @@ def resolve_escalation(
         f"{wrap_untrusted_dom(page, elements)}"
     )
 
-    parsed, latency_ms, cost, used_model = _chat_completion(
+    comp = _chat_completion(
         supervisor_model,
         ESCALATION_SYSTEM_PROMPT,
         user_prompt,
         max_tokens=1500,
         allow_model_fallback=allow_model_fallback,
     )
+    parsed, latency_ms, cost, used_model = comp
+    retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
+    finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
 
     action_type = str(parsed.get("action_type", "OVERRIDE_ACTION")).upper()
     if action_type not in {"OVERRIDE_ACTION", "UPDATE_SUBGOAL", "ASK_USER", "COMPLETE_TASK"}:
@@ -436,6 +552,8 @@ def resolve_escalation(
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
+        retries=retries,
+        finish_reason=finish_reason,
         raw=parsed,
     )
 
@@ -455,6 +573,8 @@ class UserMessageInterpretation(BaseModel):
     model: str = ""
     latency_ms: int = 0
     cost_usd: float = 0.0
+    retries: int = 0
+    finish_reason: str | None = None
 
 
 def interpret_user_message(
@@ -482,13 +602,16 @@ def interpret_user_message(
         f"Full Page Text:\n{sanitize_untrusted_text(full_page_txt, 6000)}\n"
         f"</untrusted_page_data>"
     )
-    parsed, latency_ms, cost, used_model = _chat_completion(
+    comp = _chat_completion(
         supervisor_model,
         USER_MESSAGE_SYSTEM_PROMPT,
         user_prompt,
         max_tokens=500,
         allow_model_fallback=allow_model_fallback,
     )
+    parsed, latency_ms, cost, used_model = comp
+    retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
+    finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
     intent = str(parsed.get("intent") or "CONTINUE_OR_STEER").upper().strip()
     if intent not in {"CHAT_ONLY", "NEW_GOAL", "CONTINUE_OR_STEER", "PROVIDE_FACT"}:
         intent = "CONTINUE_OR_STEER"
@@ -510,4 +633,6 @@ def interpret_user_message(
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
+        retries=retries,
+        finish_reason=finish_reason,
     )

@@ -645,3 +645,127 @@ def test_session_step_unexpected_s1_exception_sets_status_error_without_escalati
     assert snap["metrics"]["s1_errors"] == 0
     mock_resolve_esc.assert_not_called()
 
+
+def test_chat_completion_retries_once_on_empty_content_then_succeeds():
+    """F1 fix(G1): Fake client returns empty content first, then valid JSON -> succeeds on retry 1 with same model."""
+    calls: list[dict] = []
+
+    def fake_post(url, *args, **kwargs):
+        payload = kwargs.get("json", {})
+        calls.append(dict(payload))
+        resp = MagicMock()
+        resp.status_code = 200
+        if len(calls) == 1:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": ""}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        else:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": '{"action_type": "COMPLETE_TASK"}'}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        return resp
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post),
+    ):
+        res = _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            max_tokens=1500,
+        )
+
+    parsed, _latency, _cost, used_model = res
+    assert parsed == {"action_type": "COMPLETE_TASK"}
+    assert used_model == "muse-spark-1.3-contributor"
+    assert len(calls) == 2
+    assert calls[0]["model"] == "muse-spark-1.3-contributor"
+    assert calls[1]["model"] == "muse-spark-1.3-contributor"
+    assert res.retries == 1
+    assert res.finish_reason == "stop"
+    assert parsed.retries == 1
+    assert parsed.finish_reason == "stop"
+
+
+def test_chat_completion_empty_twice_raises_runtime_error_without_model_switch():
+    """F1 fix(G1): Fake client returns empty content twice -> raises RuntimeError without switching models."""
+    calls: list[dict] = []
+
+    def fake_post(url, *args, **kwargs):
+        payload = kwargs.get("json", {})
+        calls.append(dict(payload))
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "choices": [{"message": {"content": "   "}, "finish_reason": "stop"}],
+            "model": "muse-spark-1.3-contributor",
+        }
+        return resp
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
+        patch("reflex.supervisor.get_openrouter_api_key", return_value="fake-or-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            allow_model_fallback=True,
+        )
+
+    assert "Supervisor (muse-spark-1.3-contributor) call failed" in str(exc_info.value)
+    assert len(calls) == 2
+    assert [c["model"] for c in calls] == ["muse-spark-1.3-contributor", "muse-spark-1.3-contributor"]
+
+
+def test_chat_completion_finish_reason_length_doubles_max_tokens_on_retry():
+    """F1 fix(G1): When finish_reason == 'length' and JSON fails/empty, retry doubles max_tokens on the same model."""
+    calls: list[dict] = []
+
+    def fake_post(url, *args, **kwargs):
+        payload = kwargs.get("json", {})
+        calls.append(dict(payload))
+        resp = MagicMock()
+        resp.status_code = 200
+        if len(calls) == 1:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": '{"action_type": "OVER'}, "finish_reason": "length"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        else:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": '{"action_type": "OVERRIDE_ACTION", "operation": "WAIT"}'}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        return resp
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post),
+    ):
+        ctx = DualTierContext(primary_goal="Goal", active_subgoal="Subgoal")
+        sup = resolve_escalation(
+            ctx=ctx,
+            page={"url": "https://example.com", "title": "T", "text": "Body"},
+            elements=[],
+            history=[],
+            escalation_reason="Test",
+            trigger_type="low_conf",
+            s1_decision=None,
+            supervisor_model="muse-spark-1.3-contributor",
+        )
+
+    assert len(calls) == 2
+    assert calls[0]["model"] == "muse-spark-1.3-contributor"
+    assert calls[1]["model"] == "muse-spark-1.3-contributor"
+    assert calls[1]["max_tokens"] == calls[0]["max_tokens"] * 2
+    assert sup.retries == 1
+    assert sup.finish_reason == "stop"
+    assert sup.operation == "WAIT"
+
+

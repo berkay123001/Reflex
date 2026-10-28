@@ -451,6 +451,8 @@ class ReflexSession:
             "model": sup.model,
             "latency_ms": sup.latency_ms,
             "cost_usd": sup.cost_usd,
+            "retries": sup.retries,
+            "finish_reason": sup.finish_reason,
             "elapsed_ms": self.elapsed(),
         }
         self.escalations.append(esc_record)
