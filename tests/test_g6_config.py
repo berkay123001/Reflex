@@ -108,15 +108,14 @@ def test_turnike_server_model_path_configuration(monkeypatch):
 
 
 def test_pyproject_turnike_optional_dependencies():
-    """pyproject.toml defines turnike = ['torch', 'transformers'] under optional-dependencies."""
+    """pyproject.toml defines turnike optional dependencies."""
     pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
     with open(pyproject_path, "rb") as f:
         data = tomllib.load(f)
 
     optional_deps = data.get("project", {}).get("optional-dependencies", {})
     assert "turnike" in optional_deps
-    assert "torch" in optional_deps["turnike"]
-    assert "transformers" in optional_deps["turnike"]
+    assert set(optional_deps["turnike"]) == {"torch>=2.11", "transformers>=5.17", "torchao>=0.18", "accelerate"}
 
 
 def test_gitignore_contains_artifacts():

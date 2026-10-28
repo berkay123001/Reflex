@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-turnike = ["torch", "transformers"]
+turnike = ["torch>=2.11", "transformers>=5.17", "torchao>=0.18", "accelerate"]
 
 [project.scripts]
 reflex = "reflex.server:main"
