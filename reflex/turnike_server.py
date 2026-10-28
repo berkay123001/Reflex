@@ -191,6 +191,25 @@ def done_engelle(cevaplar: dict[str, Any], govde: dict[str, Any], esik: float) -
     }
 
 
+def _clone_cache(cache: Any) -> Any:
+    """Safely clone past_key_values cache without in-place tensor mutation."""
+    if cache is None:
+        return None
+    if isinstance(cache, (tuple, list)):
+        return tuple(
+            tuple(t.clone() if hasattr(t, "clone") else t for t in layer)
+            if isinstance(layer, (tuple, list))
+            else (layer.clone() if hasattr(layer, "clone") else layer)
+            for layer in cache
+        )
+    try:
+        import copy
+        return copy.deepcopy(cache)
+    except Exception:
+        pass
+    return cache
+
+
 class TurnikeWeb2Engine:
     """Fast Turnike-4B-Web2-FP8 engine with shared `## State` PrefixCache (`past_key_values`)."""
 
@@ -205,6 +224,7 @@ class TurnikeWeb2Engine:
         self.model_path = Path(effective_model_path)
         self.max_length = max_length
         self.done_engeli = done_engeli
+        self.max_options = max_options
         if not HAS_TORCH or AutoTokenizer is None:
             raise ImportError(
                 "Turnike server requires 'torch' and 'transformers'. "
@@ -341,15 +361,24 @@ class TurnikeWeb2Engine:
         alanlar = [(ad, str(soru.get("instructions", "")), ciftler)]
         full_txt = self._build_template(state, alanlar)
         ids, konumlar = self._split_and_tokenize(full_txt)
-        suf_ids = ids[len(pre_ids) :]
-        suf_konum = konumlar[0] - len(pre_ids)
 
-        suf_tensor = torch.tensor([suf_ids], device=self.device)
-        gizli = self.govde(
-            input_ids=suf_tensor,
-            past_key_values=past_key_values,
-            use_cache=True,
-        ).last_hidden_state[0, suf_konum]
+        prefix_len = len(pre_ids) if pre_ids else 0
+        if not pre_ids or past_key_values is None or ids[:prefix_len] != pre_ids:
+            # Fallback to full clean pass up to target token position
+            inp_ids = ids[: konumlar[0] + 1]
+            inp_tensor = torch.tensor([inp_ids], device=self.device)
+            gizli = self.govde(input_ids=inp_tensor, use_cache=False).last_hidden_state[0, -1]
+        else:
+            # Suffix pass with cached state prefix up to SCHEMA_MARKER
+            suf_ids = ids[prefix_len : konumlar[0] + 1]
+            suf_tensor = torch.tensor([suf_ids], device=self.device)
+            pkv_copy = _clone_cache(past_key_values)
+            gizli = self.govde(
+                input_ids=suf_tensor,
+                past_key_values=pkv_copy,
+                use_cache=False,
+            ).last_hidden_state[0, -1]
+
         logit = torch.nn.functional.linear(gizli.float(), self.sembol_agirlik)[: len(ciftler)]
         probs = torch.softmax(logit, dim=-1).cpu().tolist()
         prob_map = {k: round(float(p), 6) for k, p in zip(etiketler, probs)}
@@ -362,7 +391,7 @@ class TurnikeWeb2Engine:
 
     @torch.inference_mode()
     def karar(self, govde: dict[str, Any]) -> dict[str, Any]:
-        if self.device.type == "cuda":
+        if getattr(self.device, "type", str(self.device)) == "cuda":
             torch.cuda.synchronize(self.device)
         t0 = time.perf_counter()
 
@@ -372,30 +401,26 @@ class TurnikeWeb2Engine:
 
         state = self._fit_state(state, sorular)
         cevaplar: dict[str, Any] = {}
+        pre_ids: list[int] = []
+
         if "operation" in sorular:
             op_soru = sorular["operation"]
             op_ciftler = [
                 (str(k), str(v) if v not in (None, "") else str(k))
                 for k, v in list((op_soru.get("criteria") or {}).items())[: len(SEMBOLLER)]
             ]
-            op_etiketler = [k for k, _ in op_ciftler]
-            op_txt = self._build_template(state, [("operation", str(op_soru.get("instructions", "")), op_ciftler)])
-            op_ids, op_kon = self._split_and_tokenize(op_txt)
+            sample_alan = [("operation", str(op_soru.get("instructions", "")), op_ciftler)]
+            pre_ids, pkv = self._prefill_state(state, sample_alan)
 
-            # Pass 1: score "operation" directly at op_kon[0] and build past_key_values
-            pre_ids = op_ids[: op_kon[0] + 1]
-            inp1 = torch.tensor([pre_ids], device=self.device)
-            out1 = self.govde(input_ids=inp1, use_cache=True)
-            gizli_op = out1.last_hidden_state[0, -1]
-            logit_op = torch.nn.functional.linear(gizli_op.float(), self.sembol_agirlik)[: len(op_etiketler)]
-            probs_op = torch.softmax(logit_op, dim=-1).cpu().tolist()
-            pmap_op = {k: round(float(p), 6) for k, p in zip(op_etiketler, probs_op)}
-            best_op = max(pmap_op, key=pmap_op.get)
-            cevaplar["operation"] = {
-                "choice": best_op,
-                "confidence": round(pmap_op[best_op], 4),
-                "probabilities": pmap_op,
-            }
+            # Pass 1: score "operation" using the shared prefix cache
+            cevaplar["operation"] = self._score_question_with_cache(
+                state=state,
+                ad="operation",
+                soru=op_soru,
+                pre_ids=pre_ids,
+                past_key_values=pkv,
+            )
+
             if self.done_engeli > 0:
                 cevaplar = done_engelle(cevaplar, govde, self.done_engeli)
 
@@ -403,41 +428,23 @@ class TurnikeWeb2Engine:
             hedef_anahtar = f"{str(cevaplar['operation'].get('choice', '')).lower()}_target"
             if hedef_anahtar in sorular:
                 ts = sorular[hedef_anahtar]
-                tc = [
-                    (str(k), str(v) if v not in (None, "") else str(k))
-                    for k, v in list((ts.get("criteria") or {}).items())[: len(SEMBOLLER)]
-                ]
-                t_etiketler = [k for k, _ in tc]
-                if len(tc) == 1:
+                crit = ts.get("criteria") or {}
+                if len(crit) == 1:
+                    first_k = next(iter(crit.keys()))
                     cevaplar[hedef_anahtar] = {
-                        "choice": t_etiketler[0],
+                        "choice": str(first_k),
                         "confidence": 1.0,
-                        "probabilities": {t_etiketler[0]: 1.0},
+                        "probabilities": {str(first_k): 1.0},
                     }
                 else:
-                    inst_str = str(ts.get("instructions", ""))
-                    tgt_lines = [SCHEMA_MARKER, f"{hedef_anahtar}: {inst_str}"]
-                    tgt_lines += [f"    {s} = {d}: {a}" for s, (d, a) in zip(SEMBOLLER, tc)]
-                    suf_txt = (
-                        "\n".join(tgt_lines)
-                        + "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
-                        + json.dumps({hedef_anahtar: ISARET}, ensure_ascii=False, indent=4)
+                    # Clean standalone prompt for target question using the shared state KV cache
+                    cevaplar[hedef_anahtar] = self._score_question_with_cache(
+                        state=state,
+                        ad=hedef_anahtar,
+                        soru=ts,
+                        pre_ids=pre_ids,
+                        past_key_values=pkv,
                     )
-                    suf_ids, suf_kon = self._split_and_tokenize(suf_txt)
-                    op_rem = op_ids[op_kon[0] + 1 :]
-                    tail_ids = (op_rem + suf_ids)[: len(op_rem) + suf_kon[0] + 1]
-                    inp2 = torch.tensor([tail_ids], device=self.device)
-                    out2 = self.govde(input_ids=inp2, past_key_values=out1.past_key_values, use_cache=True)
-                    gizli_t = out2.last_hidden_state[0, -1]
-                    logit_t = torch.nn.functional.linear(gizli_t.float(), self.sembol_agirlik)[: len(t_etiketler)]
-                    probs_t = torch.softmax(logit_t, dim=-1).cpu().tolist()
-                    pmap_t = {k: round(float(p), 6) for k, p in zip(t_etiketler, probs_t)}
-                    best_t = max(pmap_t, key=pmap_t.get)
-                    cevaplar[hedef_anahtar] = {
-                        "choice": best_t,
-                        "confidence": round(pmap_t[best_t], 4),
-                        "probabilities": pmap_t,
-                    }
         else:
             first_ad, first_soru = next(iter(sorular.items()))
             first_ciftler = [
@@ -449,10 +456,10 @@ class TurnikeWeb2Engine:
             )
             items = list(sorular.items())
             for idx, (ad, soru) in enumerate(items):
-                cur_pkv = copy.deepcopy(pkv) if idx < len(items) - 1 else pkv
+                cur_pkv = _clone_cache(pkv) if idx < len(items) - 1 else pkv
                 cevaplar[ad] = self._score_question_with_cache(state, ad, soru, pre_ids, cur_pkv)
 
-        if self.device.type == "cuda":
+        if getattr(self.device, "type", str(self.device)) == "cuda":
             torch.cuda.synchronize(self.device)
         sure_ms = round((time.perf_counter() - t0) * 1000, 1)
         return {
