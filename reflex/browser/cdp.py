@@ -74,14 +74,24 @@ def _port_open(host: str, port: int) -> bool:
         return sock.connect_ex((host, port)) == 0
 
 
-def ensure_chromium_cdp(port: int = DEFAULT_CDP_PORT) -> None:
+def ensure_chromium_cdp(port: int | None = None) -> None:
     """Ensure a headless Chromium instance is listening on `port` and `BU_CDP_URL` is set."""
-    expected_url = f"http://127.0.0.1:{port}"
+    target_port = port if port is not None else DEFAULT_CDP_PORT
+    expected_url = f"http://127.0.0.1:{target_port}"
     existing_url = os.environ.get("BU_CDP_URL")
-    if existing_url and existing_url != expected_url:
+    if existing_url and existing_url != expected_url and port is not None:
         msg = f"BU_CDP_URL is already set to {existing_url!r}, which differs from expected {expected_url!r}"
         logger.warning(msg)
         warnings.warn(msg, UserWarning, stacklevel=2)
+    if existing_url:
+        try:
+            parsed_port = urlsplit(existing_url).port
+            if parsed_port:
+                target_port = parsed_port
+        except (ValueError, AttributeError):
+            pass
+    port = target_port
+    expected_url = f"http://127.0.0.1:{port}"
     os.environ.setdefault("BU_CDP_URL", expected_url)
     if _port_open("127.0.0.1", port):
         return
@@ -183,7 +193,16 @@ class Browser:
     """Single-tab CDP browser session with fresh-state verification and recovery actions."""
 
     def __init__(self, url: str, *, width: int = 1120, height: int = 780):
-        ensure_chromium_cdp()
+        cdp_port = DEFAULT_CDP_PORT
+        bu_cdp = os.environ.get("BU_CDP_URL")
+        if bu_cdp:
+            try:
+                p = urlsplit(bu_cdp).port
+                if p:
+                    cdp_port = p
+            except (ValueError, AttributeError):
+                pass
+        ensure_chromium_cdp(port=cdp_port)
         ensure_daemon()
         self._cdp_lock = threading.Lock()
         self.last_jpeg_bytes: bytes | None = None
@@ -394,7 +413,7 @@ class Browser:
                       };
 
                       requestAnimationFrame(check);
-                    }))""" + json.dumps(action) + ")",
+                    }))(""" + json.dumps(action) + ")",
                     awaitPromise=True,
                     returnByValue=True,
                 )
