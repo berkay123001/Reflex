@@ -696,9 +696,11 @@ class ReflexSession:
                 sup.url = nav_url
                 return {"id": "goto_url", "kind": "goto_url", "label": f"Navigate to {nav_url}", "url": nav_url}
 
-        if op in {"PRESS_ESCAPE", "PRESS_ENTER", "GO_BACK"}:
+        if op in {"PRESS_ESCAPE", "PRESS_ENTER", "GO_BACK", "RELOAD"}:
             if op == "GO_BACK":
                 self._record_rejected_from_history(cur_url)
+            if op == "RELOAD":
+                return {"id": "reload", "kind": "reload", "label": "Reload"}
             return {"id": op.lower(), "kind": op.lower(), "label": op.replace("_", " ").title()}
 
         if op in {"SCROLL_DOWN", "SCROLL_UP", "WAIT"}:

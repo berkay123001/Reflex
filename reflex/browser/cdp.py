@@ -551,6 +551,16 @@ class Browser:
             self.after_input = None
             return {"executed": f"goto_url:{target_url}"}
 
+        if kind == "reload":
+            try:
+                prev_origin = self.evaluate("performance.timeOrigin")
+            except Exception:
+                prev_origin = None
+            self.call("Page.reload")
+            self._wait_for_navigation_and_settle(prev_origin=prev_origin, max_wait=10.0)
+            self.after_input = None
+            return {"executed": "reload"}
+
         if kind in {"press_escape", "press_enter", "go_back"}:
             return self._recovery_act(kind)
 

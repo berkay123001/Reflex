@@ -93,7 +93,7 @@ Before choosing an action, you MUST perform 3-step stateful reasoning (inspired 
 
 Choose ONE of these three `action_type` values in your JSON response (NEVER use UPDATE_SUBGOAL):
 1. "OVERRIDE_ACTION": Directly execute the next browser operation yourself.
-   - Supported `operation`: "CLICK", "TYPE_TEXT", "SELECT", "SCROLL_DOWN", "SCROLL_UP", "WAIT", "PRESS_ESCAPE", "PRESS_ENTER", "GO_BACK", "GOTO_URL".
+   - Supported `operation`: "CLICK", "TYPE_TEXT", "SELECT", "SCROLL_DOWN", "SCROLL_UP", "WAIT", "PRESS_ESCAPE", "PRESS_ENTER", "GO_BACK", "RELOAD", "GOTO_URL".
    - HARD RULE A (NEVER RE-CLICK REJECTED LINKS): Check `Already Visited & Rejected Links` and `Recent Execution Trajectory`. If a link was already clicked and followed by `GO_BACK`, NEVER click that same element again!
    - HARD RULE B (SCROLL ON SEARCH RESULTS): When on a search results page, if the visible top results are unrelated or were already visited, you MUST use `operation: "SCROLL_DOWN"` to reveal the remaining search results below the fold BEFORE rewriting the search query!
    - HARD RULE C (SHORT SEARCH QUERIES): If you ever use `TYPE_TEXT` on a search input, use only 2-3 words (e.g. the person's or product's name), NEVER `site:` filters or long sentences.
@@ -112,7 +112,7 @@ Return ONLY a valid JSON object with these keys (CRITICAL: Keep evaluation_previ
   "next_goal": "max 12 words immediate next action to take",
   "action_type": "OVERRIDE_ACTION" | "ASK_USER" | "COMPLETE_TASK",
   "reasoning": "1 short sentence in the user's language explaining why you chose this action",
-  "operation": "CLICK" | "TYPE_TEXT" | "SELECT" | "SCROLL_DOWN" | "SCROLL_UP" | "WAIT" | "PRESS_ESCAPE" | "PRESS_ENTER" | "GO_BACK" | "GOTO_URL" | null,
+  "operation": "CLICK" | "TYPE_TEXT" | "SELECT" | "SCROLL_DOWN" | "SCROLL_UP" | "WAIT" | "PRESS_ESCAPE" | "PRESS_ENTER" | "GO_BACK" | "RELOAD" | "GOTO_URL" | null,
   "target": "element index like '4' or '2:1', or null",
   "text": "string to type if operation is TYPE_TEXT, or null",
   "url": "full https:// URL to open if operation is GOTO_URL, or null",
