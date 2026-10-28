@@ -117,6 +117,8 @@ class DualTierContext(BaseModel):
         parts: list[str] = [self.primary_goal.strip()]
         if self.active_subgoal and self.active_subgoal.strip() != self.primary_goal.strip():
             parts.append(f"Current subgoal: {self.active_subgoal.strip()}")
+        if self.constraints:
+            parts.append(f"Constraints: {'; '.join(self.constraints)}")
         if self.tactical_hint:
             parts.append(f"Note: {self.tactical_hint.strip()}")
         if site_memory_hint:
@@ -132,6 +134,8 @@ class DualTierContext(BaseModel):
             f"Primary Goal: {self.primary_goal}",
             f"Active Subgoal: {self.active_subgoal or self.primary_goal}",
         ]
+        if self.constraints:
+            lines.append(f"Active Constraints: {'; '.join(self.constraints)}")
         if self.tactical_hint:
             lines.append(f"Current Tactical Hint: {self.tactical_hint}")
         if self.working_memory:
@@ -185,6 +189,8 @@ class DualTierContext(BaseModel):
         return {
             "primary_goal": self.primary_goal,
             "active_subgoal": self.active_subgoal or self.primary_goal,
+            "allow_arbitrary_choices": self.allow_arbitrary_choices,
+            "constraints": self.constraints,
             "tactical_hint": self.tactical_hint,
             "working_memory": self.working_memory,
             "visited_urls": self.visited_urls[-15:],

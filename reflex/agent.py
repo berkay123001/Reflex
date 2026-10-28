@@ -75,14 +75,10 @@ class ReflexSession:
         self.config = config or ReflexConfig()
         clean_url = url.strip()
         self.url = clean_url
-        allow_arb = allow_arbitrary_choices or any(
-            kw in goal.lower()
-            for kw in ("kafana göre", "rastgele", "kendi yorumuna", "istediğin", "random", "arbitrary")
-        )
         self.ctx = DualTierContext(
             primary_goal=goal.strip(),
             active_subgoal=goal.strip(),
-            allow_arbitrary_choices=allow_arb,
+            allow_arbitrary_choices=allow_arbitrary_choices,
             constraints=list(constraints or []),
         )
         self.ctx.add_user_message(goal.strip(), kind="chat")
@@ -110,6 +106,28 @@ class ReflexSession:
         self._done_rejected_url: tuple[str, int] | None = None
         self.last_error: str | None = None
         self.s1_errors: int = 0
+
+        try:
+            interp = interpret_user_message(
+                user_message=goal.strip(),
+                ctx=self.ctx,
+                page=self.page,
+                history=self.history,
+                pending_fact_key=None,
+                supervisor_model=self.config.supervisor_model,
+                allow_model_fallback=self.config.allow_model_fallback,
+            )
+            self.ctx.allow_arbitrary_choices = interp.allow_arbitrary_choices
+            self.ctx.constraints = list(interp.constraints or [])
+            if constraints:
+                for c in constraints:
+                    if c not in self.ctx.constraints:
+                        self.ctx.constraints.append(c)
+            if allow_arbitrary_choices:
+                self.ctx.allow_arbitrary_choices = True
+        except Exception as exc:
+            self.status = "error"
+            self.last_error = f"Goal constraint extraction failed: {exc}"
 
     def elapsed(self) -> int:
         self.elapsed_ms = round((time.perf_counter() - self.started_at) * 1000)

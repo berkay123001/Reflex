@@ -45,17 +45,19 @@ def test_ctx_constraints_initialization_and_update():
         mock_browser.observe.return_value = {"url": "https://example.com/survey", "actions": []}
         mock_browser_cls.return_value = mock_browser
 
-        # Normal goal without constraints
-        sess_normal = ReflexSession("https://example.com/survey", "Fill the survey")
-        assert sess_normal.ctx.constraints == []
+        fake_default_interp = UserMessageInterpretation(constraints=[])
+        with patch("reflex.agent.interpret_user_message", return_value=fake_default_interp):
+            # Normal goal without constraints
+            sess_normal = ReflexSession("https://example.com/survey", "Fill the survey")
+            assert sess_normal.ctx.constraints == []
 
-        # Goal with submission constraint passed via structured constraints
-        sess_constrained = ReflexSession(
-            "https://example.com/survey",
-            "Fill the survey",
-            constraints=["do not submit form"],
-        )
-        assert "do not submit form" in sess_constrained.ctx.constraints
+            # Goal with submission constraint passed via structured constraints
+            sess_constrained = ReflexSession(
+                "https://example.com/survey",
+                "Fill the survey",
+                constraints=["do not submit form"],
+            )
+            assert "do not submit form" in sess_constrained.ctx.constraints
 
         # User steers with constraints via reply_user
         fake_interp = UserMessageInterpretation(
@@ -137,7 +139,8 @@ def test_end_to_end_step_escalates_on_constrained_submission():
         mock_browser.observe.return_value = mock_page
         mock_browser_cls.return_value = mock_browser
 
-        session = ReflexSession("https://example.com/form", "Fill fields", constraints=["do not submit form"])
+        with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation()):
+            session = ReflexSession("https://example.com/form", "Fill fields", constraints=["do not submit form"])
         assert len(session.ctx.constraints) > 0
 
         # Mock choose_action proposing the submit action

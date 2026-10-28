@@ -20,11 +20,12 @@ def test_no_books_toscrape_hardcoded_redirect():
         mock_browser.observe.return_value = {"url": "https://books.toscrape.com", "actions": []}
         mock_browser_cls.return_value = mock_browser
 
-        session = ReflexSession(
-            url="https://books.toscrape.com",
-            goal="Find cheap books",
-            config=ReflexConfig(),
-        )
+        with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation()):
+            session = ReflexSession(
+                url="https://books.toscrape.com",
+                goal="Find cheap books",
+                config=ReflexConfig(),
+            )
         assert session.url == "https://books.toscrape.com"
         mock_browser_cls.assert_called_once_with("https://books.toscrape.com")
 
@@ -39,10 +40,12 @@ def test_ctx_allow_arbitrary_choices_default_and_goal_init():
         mock_browser.observe.return_value = {"url": "https://example.com", "actions": []}
         mock_browser_cls.return_value = mock_browser
 
-        session_strict = ReflexSession(url="https://example.com", goal="Fill form accurately")
+        with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation(allow_arbitrary_choices=False)):
+            session_strict = ReflexSession(url="https://example.com", goal="Fill form accurately")
         assert session_strict.ctx.allow_arbitrary_choices is False
 
-        session_arb = ReflexSession(url="https://example.com", goal="Anketi kafana göre doldur")
+        with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation(allow_arbitrary_choices=True)):
+            session_arb = ReflexSession(url="https://example.com", goal="Anketi kafana göre doldur")
         assert session_arb.ctx.allow_arbitrary_choices is True
 
 
@@ -53,7 +56,8 @@ def test_reply_user_populates_allow_arbitrary_choices():
         mock_browser.observe.return_value = {"url": "https://example.com", "actions": []}
         mock_browser_cls.return_value = mock_browser
 
-        session = ReflexSession(url="https://example.com", goal="Initial strict goal")
+        with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation()):
+            session = ReflexSession(url="https://example.com", goal="Initial strict goal")
         assert session.ctx.allow_arbitrary_choices is False
 
         fake_interp = UserMessageInterpretation(

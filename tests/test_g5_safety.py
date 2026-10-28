@@ -20,6 +20,12 @@ from reflex.safety import (
 from reflex.supervisor import UserMessageInterpretation
 
 
+@pytest.fixture(autouse=True)
+def _mock_session_init_supervisor():
+    with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation()):
+        yield
+
+
 def _make_fake_browser(page: dict[str, Any] | None = None) -> MagicMock:
     if page is None:
         page = {

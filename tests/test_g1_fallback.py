@@ -22,6 +22,12 @@ from reflex.supervisor import (
 from reflex.system1 import choose_action
 
 
+@pytest.fixture(autouse=True)
+def _mock_session_init_supervisor():
+    with patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation()):
+        yield
+
+
 def test_config_allow_model_fallback_default():
     """Ensure ReflexConfig defaults allow_model_fallback to False."""
     cfg = ReflexConfig()
