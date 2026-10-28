@@ -157,7 +157,8 @@
     const visW=visRight-visLeft, visH=visBottom-visTop;
     if (!rname || r.width<=0 || r.height<=0 || visW<Math.min(16,r.width*0.5) || visH<Math.min(20,r.height*0.35)) continue;
     if (rname==='gridcell' && e.querySelector('button,[role="button"]')) continue;
-    let lbl=(e.tagName==='IFRAME'?'Verify you are human (Security Challenge)':name(e))||rname;
+    const accessibleName=name(e)||'';
+    let lbl=(e.tagName==='IFRAME'?'Verify you are human (Security Challenge)':accessibleName)||rname;
     if (rname==='link' && lbl.length>35) {
       const hEl=e.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
       const hTxt=hEl?.innerText?.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g,'').replace(/\s+/g,' ').trim();
@@ -187,7 +188,7 @@
       if (seenCardLinks.has(dedupKey)) continue;
       seenCardLinks.add(dedupKey);
     }
-    const base={node:identity(e),role:rname,label:lbl,
+    const base={node:identity(e),role:rname,label:lbl,accessible_name:accessibleName,
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
     if (rawHref || rname==='link') base.href=rawHref;
     const form=owningForm(e);
@@ -259,7 +260,7 @@
     if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
     const lbl=name(e);
     if (!lbl || lbl.length>80) continue;
-    const customAction={node:identity(e),role:'button',label:lbl,custom:true,kind:'click',value:'',
+    const customAction={node:identity(e),role:'button',label:lbl,accessible_name:lbl,custom:true,kind:'click',value:'',
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
     if (isCommitControl(e)) {
       customAction.submits_form=true;

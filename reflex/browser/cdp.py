@@ -135,6 +135,38 @@ def ensure_chromium_cdp(port: int | None = None) -> None:
 CLICK_TEXT_QUIET_S = 0.6
 CLICK_TEXT_CAP_S = 10.0
 _PAGE_TEXT_LEN = "(document.body && (document.body.innerText || '').length) || 0"
+_TIME_TOKEN = re.compile(r"\b\d+\s*(?:s|sn|sec|ms)\b", re.IGNORECASE)
+# Read the live accessible name. The token keeps this evaluate distinct from the click script.
+_ACCESSIBLE_NAME = """(nodeId => {
+  const reflexAccessibleName = window.__jevFast;
+  const node = reflexAccessibleName?.nodes?.get(nodeId);
+  if (!node || !reflexAccessibleName.guard) return null;
+  const guard = reflexAccessibleName.guard(node);
+  const name = guard && guard[2];
+  return typeof name === 'string' ? name : null;
+})"""
+
+
+def _norm_accessible_label(value: str) -> str:
+    cleaned = _TIME_TOKEN.sub("", value or "")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _recorded_accessible_name(action: dict[str, Any], page: dict[str, Any] | None) -> str:
+    """Raw name from the decision, never the decorated label."""
+    raw = action.get("accessible_name")
+    if isinstance(raw, str) and raw.strip():
+        return raw
+    node = action.get("node")
+    guards = (page or {}).get("guards") or {}
+    guard = None
+    if type(node) is int:
+        guard = guards.get(str(node))
+        if guard is None:
+            guard = guards.get(node)
+    if isinstance(guard, (list, tuple)) and len(guard) > 2 and isinstance(guard[2], str) and guard[2].strip():
+        return str(guard[2])
+    return ""
 
 
 class StalePage(ValueError):
@@ -590,6 +622,33 @@ class Browser:
             return cur_lbl == exp_lbl
         return self.evaluate(MARKER) == page.get("marker")
 
+    def accessible_name_matches(self, action: dict[str, Any], page: dict[str, Any] | None = None) -> bool:
+        """True when the live name still equals the raw name recorded at decision time.
+
+        The decorated label is not parsed. An empty or unreadable name does not
+        block. A different raw name returns False.
+        """
+        if action.get("kind") != "click":
+            return True
+        node = action.get("node")
+        if type(node) is not int:
+            return True
+        recorded = _recorded_accessible_name(action, page)
+        if not recorded:
+            return True
+        try:
+            current = self.evaluate(_ACCESSIBLE_NAME + "(" + json.dumps(node) + ")")
+        except Exception:
+            return True
+        if not isinstance(current, str) or not current.strip():
+            return True
+        return _norm_accessible_label(recorded) == _norm_accessible_label(current)
+
+    def _refuse_click_if_name_changed(self, action: dict[str, Any], page: dict[str, Any]) -> None:
+        """Do not click when the live accessible name no longer matches the recorded raw name."""
+        if not self.accessible_name_matches(action, page):
+            raise StalePage("Accessible name changed since this decision. Observe again.")
+
     def act(self, action: dict[str, Any], page: dict[str, Any], text: str | None = None) -> dict[str, Any]:
         """Execute a low-level action on the observed page."""
         kind = action["kind"]
@@ -618,6 +677,9 @@ class Browser:
 
         if not self.fresh(page, action):
             raise StalePage("Page changed since this decision. Observe again.")
+
+        if kind == "click":
+            self._refuse_click_if_name_changed(action, page)
 
         if kind == "wait":
             wait_s = float(os.environ.get("REFLEX_WAIT_SECONDS", "1.0") or 1.0)

@@ -928,6 +928,11 @@ class ReflexSession:
                 ),
                 None,
             )
+            if refreshed_act is not None and refreshed_act.get("kind") == "click":
+                # A raw name that still disagrees must not be clicked again.
+                matcher = getattr(self.browser, "accessible_name_matches", None)
+                if callable(matcher) and matcher(refreshed_act, self.page) is False:
+                    refreshed_act = None
             if refreshed_act is not None:
                 try:
                     before_page = self.page
