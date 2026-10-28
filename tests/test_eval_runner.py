@@ -455,3 +455,115 @@ def test_t3_eval_records_asked_question_error_step_and_flushes_stdout(tmp_path: 
     for call in mock_print.call_args_list:
         assert call.kwargs.get("flush") is True
 
+
+def test_l3_step_duration_breakdown_and_summary_task_elapsed():
+    """L3: Verify s1_ms, s2_ms, act_ms, observe_ms, step_ms in session.history & step_details, Studio app.js usage, and summary elapsed metrics."""
+    from unittest.mock import MagicMock
+    from reflex.agent import ReflexSession
+    from reflex.config import ReflexConfig
+    from reflex.supervisor import SupervisorDecision, UserMessageInterpretation
+
+    page1 = {
+        "url": "https://example.com/1",
+        "title": "Page 1",
+        "text": "Content 1",
+        "fingerprint": "fp1",
+        "actions": [
+            {"id": "btn_1", "node": 10, "kind": "click", "role": "button", "label": "Next"},
+        ],
+    }
+    page2 = {
+        "url": "https://example.com/2",
+        "title": "Page 2",
+        "text": "Content 2",
+        "fingerprint": "fp2",
+        "actions": [
+            {"id": "btn_2", "node": 20, "kind": "click", "role": "button", "label": "Finish"},
+        ],
+    }
+
+    fake_browser = MagicMock()
+    fake_browser.observe.side_effect = [page1, page2, page2]
+    fake_browser.fresh.return_value = True
+    fake_browser.act.return_value = {"rect": {"x": 10, "y": 10, "w": 20, "h": 20}}
+
+    s1_step1 = {
+        "operation": "CLICK",
+        "target": "1",
+        "choice": "btn_1",
+        "confidence": 0.92,
+        "target_confidence": 0.90,
+        "target_margin": 0.80,
+        "latency_ms": 310,
+        "model": "turnike-4b",
+        "usage": {},
+    }
+    s1_step2_escalate = {
+        "operation": "CLICK",
+        "target": "1",
+        "choice": "btn_2",
+        "confidence": 0.25,
+        "target_confidence": 0.30,
+        "target_margin": 0.10,
+        "latency_ms": 280,
+        "model": "turnike-4b",
+        "usage": {},
+    }
+    sup_step2 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Click Finish",
+        model="muse-spark-1.3-contributor",
+        latency_ms=4200,
+    )
+
+    with (
+        patch("reflex.agent.Browser", return_value=fake_browser),
+        patch("reflex.agent.interpret_user_message", return_value=UserMessageInterpretation()),
+        patch("reflex.agent.choose_action", side_effect=[s1_step1, s1_step2_escalate]),
+        patch("reflex.agent.resolve_escalation", return_value=sup_step2),
+    ):
+        session = ReflexSession(url="https://example.com/1", goal="Test L3 breakdown", config=ReflexConfig())
+        session.step()
+        snap = session.step()
+
+    assert len(session.history) == 2
+    h1, h2 = session.history[0], session.history[1]
+
+    # Step 1: S1 fast path
+    assert h1["s1_ms"] == 310
+    assert h1["s2_ms"] == 0
+    assert isinstance(h1["act_ms"], int) and h1["act_ms"] >= 0
+    assert isinstance(h1["observe_ms"], int) and h1["observe_ms"] >= 0
+    assert h1["step_ms"] >= h1["s1_ms"] + h1["s2_ms"] + h1["act_ms"] + h1["observe_ms"]
+
+    # Step 2: S1 -> Gate Escalation -> S2 Override
+    assert h2["s1_ms"] == 280
+    assert h2["s2_ms"] == 4200
+    assert isinstance(h2["act_ms"], int) and h2["act_ms"] >= 0
+    assert isinstance(h2["observe_ms"], int) and h2["observe_ms"] >= 0
+    assert h2["step_ms"] >= h2["s1_ms"] + h2["s2_ms"] + h2["act_ms"] + h2["observe_ms"]
+    assert snap["metrics"]["median_step_ms"] >= 310
+
+    # Verify compute_summary and format_summary_report include per-task and total elapsed time
+    summary = compute_summary(
+        [
+            {"id": "task_a", "success": True, "score": 1.0, "status": "done", "steps": 2, "s2_escalations": 1, "elapsed_ms": 12000, "latencies_ms": [310, 4200]},
+            {"id": "task_b", "success": True, "score": 1.0, "status": "done", "steps": 3, "s2_escalations": 0, "elapsed_ms": 8000, "latencies_ms": [250, 260, 270]},
+        ]
+    )
+    assert summary["total_elapsed_ms"] == 20000
+    assert summary["avg_elapsed_ms_per_task"] == 10000.0
+    assert summary["task_elapsed_ms"] == {"task_a": 12000, "task_b": 8000}
+    report = format_summary_report(summary)
+    assert "Total Elapsed:" in report
+    assert "Task Durations:" in report
+    assert "task_a: 12000 ms" in report
+
+    # Verify Studio app.js uses step_ms and median_step_ms
+    app_js = (Path(__file__).resolve().parent.parent / "reflex" / "web" / "app.js").read_text(encoding="utf-8")
+    assert "lastStep.step_ms" in app_js
+    assert "m.median_step_ms" in app_js
+
+

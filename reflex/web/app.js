@@ -188,7 +188,7 @@ function renderDomOverlay(state) {
     cursor.classList.toggle("s2", Boolean(isS2));
     cursor.classList.add("visible");
     if (callout && lastStep) {
-      callout.textContent = `${lastStep.actor} · ${lastStep.operation || lastStep.kind} · ${lastStep.latency_ms || 0}ms`;
+      callout.textContent = `${lastStep.actor} · ${lastStep.operation || lastStep.kind} · ${lastStep.step_ms ?? lastStep.latency_ms ?? 0}ms`;
     }
   } else if (cursor) {
     cursor.classList.remove("visible");
@@ -231,12 +231,14 @@ function renderDecisionStack(state) {
     const marPct = Math.round((lastStep.target_margin ?? 1) * 100);
 
     const matchingEsc = isS2 ? escalations.find((e) => e.step === lastStep.step) || lastEsc : null;
+    const stepDur = lastStep.step_ms ?? lastStep.latency_ms ?? 0;
+    const stepBreakdownTitle = `S1: ${lastStep.s1_ms ?? 0}ms | S2: ${lastStep.s2_ms ?? 0}ms | Act: ${lastStep.act_ms ?? 0}ms | Obs: ${lastStep.observe_ms ?? 0}ms`;
 
     html += `
       <div class="dcard ${isS2 ? "s2" : "s1"}">
         <div class="dcard-top">
           <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${lastStep.step} ${isS2 ? "🧠 S2 SUPERVISOR" : "⚡ S1 REFLEX"} · ${escapeHtml(lastStep.operation)}</span>
-          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">${lastStep.latency_ms} ms</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)" title="${stepBreakdownTitle}">${stepDur} ms</span>
         </div>
         <div class="dcard-act">${lastStep.target ? `[${escapeHtml(lastStep.target)}] ` : ""}${escapeHtml(lastStep.action)}</div>
         ${lastStep.text ? `<div class="dcard-reason">✎ Typed: <b>"${escapeHtml(lastStep.text)}"</b></div>` : ""}
@@ -279,10 +281,11 @@ function renderDecisionStack(state) {
     // Stacked previous 3 steps
     const prevSteps = history.slice(Math.max(0, history.length - 4), history.length - 1).reverse();
     prevSteps.forEach((ps) => {
+      const psDur = ps.step_ms ?? ps.latency_ms ?? 0;
       html += `
         <div class="dstack-prev">
           <span>#${ps.step} <b style="color:${ps.actor === "S2" ? "var(--s2)" : "var(--s1)"}">${ps.actor}</b> ${escapeHtml(ps.operation)} · ${escapeHtml((ps.action || "").slice(0, 38))}</span>
-          <span>${ps.latency_ms}ms</span>
+          <span>${psDur}ms</span>
         </div>`;
     });
   } else if (lastDec) {
@@ -303,7 +306,8 @@ function renderScrubberAndActionSpace(state) {
     track.innerHTML = history
       .map((h) => {
         const cls = h.verification?.loop_detected || h.verification?.oscillation_detected ? "warn" : h.actor === "S2" ? "s2" : "s1";
-        return `<div class="scrub-tick ${cls}" title="#${h.step} [${h.actor}] ${escapeHtml(h.operation)}: ${escapeHtml(h.action)} (${h.latency_ms}ms)"></div>`;
+        const hDur = h.step_ms ?? h.latency_ms ?? 0;
+        return `<div class="scrub-tick ${cls}" title="#${h.step} [${h.actor}] ${escapeHtml(h.operation)}: ${escapeHtml(h.action)} (${hDur}ms)"></div>`;
       })
       .join("");
   }
@@ -373,11 +377,12 @@ function renderSecondaryViews(state) {
         .reverse()
         .map((h) => {
           const isS2 = h.actor === "S2";
+          const hDur = h.step_ms ?? h.latency_ms ?? 0;
           return `
             <div class="dcard ${isS2 ? "s2" : "s1"}">
               <div class="dcard-top">
                 <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${h.step} ${h.actor} · ${escapeHtml(h.operation)}</span>
-                <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">${h.latency_ms} ms · ${escapeHtml(h.url || "")}</span>
+                <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">${hDur} ms (S1:${h.s1_ms ?? 0} S2:${h.s2_ms ?? 0} Act:${h.act_ms ?? 0} Obs:${h.observe_ms ?? 0}) · ${escapeHtml(h.url || "")}</span>
               </div>
               <div class="dcard-act">${h.target ? `[${escapeHtml(h.target)}] ` : ""}${escapeHtml(h.action)}</div>
               ${h.text ? `<div class="dcard-reason">Typed: "${escapeHtml(h.text)}"</div>` : ""}
@@ -488,7 +493,7 @@ function renderState(state) {
   if ($("m-steps")) $("m-steps").textContent = String(m.steps ?? 0);
   if ($("m-s1")) $("m-s1").textContent = String(m.s1_steps ?? 0);
   if ($("m-s2")) $("m-s2").textContent = String(m.s2_escalations ?? 0);
-  if ($("m-lat")) $("m-lat").textContent = `${m.median_decision_ms ?? 0} ms`;
+  if ($("m-lat")) $("m-lat").textContent = `${m.median_step_ms ?? m.median_decision_ms ?? 0} ms`;
   if ($("m-cost")) {
     $("m-cost").textContent =
       m.total_cost_usd === "bilinmiyor"

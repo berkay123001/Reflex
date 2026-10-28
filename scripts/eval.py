@@ -493,6 +493,11 @@ def run_task(
                     "model": h.get("model"),
                     "text_helper": h.get("text_helper"),
                     "latency_ms": h.get("latency_ms"),
+                    "s1_ms": h.get("s1_ms", 0),
+                    "s2_ms": h.get("s2_ms", 0),
+                    "act_ms": h.get("act_ms", 0),
+                    "observe_ms": h.get("observe_ms", 0),
+                    "step_ms": h.get("step_ms", h.get("latency_ms", 0)),
                     "url": h.get("url"),
                 }
             )
@@ -668,6 +673,15 @@ def compute_summary(
     else:
         run_status = "completed"
 
+    total_elapsed_ms = sum(int(r.get("elapsed_ms", 0) or 0) for r in task_results)
+    avg_elapsed_ms = round(total_elapsed_ms / total_tasks, 2) if total_tasks > 0 else 0.0
+    total_elapsed_sec = round(total_elapsed_ms / 1000.0, 2)
+    avg_elapsed_sec = round(avg_elapsed_ms / 1000.0, 2)
+    task_elapsed_ms = {
+        str(r.get("id", f"task_{idx}")): int(r.get("elapsed_ms", 0) or 0)
+        for idx, r in enumerate(task_results, start=1)
+    }
+
     return {
         "status": run_status,
         "total_tasks": total_tasks,
@@ -687,6 +701,11 @@ def compute_summary(
         "usage": total_usage,
         "p50_latency_ms": p50_lat_ms,
         "p50_latency_seconds": p50_lat_sec,
+        "total_elapsed_ms": total_elapsed_ms,
+        "total_elapsed_seconds": total_elapsed_sec,
+        "avg_elapsed_ms_per_task": avg_elapsed_ms,
+        "avg_elapsed_seconds_per_task": avg_elapsed_sec,
+        "task_elapsed_ms": task_elapsed_ms,
         "models_used": sorted(all_models),
         "by_check_kind": by_check_kind,
     }
@@ -709,8 +728,12 @@ def format_summary_report(summary: dict[str, Any]) -> str:
         f"S2 Escalation Rate:      {summary['s2_escalation_rate'] * 100:.2f}%",
         f"Total Cost:              {cost_str}",
         f"p50 Latency:             {summary['p50_latency_ms']} ms ({summary['p50_latency_seconds']} s)",
+        f"Total Elapsed:           {summary.get('total_elapsed_ms', 0)} ms ({summary.get('total_elapsed_seconds', 0.0):.2f} s | Avg / Task: {summary.get('avg_elapsed_ms_per_task', 0.0):.0f} ms / {summary.get('avg_elapsed_seconds_per_task', 0.0):.2f} s)",
         f"Models Used:             {', '.join(summary['models_used']) if summary['models_used'] else 'None'}",
     ]
+    if summary.get("task_elapsed_ms"):
+        t_strs = [f"{tid}: {ms} ms ({ms / 1000.0:.1f} s)" for tid, ms in summary["task_elapsed_ms"].items()]
+        lines.append(f"Task Durations:          {', '.join(t_strs)}")
     if summary.get("by_check_kind"):
         kind_strs = [
             f"{k}: {v['successful']}/{v['total']}"

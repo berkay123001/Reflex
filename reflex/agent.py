@@ -193,6 +193,12 @@ class ReflexSession:
 
         latencies = [h["latency_ms"] for h in self.history if isinstance(h.get("latency_ms"), (int, float))]
         median_ms = sorted(latencies)[len(latencies) // 2] if latencies else 0
+        step_durations = [
+            h.get("step_ms", h.get("latency_ms", 0))
+            for h in self.history
+            if isinstance(h.get("step_ms", h.get("latency_ms")), (int, float))
+        ]
+        median_step_ms = sorted(step_durations)[len(step_durations) // 2] if step_durations else 0
 
         return {
             "status": self.status,
@@ -229,6 +235,7 @@ class ReflexSession:
                 "s1_errors": self.s1_errors,
                 "text_helper_calls": len(self.text_calls),
                 "median_decision_ms": median_ms,
+                "median_step_ms": median_step_ms,
                 "total_cost_usd": total_cost,
                 "known_cost_usd": known_cost_sum,
                 "usage": {
@@ -251,17 +258,30 @@ class ReflexSession:
             self.ctx.add_agent_message(self.last_error, kind="escalation_note")
             return self.snapshot()
 
+        step_t0 = time.perf_counter()
+        pre_obs_ms = 0
         try:
             if not self.browser.fresh(self.page):
+                obs_t0 = time.perf_counter()
                 self.page = self.browser.observe(screenshot=self.config.screenshots)
+                pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
         except StalePage:
+            obs_t0 = time.perf_counter()
             self.page = self.browser.observe(screenshot=self.config.screenshots)
+            pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
 
         # 1. Check if post-step verification from the previous action scheduled an escalation
         if self.pending_escalation_reason is not None:
             trig, reason = self.pending_escalation_reason
             self.pending_escalation_reason = None
-            return self._handle_escalation(trigger_type=trig, reason=reason, s1_decision=None)
+            return self._handle_escalation(
+                trigger_type=trig,
+                reason=reason,
+                s1_decision=None,
+                step_t0=step_t0,
+                s1_ms=0,
+                pre_obs_ms=pre_obs_ms,
+            )
 
         # 2. Query System 1 (OpenRouter Jev or Local Turnike)
         cur_url_str = str(self.page.get("url", ""))
@@ -278,6 +298,7 @@ class ReflexSession:
             and (len(self.history) - self._done_rejected_url[1]) <= 8
         )
 
+        s1_t0 = time.perf_counter()
         try:
             s1_decision = choose_action(
                 self.page,
@@ -287,17 +308,22 @@ class ReflexSession:
                 suppress_done=suppress_done,
             )
         except ValueError as exc:
+            s1_err_ms = round((time.perf_counter() - s1_t0) * 1000)
             self.s1_errors += 1
             return self._handle_escalation(
                 trigger_type="s1_error",
                 reason=f"System 1 error: {exc}",
                 s1_decision=None,
+                step_t0=step_t0,
+                s1_ms=s1_err_ms,
+                pre_obs_ms=pre_obs_ms,
             )
         except Exception as exc:
             self.status = "error"
             self.last_error = str(exc)
             return self.snapshot()
 
+        s1_ms = int(s1_decision.get("latency_ms", round((time.perf_counter() - s1_t0) * 1000)) or 0)
         selected_id = s1_decision.get("choice")
         selected_action = next((a for a in self.page.get("actions", []) if a.get("id") == selected_id), None)
 
@@ -337,6 +363,9 @@ class ReflexSession:
                 reason=gate_eval.reason,
                 s1_decision=s1_decision,
                 gate_eval=gate_eval,
+                step_t0=step_t0,
+                s1_ms=s1_ms,
+                pre_obs_ms=pre_obs_ms,
             )
 
         # 4. High-Confidence DONE from System 1
@@ -357,6 +386,9 @@ class ReflexSession:
                 reason=f"Selected action ID {selected_id} not found on page",
                 s1_decision=s1_decision,
                 gate_eval=gate_eval,
+                step_t0=step_t0,
+                s1_ms=s1_ms,
+                pre_obs_ms=pre_obs_ms,
             )
 
         if s1_decision["operation"] == "CLICK" and self._is_rejected_target(action, self.page.get("url", "")):
@@ -371,6 +403,9 @@ class ReflexSession:
                     reason=f"Target '{action.get('label', '')}' was already visited and rejected",
                     s1_decision=s1_decision,
                     gate_eval=gate_eval,
+                    step_t0=step_t0,
+                    s1_ms=s1_ms,
+                    pre_obs_ms=pre_obs_ms,
                 )
 
         return self._execute_and_verify(
@@ -387,6 +422,10 @@ class ReflexSession:
             usage=s1_decision.get("usage", {}),
             preset_text=None,
             escalation_note=None,
+            step_t0=step_t0,
+            s1_ms=s1_ms,
+            s2_ms=0,
+            pre_obs_ms=pre_obs_ms,
         )
 
     def _is_rejected_target(self, action: dict[str, Any], current_url: str) -> bool:
@@ -459,8 +498,13 @@ class ReflexSession:
         reason: str,
         s1_decision: dict[str, Any] | None,
         gate_eval: GateEvaluation | None = None,
+        step_t0: float | None = None,
+        s1_ms: int = 0,
+        pre_obs_ms: int = 0,
     ) -> dict[str, Any]:
         """Run System 2 Supervisor (`qwen/qwen3.8-omni-flash`) to resolve an escalation."""
+        if step_t0 is None:
+            step_t0 = time.perf_counter()
         if len(self.escalations) >= self.config.max_escalations:
             self.status = "blocked"
             self.last_error = f"Reached max supervisor escalations ({self.config.max_escalations}): {reason}"
@@ -468,6 +512,7 @@ class ReflexSession:
             return self.snapshot()
 
         elements, targets, controls = action_space(self.page.get("actions", []))
+        s2_t0 = time.perf_counter()
         try:
             sup: SupervisorDecision = resolve_escalation(
                 ctx=self.ctx,
@@ -486,6 +531,7 @@ class ReflexSession:
             self.last_error = str(exc)
             return self.snapshot()
 
+        s2_ms = int(sup.latency_ms or round((time.perf_counter() - s2_t0) * 1000))
         if sup.memory:
             self.ctx.working_memory = sup.memory
 
@@ -607,6 +653,10 @@ class ReflexSession:
             usage={"cost": 0.0},
             preset_text=sup.text,
             escalation_note=f"[{trigger_type}] {sup.reasoning}",
+            step_t0=step_t0,
+            s1_ms=s1_ms,
+            s2_ms=s2_ms,
+            pre_obs_ms=pre_obs_ms,
         )
 
     def _resolve_supervisor_action(
@@ -732,8 +782,14 @@ class ReflexSession:
         usage: dict[str, Any],
         preset_text: str | None,
         escalation_note: str | None,
+        step_t0: float | None = None,
+        s1_ms: int = 0,
+        s2_ms: int = 0,
+        pre_obs_ms: int = 0,
     ) -> dict[str, Any]:
         """Run safety check, text generation (if fill), CDP action execution, and 3-layer verification."""
+        if step_t0 is None:
+            step_t0 = time.perf_counter()
         # 1. Irreversible Action Safety Guard
         origin = extract_origin(action.get("origin")) or extract_origin(self.page.get("url"))
         if action.get("kind") == "press_enter":
@@ -765,6 +821,9 @@ class ReflexSession:
                 "usage": usage,
                 "preset_text": preset_text,
                 "escalation_note": escalation_note,
+                "s1_ms": s1_ms,
+                "s2_ms": s2_ms,
+                "pre_obs_ms": pre_obs_ms,
                 "summary": safety.action_summary,
                 "reason": safety.reason,
                 "signature": sig,
@@ -797,7 +856,8 @@ class ReflexSession:
                 return self.snapshot()
             self.text_calls.append(outcome.model_dump())
             text_helper_model = outcome.model
-            text_latency_ms = outcome.latency_ms
+            text_latency_ms = int(outcome.latency_ms or 0)
+            s2_ms += text_latency_ms
             if outcome.text is None:
                 # Required value missing -> Pause and ask the user instead of crashing!
                 self.status = "waiting_user"
@@ -811,14 +871,22 @@ class ReflexSession:
         # 3. Execute on Browser via CDP
         before_page = self.page
         act_res: dict[str, Any] = {}
+        act_ms = 0
+        stale_obs_ms = 0
+        act_t0 = time.perf_counter()
         try:
             act_res = self.browser.act(action, before_page, text=typed_text) or {}
+            act_ms += round((time.perf_counter() - act_t0) * 1000)
         except TargetCoveredError as exc:
+            act_ms += round((time.perf_counter() - act_t0) * 1000)
             if actor == "S1":
                 return self._handle_escalation(
                     trigger_type="target_covered",
                     reason=str(exc),
                     s1_decision={"operation": operation, "target": target, "confidence": confidence},
+                    step_t0=step_t0,
+                    s1_ms=s1_ms,
+                    pre_obs_ms=pre_obs_ms,
                 )
             # If S2 also hit a covered target, automatically press Escape to dismiss the modal/overlay instead of looping
             try:
@@ -829,7 +897,10 @@ class ReflexSession:
             self.status = "ready"
             return self.snapshot()
         except StalePage as exc:
+            act_ms += round((time.perf_counter() - act_t0) * 1000)
+            obs_retry_t0 = time.perf_counter()
             self.page = self.browser.observe(screenshot=self.config.screenshots)
+            stale_obs_ms += round((time.perf_counter() - obs_retry_t0) * 1000)
             refreshed_act = next(
                 (
                     a
@@ -843,7 +914,9 @@ class ReflexSession:
                 try:
                     before_page = self.page
                     action = refreshed_act
+                    act_retry_t0 = time.perf_counter()
                     act_res = self.browser.act(action, before_page, text=typed_text) or {}
+                    act_ms += round((time.perf_counter() - act_retry_t0) * 1000)
                 except Exception as exc2:
                     self.pending_escalation_reason = ("stale_retry_failed", f"Retry after StalePage failed: {exc2}")
                     self.status = "ready"
@@ -854,7 +927,9 @@ class ReflexSession:
                 self.status = "ready"
                 return self.snapshot()
 
+        obs_after_t0 = time.perf_counter()
         after_page = self.browser.observe(screenshot=self.config.screenshots)
+        observe_ms = pre_obs_ms + stale_obs_ms + round((time.perf_counter() - obs_after_t0) * 1000)
         self.page = after_page
         after_url = str(after_page.get("url", ""))
         if after_url and after_url not in self.ctx.visited_urls:
@@ -879,6 +954,9 @@ class ReflexSession:
         if act_res.get("auto_submitted"):
             action_label = f"{action_label} (submitted search)"
 
+        wall_step_ms = round((time.perf_counter() - step_t0) * 1000)
+        step_ms = max(wall_step_ms, s1_ms + s2_ms + act_ms + observe_ms)
+
         step_record = {
             "step": len(self.history) + 1,
             "actor": actor,  # "S1" (Jev/Turnike) or "S2" (Supervisor)
@@ -895,6 +973,11 @@ class ReflexSession:
             "joint_confidence": joint_confidence,
             "target_margin": target_margin,
             "latency_ms": latency_ms,
+            "s1_ms": s1_ms,
+            "s2_ms": s2_ms,
+            "act_ms": act_ms,
+            "observe_ms": observe_ms,
+            "step_ms": step_ms,
             "model": model_name,
             "text": typed_text,
             "text_helper": text_helper_model,
@@ -1069,6 +1152,9 @@ class ReflexSession:
                 usage=pending["usage"],
                 preset_text=pending["preset_text"],
                 escalation_note=pending["escalation_note"],
+                s1_ms=int(pending.get("s1_ms", 0) or 0),
+                s2_ms=int(pending.get("s2_ms", 0) or 0),
+                pre_obs_ms=int(pending.get("pre_obs_ms", 0) or 0),
             )
             self.ctx.approved_actions.discard(sig)
             return res
