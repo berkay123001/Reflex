@@ -605,9 +605,15 @@ class Browser:
 
         target = self.evaluate(
             """(action => {
-              const e=window.__jevFast?.nodes.get(action.node);
-              if (!e?.isConnected || e.matches(':disabled') || e.closest('[aria-disabled="true"],[inert]') ||
-                  !e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})) return null;
+              const node=window.__jevFast?.nodes.get(action.node);
+              if (!node?.isConnected || node.matches(':disabled') || node.closest('[aria-disabled="true"],[inert]')) return null;
+              const shown=el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+              let e=node;
+              // Custom-styled radio/checkbox: the native input is hidden, its visible <label> takes the click.
+              if (!shown(node) && node.tagName==='INPUT' && ['radio','checkbox'].includes(node.type)) {
+                e=[...(node.labels||[]), node.closest('label')].find(l=>l && shown(l)) || node;
+              }
+              if (!shown(e)) return null;
               if (action.kind==='fill' && (e.readOnly || e.getAttribute('aria-readonly')==='true')) return null;
               if (action.kind==='click') {
                 const link=e.tagName==='A'?e:e.closest('a[href]');

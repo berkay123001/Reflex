@@ -49,7 +49,7 @@
     [...document.querySelectorAll('input,textarea,select')].filter(safe)
       .map(e=>[identity(e),e.value,e.checked,e.selectedIndex,e.disabled,e.readOnly])];
   cache.guard=e=>{
-    if (!e?.isConnected || !visible(e)) return null;
+    if (!e?.isConnected || !(visible(e) || choiceProxy(e))) return null;
     const scope=e.closest('form,dialog,[role="dialog"],article,li,tr,[role="row"]') || e.parentElement;
     return [identity(e),role(e),name(e),e.value??null,e.checked??null,e.selectedIndex??null,
       e.readOnly??null,e.matches(':disabled'),e.getAttribute('aria-disabled'),
@@ -86,14 +86,43 @@
     }
     return false;
   };
+  // Custom-styled choices hide the native radio/checkbox (opacity 0) and show a styled <label>.
+  // Such an input is listed through its visible label; Browser.act() clicks the label.
+  const choiceProxy=e=>{
+    if (e.tagName!=='INPUT' || !['radio','checkbox'].includes(e.type)) return null;
+    for (const l of [...(e.labels||[]), e.closest('label')]) {
+      if (!l) continue;
+      const lr=l.getBoundingClientRect();
+      if (lr.width>0 && lr.height>0 && visible(l)) return l;
+    }
+    return null;
+  };
+  // Question text for repeated options ("Evet"/"Hayır"): the first line an ancestor holding the whole
+  // radio group adds beyond the option labels themselves.
+  const choiceQuestion=e=>{
+    const group=e.name ? [...document.querySelectorAll(`input[type="${e.type}"][name="${CSS.escape(e.name)}"]`)] : [e];
+    if (group.length<2) return '';
+    const optionTexts=new Set(group.map(x=>(name(x)||'').trim().toLowerCase()).filter(Boolean));
+    let cur=(e.closest('label')||e).parentElement;
+    for (let i=0; cur && cur!==document.body && i<8; i++, cur=cur.parentElement) {
+      if (!group.every(x=>cur.contains(x))) continue;
+      const extra=(cur.innerText||'').split('\n').map(s=>s.replace(/\s+/g,' ').trim())
+        .filter(s=>s && !optionTexts.has(s.toLowerCase()));
+      if (extra.length) return extra[0].slice(0,90);
+    }
+    return '';
+  };
   const seenCardLinks=new Set();
   const actions=[];
   for (const e of document.querySelectorAll(selector)) {
-    if (!safe(e) || !visible(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
+    if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
+    const proxy=visible(e) ? null : choiceProxy(e);
+    if (!visible(e) && !proxy) continue;
+    const box=proxy || e;
     const parentClickable=e.parentElement?.closest('a[href],button,[role="button"],[role="link"]');
     if (parentClickable && (name(parentClickable)||'').trim() && (name(parentClickable)||'').trim()===(name(e)||'').trim()) continue;
-    const r=e.getBoundingClientRect(), rname=role(e);
-    const clip=getClipRect(e.parentElement);
+    const r=box.getBoundingClientRect(), rname=role(e);
+    const clip=getClipRect(box.parentElement);
     const visLeft=Math.max(clip.left,r.left), visRight=Math.min(clip.right,r.right);
     const visTop=Math.max(clip.top,r.top), visBottom=Math.min(clip.bottom,r.bottom);
     const visW=visRight-visLeft, visH=visBottom-visTop;
@@ -110,7 +139,8 @@
     if (['radio','checkbox','textbox'].includes(rname)) {
       const qItem=e.closest('[role="listitem"],[role="group"],fieldset');
       const qHead=qItem?.querySelector('[role="heading"],legend,h2,h3,h4');
-      const qTxt=qHead?.innerText?.replace(/\s*\*\s*$/,'').replace(/\s+/g,' ').trim();
+      let qTxt=qHead?.innerText?.replace(/\s*\*\s*$/,'').replace(/\s+/g,' ').trim();
+      if (!qTxt && rname!=='textbox') qTxt=choiceQuestion(e);
       if (qTxt && !lbl.toLowerCase().includes(qTxt.slice(0,25).toLowerCase())) {
         lbl=`${qTxt.slice(0,75)} → ${lbl.trim()}`;
       }
@@ -148,6 +178,48 @@
       actions.push({...base,kind:editable?'fill':'click',value});
       if (editable && rname==='combobox' && !value) actions.push({...base,kind:'click',value,label:'Open '+base.label});
     }
+  }
+  // Custom widgets (div/span answers, card toggles) carry no semantic role. Add the outermost element where
+  // cursor becomes pointer, or an explicit click handler, when it is short-labelled, in view and not
+  // already represented by (or wrapping) a listed control.
+  const listedEls=new Set(actions.map(a=>cache.nodes.get(a.node)).filter(Boolean));
+  const touchesListed=el=>{
+    for (const x of listedEls) if (x===el || x.contains(el) || el.contains(x)) return true;
+    return false;
+  };
+  const clickHandler=el=>el.hasAttribute('onclick') || /(^|;)\s*click:/.test(el.getAttribute('jsaction')||'');
+  const pointerRoot=el=>getComputedStyle(el).cursor==='pointer' &&
+    (!el.parentElement || getComputedStyle(el.parentElement).cursor!=='pointer');
+  const maxCustomArea=innerWidth*innerHeight*0.25;
+  let customAdded=0;
+  for (const e of document.body.querySelectorAll('*')) {
+    if (customAdded>=60) break;
+    if (['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','IFRAME'].includes(e.tagName)) continue;
+    const r=e.getBoundingClientRect();  // cheap filters first: most elements of a long page are off-screen
+    if (r.width<=0 || r.height<=0 || r.bottom<=0 || r.top>=innerHeight || r.right<=0 || r.left>=innerWidth) continue;
+    if (r.width*r.height>maxCustomArea) continue;
+    if (!clickHandler(e) && !pointerRoot(e)) continue;
+    if (e.matches(selector) || (e.closest('svg') && e.tagName.toLowerCase()!=='svg')) continue;
+    if (!visible(e) || e.closest('[aria-disabled="true"]') || touchesListed(e) || e.querySelector(selector)) continue;
+    const clip=getClipRect(e.parentElement);
+    const visW=Math.min(clip.right,r.right)-Math.max(clip.left,r.left);
+    const visH=Math.min(clip.bottom,r.bottom)-Math.max(clip.top,r.top);
+    if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
+    const lbl=name(e);
+    if (!lbl || lbl.length>80) continue;
+    actions.push({node:identity(e),role:'button',label:lbl,custom:true,kind:'click',value:'',
+      rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}});
+    listedEls.add(e);
+    customAdded++;
+  }
+  if (customAdded) {
+    // Keep document order so System 1's first-60 element window sees custom widgets in reading order.
+    const pos=a=>cache.nodes.get(a.node);
+    actions.sort((a,b)=>{
+      const x=pos(a), y=pos(b);
+      if (!x || !y || x===y) return 0;
+      return x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
   }
   const labelCounts=new Map();
   for (const a of actions) {

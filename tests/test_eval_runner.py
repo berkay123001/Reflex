@@ -135,12 +135,12 @@ def _make_mock_session(
 # ==============================================================================
 
 
-def test_dev_qa_json_exists_and_contains_exactly_8_tasks():
-    """dev_qa.json must exist and contain exactly 8 specific evaluation tasks."""
+def test_dev_qa_json_exists_and_contains_exactly_9_tasks():
+    """dev_qa.json must exist and contain exactly 9 specific evaluation tasks."""
     assert DEV_QA_PATH.is_file(), f"Missing tasks file at {DEV_QA_PATH}"
 
     tasks = load_tasks(DEV_QA_PATH)
-    assert len(tasks) == 8, f"Expected exactly 8 tasks, found {len(tasks)}"
+    assert len(tasks) == 9, f"Expected exactly 9 tasks, found {len(tasks)}"
 
     task_ids = [t["id"] for t in tasks]
     expected_ids = [
@@ -152,6 +152,7 @@ def test_dev_qa_json_exists_and_contains_exactly_8_tasks():
         "qa_crm",
         "fixture",
         "qa_survey_fill_only",
+        "qa_hidden_choices",
     ]
     assert task_ids == expected_ids, f"Task IDs mismatch: {task_ids} != {expected_ids}"
 

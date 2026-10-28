@@ -1163,3 +1163,22 @@ def test_eval_budget_usd_with_unknown_cost_stops_with_budget_unknown(tmp_path: P
     assert "Budget Unknown: 1" in report
 
 
+
+
+def test_managed_isolated_browser_points_harness_client_at_eval_daemon():
+    """browser_harness reads BU_NAME at import; the client must still talk to the eval_{port} daemon.
+
+    Regression: only os.environ was updated, so CDP calls went to the "default" daemon, which may be
+    attached to the shared 9333 browser instead of the isolated instance.
+    """
+    import browser_harness.admin as bh_admin
+    import browser_harness.helpers as bh_helpers
+
+    before = (bh_admin.NAME, bh_helpers.NAME)
+    with (
+        patch("scripts.eval.is_port_open", return_value=True),
+        managed_isolated_browser(port=9497, headless=True),
+    ):
+        assert bh_admin.NAME == "eval_9497"
+        assert bh_helpers.NAME == "eval_9497"
+    assert (bh_admin.NAME, bh_helpers.NAME) == before

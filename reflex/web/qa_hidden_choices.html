@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>QA-07: Kişilik Testi (özel stilli seçenekler)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f6f7fb; margin: 0; padding: 24px; }
+    .item { background: #fff; border-radius: 10px; padding: 18px 20px; margin: 0 auto 90px; max-width: 640px; }
+    .qt { font-weight: 600; margin-bottom: 12px; }
+    .opt { display: inline-block; position: relative; margin-right: 10px; padding: 8px 18px; border: 1px solid #c9cdd8; border-radius: 999px; cursor: pointer; }
+    .opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .opt input:checked + span { font-weight: 700; color: #4f46e5; }
+    .consent { max-width: 640px; margin: 0 auto 16px; cursor: pointer; display: block; }
+    .consent input { position: absolute; opacity: 0; }
+    #finish { max-width: 200px; margin: 0 auto; text-align: center; padding: 12px; background: #4f46e5; color: #fff; border-radius: 8px; cursor: pointer; }
+    #result { max-width: 640px; margin: 20px auto; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center">Kişilik Testi</h1>
+  <div class="item"><div class="qt">1- Plan yapmadan harekete geçerim.</div><div class="opts"><label class="opt"><input type="radio" name="s1" value="evet"><span>Evet</span></label><label class="opt"><input type="radio" name="s1" value="bazen"><span>Bazen</span></label><label class="opt"><input type="radio" name="s1" value="hayir"><span>Hayır</span></label></div></div><div class="item"><div class="qt">2- Kalabalık ortamlarda enerji toplarım.</div><div class="opts"><label class="opt"><input type="radio" name="s2" value="evet"><span>Evet</span></label><label class="opt"><input type="radio" name="s2" value="bazen"><span>Bazen</span></label><label class="opt"><input type="radio" name="s2" value="hayir"><span>Hayır</span></label></div></div><div class="item"><div class="qt">3- Kararlarımı mantıkla veririm.</div><div class="opts"><label class="opt"><input type="radio" name="s3" value="evet"><span>Evet</span></label><label class="opt"><input type="radio" name="s3" value="bazen"><span>Bazen</span></label><label class="opt"><input type="radio" name="s3" value="hayir"><span>Hayır</span></label></div></div><div class="item"><div class="qt">4- Yeni şeyler denemeyi severim.</div><div class="opts"><label class="opt"><input type="radio" name="s4" value="evet"><span>Evet</span></label><label class="opt"><input type="radio" name="s4" value="bazen"><span>Bazen</span></label><label class="opt"><input type="radio" name="s4" value="hayir"><span>Hayır</span></label></div></div><div class="item"><div class="qt">5- Eleştiriye hızlı tepki veririm.</div><div class="opts"><label class="opt"><input type="radio" name="s5" value="evet"><span>Evet</span></label><label class="opt"><input type="radio" name="s5" value="bazen"><span>Bazen</span></label><label class="opt"><input type="radio" name="s5" value="hayir"><span>Hayır</span></label></div></div><div class="item"><div class="qt">6- İşlerimi son ana bırakırım.</div><div class="opts"><label class="opt"><input type="radio" name="s6" value="evet"><span>Evet</span></label><label class="opt"><input type="radio" name="s6" value="bazen"><span>Bazen</span></label><label class="opt"><input type="radio" name="s6" value="hayir"><span>Hayır</span></label></div></div>
+  <label class="consent"><input type="checkbox" id="consent"><span>Sonuçların bana gösterilmesini kabul ediyorum</span></label>
+  <div id="finish" onclick="finishTest()">Testi Tamamla</div>
+  <div id="result"></div>
+  <script>
+    window.__qa_result = {done: false, score: 0};
+    function finishTest() {
+      const total = 6;
+      const answered = [...Array(total).keys()].filter(i => document.querySelector('input[name="s' + (i + 1) + '"]:checked')).length;
+      const consent = document.getElementById('consent').checked;
+      if (answered < total || !consent) {
+        document.getElementById('result').textContent = 'Eksik: ' + (total - answered) + ' soru' + (consent ? '' : ', onay kutusu');
+        return;
+      }
+      window.__qa_result = {done: true, score: 1.0, answered};
+      document.getElementById('result').textContent = 'TEST TAMAMLANDI (' + answered + '/' + total + ')';
+    }
+  </script>
+</body>
+</html>

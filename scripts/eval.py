@@ -52,6 +52,7 @@ def managed_web_server(
         "/qa/shop": "/qa_shop.html",
         "/qa/tournament": "/qa_tournament.html",
         "/qa/crm": "/qa_crm.html",
+        "/qa/choices": "/qa_hidden_choices.html",
     }
 
     class _FixtureHandler(http.server.SimpleHTTPRequestHandler):
@@ -910,6 +911,9 @@ def managed_isolated_browser(
     old_bu_name = os.environ.get("BU_NAME")
     os.environ["BU_CDP_URL"] = cdp_url
     os.environ["BU_NAME"] = f"eval_{port}"
+    # browser_harness reads BU_NAME once at import; without this the client keeps talking to the
+    # "default" daemon (which may be attached to the shared 9333 browser) instead of eval_{port}.
+    harness_names = _set_harness_daemon_name(f"eval_{port}")
 
     old_ensure = None
     try:
@@ -1011,6 +1015,28 @@ def managed_isolated_browser(
             os.environ["BU_NAME"] = old_bu_name
         else:
             os.environ.pop("BU_NAME", None)
+        _restore_harness_daemon_name(harness_names)
+
+
+def _set_harness_daemon_name(name: str) -> dict[str, str]:
+    """Point browser_harness's import-time daemon NAME at `name`; return previous values for restore."""
+    previous: dict[str, str] = {}
+    for module_name in ("browser_harness.admin", "browser_harness.helpers"):
+        module = sys.modules.get(module_name)
+        if module is None:
+            with contextlib.suppress(ImportError):
+                module = __import__(module_name, fromlist=["NAME"])
+        if module is not None and hasattr(module, "NAME"):
+            previous[module_name] = module.NAME
+            module.NAME = name
+    return previous
+
+
+def _restore_harness_daemon_name(previous: dict[str, str]) -> None:
+    for module_name, name in previous.items():
+        module = sys.modules.get(module_name)
+        if module is not None:
+            module.NAME = name
 
 
 def main(argv: list[str] | None = None) -> int:
