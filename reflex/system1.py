@@ -39,6 +39,12 @@ a field that already contains the requested value. Choose only an offered elemen
 
 _HTTP_CLIENT = httpx.Client(http2=True, timeout=30.0)
 MAX_SYSTEM1_ELEMENTS = 60
+HTTP_RETRY_DELAY_S = 1.5
+
+
+def _retryable_http_status(code: int) -> bool:
+    """Transient statuses that are retried once: 429 and any 5xx."""
+    return code == 429 or 500 <= code <= 599
 
 
 def action_space(
@@ -138,15 +144,16 @@ def _normalize_answer(answer: dict[str, Any], valid_ids: dict[str, Any] | set[st
     }
 
 
-def choose_action(
+def build_system1_request(
     page: dict[str, Any],
     compiled_goal: str,
     history: list[dict[str, Any]],
-    config: ReflexConfig,
-    *,
+    config: ReflexConfig | None = None,
     suppress_done: bool = False,
-) -> dict[str, Any]:
-    """Query System 1 (OpenRouter Jev or Local Turnike) for the next operation and target."""
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, Any]]:
+    """Build the System 1 request body, target map, and control map without making network calls."""
+    _ = suppress_done
+    cfg = config or ReflexConfig()
     elements, targets, controls = action_space(page.get("actions", []))
 
     labels = {
@@ -188,7 +195,7 @@ def choose_action(
 
     clean_elements = [{k: v for k, v in el.items() if k not in ("rect", "node", "href")} for el in elements]
     body: dict[str, Any] = {
-        "model": config.jev_model,
+        "model": cfg.jev_model,
         "state": {
             "page": {k: page.get(k, "") for k in ("url", "title", "text")},
             "elements": clean_elements,
@@ -199,6 +206,27 @@ def choose_action(
         },
         "questions": questions,
     }
+    return body, targets, controls
+
+
+def choose_action(
+    page: dict[str, Any],
+    compiled_goal: str,
+    history: list[dict[str, Any]],
+    config: ReflexConfig,
+    *,
+    suppress_done: bool = False,
+) -> dict[str, Any]:
+    """Query System 1 (OpenRouter Jev or Local Turnike) for the next operation and target."""
+    elements, _, _ = action_space(page.get("actions", []))
+    body, targets, controls = build_system1_request(
+        page,
+        compiled_goal,
+        history,
+        config,
+        suppress_done=suppress_done,
+    )
+    operations = dict(body["questions"]["operation"]["criteria"])
 
     started = time.perf_counter()
     if config.decision_backend == "local_turnike":
@@ -210,14 +238,22 @@ def choose_action(
 
     last_err: Exception | None = None
     result: dict[str, Any] = {}
-    for attempt in range(3):
+    retry_reason: str | None = None
+    succeeded = False
+    for attempt in range(2):
         try:
             resp = _HTTP_CLIENT.post(url, json=body, headers=headers)
-            if resp.status_code in {429, 502, 503, 529} and attempt < 2:
-                time.sleep(0.4 * (2**attempt))
+            if (
+                config.decision_backend != "local_turnike"
+                and _retryable_http_status(resp.status_code)
+                and attempt == 0
+            ):
+                retry_reason = f"http_{resp.status_code}"
+                time.sleep(HTTP_RETRY_DELAY_S)
                 continue
             resp.raise_for_status()
             result = resp.json()
+            succeeded = True
             break
         except Exception as exc:
             last_err = exc
@@ -225,9 +261,8 @@ def choose_action(
                 raise RuntimeError(
                     f"System 1 ({config.decision_backend}) transport failed: {exc}"
                 ) from exc
-            if attempt < 2:
-                time.sleep(0.3 * (2**attempt))
-    else:
+            break
+    if not succeeded:
         raise RuntimeError(f"System 1 ({config.decision_backend}) request failed: {last_err}")
 
     answers = result.get("answers") or {}
@@ -289,6 +324,7 @@ def choose_action(
         "model": result.get("model", config.jev_model),
         "backend": config.decision_backend,
         "usage": result.get("usage", {}),
+        "retry_reason": retry_reason,
         "latency_ms": latency_ms,
         "elements": elements,
         "targets": targets,
