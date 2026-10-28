@@ -618,3 +618,36 @@ def test_patterns_exclude_standalone_benign_terms() -> None:
     assert len(ACCOUNT_PATTERNS) > 0
 
 
+# ---------------------------------------------------------------------------
+# 12. F3 fix(G5): Pseudo-Button Links (href="#", empty, or "javascript:")
+# ---------------------------------------------------------------------------
+
+
+def test_pseudo_button_links_require_confirmation() -> None:
+    """F3 fix(G5): Links with href='#', empty, or starting with 'javascript:' act as buttons and require confirmation."""
+    # Exact required test case from F3 specification (without explicit 'kind')
+    res_js = check_action_safety({"role": "link", "href": "javascript:void(0)", "label": "Satın Al"})
+    assert res_js.requires_confirmation is True
+    assert res_js.category == "payment"
+
+    # Hash href="#"
+    res_hash = check_action_safety({"kind": "click", "role": "link", "href": "#", "label": "Satın Al"})
+    assert res_hash.requires_confirmation is True
+    assert res_hash.category == "payment"
+
+    # Empty href=""
+    res_empty = check_action_safety({"kind": "click", "role": "link", "href": "", "label": "Hesabı Sil"})
+    assert res_empty.requires_confirmation is True
+    assert res_empty.category == "account"
+
+    # Missing href and url
+    res_missing = check_action_safety({"role": "link", "label": "Delete"})
+    assert res_missing.requires_confirmation is True
+    assert res_missing.category == "deletion"
+
+    # Genuine navigation link remains exempt
+    res_nav = check_action_safety({"role": "link", "href": "https://example.com/shop/buy", "label": "Satın Al"})
+    assert res_nav.requires_confirmation is False
+
+
+

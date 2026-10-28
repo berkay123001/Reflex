@@ -29,8 +29,8 @@ def extract_origin(url: str | None) -> str:
 PAYMENT_PATTERNS = [
     r"\bpay\b",
     r"\bpay\s+now\b",
-    r"\bcheckout\b",
-    r"\bcheck\s*out\b",
+    r"\bcheckout\b(?!\s+guide\b)",
+    r"\bcheck\s*out\b(?!\s+guide\b)",
     r"\bbuy\b",
     r"\bbuy\s+now\b",
     r"\bpurchase\b",
@@ -106,12 +106,19 @@ def check_action_safety(
     if not enabled:
         return SafetyCheckResult(requires_confirmation=False)
 
-    kind = str(action.get("kind", "")).strip().lower()
+    raw_kind = action.get("kind")
+    kind = str(raw_kind if raw_kind is not None and str(raw_kind).strip() != "" else "click").strip().lower()
     label = str(action.get("label", "")).strip()
     submit_label = str(action.get("submit_label", "")).strip()
     effective_label = label or submit_label
 
     role = str(action.get("role", "")).strip().lower() if action.get("role") is not None else None
+    raw_href_val = action.get("href") if "href" in action else action.get("url", "")
+    href = str(raw_href_val or "").strip()
+    is_button_like_link = (
+        role == "link"
+        and (href == "" or href == "#" or href.lower().startswith("javascript:"))
+    )
 
     # Determine origin: explicit arg -> action["origin"] -> action["url"]
     action_origin = origin
@@ -150,8 +157,9 @@ def check_action_safety(
                 action_signature=sig_legacy,
             )
 
-    # 1. Links are GET navigations and inherently reversible; completely exempt from confirmation.
-    if role == "link":
+    # 1. Genuine navigation links are GET navigations and inherently reversible;
+    # links with empty href, '#', or 'javascript:' act like buttons and must be checked.
+    if role == "link" and not is_button_like_link:
         return SafetyCheckResult(
             requires_confirmation=False,
             action_summary=sig_origin,
@@ -165,12 +173,13 @@ def check_action_safety(
             action_signature=sig_origin,
         )
 
-    # 2. Confirmation guard applies only to button/submit elements.
+    # 2. Confirmation guard applies only to button/submit elements (and button-like links).
     # For clicks, non-button elements (e.g. tabs, checkboxes, comboboxes) do not trigger confirmation.
     # Note: role is None or empty is allowed for backward compatibility with manual/test action dicts.
     if kind == "click":
         is_button_or_submit = (
             role in ("button", "submit")
+            or is_button_like_link
             or bool(action.get("submits_form"))
             or str(action.get("type", "")).strip().lower() in ("button", "submit")
             or str(action.get("tag", "")).strip().lower() == "button"

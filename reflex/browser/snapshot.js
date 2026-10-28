@@ -116,8 +116,10 @@
       }
     }
     const linkEl=e.tagName==='A'?e:e.closest('a[href]');
-    const rawHref=(linkEl?.href && !linkEl.href.startsWith('javascript:')) ? linkEl.href.slice(0,240) : '';
-    if (rname==='link' && rawHref) {
+    const attrHref=linkEl?.getAttribute('href')?.trim() ?? '';
+    const isPseudoHref=attrHref==='' || attrHref==='#' || /^javascript:/i.test(attrHref);
+    const rawHref=isPseudoHref ? attrHref : (linkEl?.href ? linkEl.href.slice(0,240) : '');
+    if (rname==='link' && rawHref && !isPseudoHref) {
       const cardScope=e.closest('article,li,tr,[class*="Card-root"],[class*="card"]') || e.parentElement;
       const scopeId=cardScope ? identity(cardScope) : 0;
       const dedupKey=`${scopeId}|${rawHref}|${lbl.trim().toLowerCase()}`;
@@ -126,7 +128,7 @@
     }
     const base={node:identity(e),role:rname,label:lbl,
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
-    if (rawHref) base.href=rawHref;
+    if (rawHref || rname==='link') base.href=rawHref;
     if (isFormSubmitter(e)) base.submits_form=true;
     for (const key of ['checked','selected','expanded']) {
       const value=e.getAttribute('aria-'+key);
