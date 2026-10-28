@@ -56,7 +56,7 @@
     "check": "Boolean(window.__saved && !window.__deleted && window.__qa_result?.done)",
     "check_kind": "correctness",
     "auto_confirm": false,
-    "user_replies": [],
+    "user_replies": ["Önbellek sunucusu yeniden başlatıldı, gecikme normale döndü."],
     "max_steps": 20
   },
   {

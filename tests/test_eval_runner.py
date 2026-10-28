@@ -193,6 +193,14 @@ def test_dev_qa_task_8_survey_fill_only_check_expression():
     assert task8["check"] == expected_check
 
 
+def test_dev_qa_qa_crm_has_canned_user_reply():
+    """T4: qa_crm task in dev_qa.json must include the resolution note in user_replies."""
+    tasks = {t["id"]: t for t in load_tasks(DEV_QA_PATH)}
+    assert tasks["qa_crm"]["user_replies"] == [
+        "Önbellek sunucusu yeniden başlatıldı, gecikme normale döndü."
+    ]
+
+
 def test_dev_qa_check_expressions_pass_node_syntax():
     """All check expressions in dev_qa.json must pass JavaScript syntax check via node --check."""
     node_bin = shutil.which("node")
