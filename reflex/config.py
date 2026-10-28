@@ -28,7 +28,7 @@ OPENROUTER_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 META_API_CHAT_URL = "https://api.meta.ai/v1/chat/completions"
 LOCAL_TURNIKE_URL = "http://127.0.0.1:8794/v1/systemone"
 
-DEFAULT_DECISION_BACKEND = "local_turnike"
+DEFAULT_DECISION_BACKEND = "openrouter_jev"
 DEFAULT_JEV_MODEL = "~typesafe/jev-latest"
 DEFAULT_SUPERVISOR_MODEL = "muse-spark-1.3-contributor"
 DEFAULT_SUPERVISOR_TIMEOUT_S = 60.0

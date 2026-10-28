@@ -744,7 +744,7 @@ function initUI() {
         const s = await apiPost("reply", {
           message: msg,
           url: $("input-url")?.value || "https://www.google.com",
-          decision_backend: $("top-s1-select")?.value || "local_turnike",
+          decision_backend: $("top-s1-select")?.value || "openrouter_jev",
           supervisor_model: $("top-s2-select")?.value || "muse-spark-1.3-contributor",
         });
         renderState(s);

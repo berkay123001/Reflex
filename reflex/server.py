@@ -30,6 +30,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .agent import ReflexSession
 from .config import (
+    DEFAULT_DECISION_BACKEND,
     DEFAULT_SUPERVISOR_MODEL,
     ReflexConfig,
     get_meta_api_key,
@@ -97,6 +98,14 @@ def current_state() -> dict[str, Any]:
     return snap
 
 
+def _requested_decision_backend(body: dict[str, Any]) -> str:
+    """Use the posted backend, or the config default when the field is omitted or blank."""
+    raw = body.get("decision_backend", DEFAULT_DECISION_BACKEND)
+    if raw is None or not str(raw).strip():
+        return DEFAULT_DECISION_BACKEND
+    return str(raw).strip()
+
+
 def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
     global _SESSION
     if action == "start":
@@ -108,7 +117,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("Goal must be between 2 and 2000 characters")
 
         cfg = ReflexConfig(
-            decision_backend=str(body.get("decision_backend", "local_turnike")),
+            decision_backend=_requested_decision_backend(body),
             supervisor_model=str(body.get("supervisor_model", DEFAULT_SUPERVISOR_MODEL)),
             require_confirmation_for_destructive=bool(body.get("require_confirmation_for_destructive", True)),
             verify_done_with_supervisor=bool(body.get("verify_done_with_supervisor", True)),
@@ -131,7 +140,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
             if not init_url.startswith(("http://", "https://")):
                 init_url = "https://www.google.com"
             cfg = ReflexConfig(
-                decision_backend=str(body.get("decision_backend", "local_turnike")),
+                decision_backend=_requested_decision_backend(body),
                 supervisor_model=str(body.get("supervisor_model", DEFAULT_SUPERVISOR_MODEL)),
                 max_steps=60,
                 max_escalations=35,
