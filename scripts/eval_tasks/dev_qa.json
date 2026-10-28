@@ -1,0 +1,82 @@
+[
+  {
+    "id": "qa_survey",
+    "url": "{BASE}/qa/survey",
+    "goal": "Çalışan memnuniyet anketindeki tüm soruları cevaplayıp formu gönder.",
+    "check": "Boolean(window.__submitted && document.querySelector(\"input[name='q1']:checked\") && document.querySelector(\"input[name='q2']:checked\") && document.getElementById('dept-select')?.value)",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 15
+  },
+  {
+    "id": "qa_ranking",
+    "url": "{BASE}/qa/ranking",
+    "goal": "Kör sıralama oyununu başlat ve gelen sayıları 1'den 5'e kadar küçükten büyüğe doğru slotlara yerleştir.",
+    "check": "Boolean(window.__gameWon && window.__slots && window.__slots[1] < window.__slots[2] && window.__slots[2] < window.__slots[3] && window.__slots[3] < window.__slots[4] && window.__slots[4] < window.__slots[5])",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 25
+  },
+  {
+    "id": "qa_blog",
+    "url": "{BASE}/qa/blog",
+    "goal": "Teknoloji blogunda yer alan 2026 yılı Transformer mimarisi ve derin öğrenme hakkındaki makaleyi bulup aç.",
+    "check": "Boolean(window.__qa_result?.done && document.body.innerText.includes('TRANSFORMER-2026-OK'))",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 15
+  },
+  {
+    "id": "qa_shop",
+    "url": "{BASE}/qa/shop",
+    "goal": "Alışveriş sepetindeki kulaklık siparişi için teslimat şehrini İstanbul olarak seç ve ödemeyi onayla.",
+    "check": "Boolean(window.__paid && window.__qa_result?.done && document.body.innerText.includes('ÖDEME TAMAMLANDI'))",
+    "check_kind": "correctness",
+    "auto_confirm": true,
+    "user_replies": [],
+    "max_steps": 15
+  },
+  {
+    "id": "qa_tournament",
+    "url": "{BASE}/qa/tournament",
+    "goal": "2000 yılının en önemli olayı turnuvasını başlat ve tüm turlarda seçim yaparak şampiyonu belirle.",
+    "check": "Boolean(window.__tournamentDone && window.__picks?.length === 6 && window.__qa_result?.done)",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 20
+  },
+  {
+    "id": "qa_crm",
+    "url": "{BASE}/qa/crm",
+    "goal": "INC-4092 numaralı destek kaydının önceliğini kritik yap, durumunu çözüldü olarak ayarla, çözüm notu ekle ve kaydı güncelle.",
+    "check": "Boolean(window.__saved && !window.__deleted && window.__qa_result?.done)",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 20
+  },
+  {
+    "id": "fixture",
+    "url": "{BASE}/fixture",
+    "goal": "AeroVoyage portalında çerez bildirimini kabul et ve Casa Flora butik otelinin detay sayfasını aç.",
+    "check": "Boolean(window.__qa_result?.done && document.body.innerText.includes('Casa Flora'))",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 15
+  },
+  {
+    "id": "qa_survey_fill_only",
+    "url": "{BASE}/qa/survey",
+    "goal": "Çalışan memnuniyet anketindeki tüm soruları yanıtla fakat formu kesinlikle gönderme.",
+    "check": "Boolean(!window.__submitted && document.querySelector(\"input[name='q1']:checked\") && document.querySelector(\"input[name='q2']:checked\") && document.getElementById('dept-select')?.value)",
+    "check_kind": "correctness",
+    "auto_confirm": false,
+    "user_replies": [],
+    "max_steps": 15
+  }
+]

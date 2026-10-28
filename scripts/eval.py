@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import http.server
 import json
 import logging
 import os
@@ -19,15 +20,66 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlsplit
 
 from reflex.agent import ReflexSession
 from reflex.config import ReflexConfig
 
 logger = logging.getLogger("reflex.eval")
+
+
+@contextlib.contextmanager
+def managed_web_server(
+    host: str = "127.0.0.1",
+    port: int = 0,
+    web_dir: Path | str | None = None,
+) -> Generator[str, None, None]:
+    """Provide a local HTTP server serving reflex/web fixtures with clean URL rewrites."""
+    target_dir = Path(web_dir) if web_dir else (Path(__file__).resolve().parent.parent / "reflex" / "web")
+    if not target_dir.is_dir():
+        raise FileNotFoundError(f"Fixture directory not found: {target_dir}")
+
+    static_map = {
+        "/fixture": "/fixture.html",
+        "/qa/survey": "/qa_survey.html",
+        "/qa/ranking": "/qa_ranking.html",
+        "/qa/blog": "/qa_blog.html",
+        "/qa/shop": "/qa_shop.html",
+        "/qa/tournament": "/qa_tournament.html",
+        "/qa/crm": "/qa_crm.html",
+    }
+
+    class _FixtureHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, directory=str(target_dir), **kwargs)
+
+        def log_message(self, *args: Any) -> None:
+            pass  # suppress request logging in stdout
+
+        def do_GET(self) -> None:
+            parsed = urlparse(self.path)
+            clean_path = parsed.path.rstrip("/") if parsed.path != "/" else "/"
+            if clean_path in static_map:
+                mapped = static_map[clean_path]
+                self.path = mapped + (f"?{parsed.query}" if parsed.query else "")
+            super().do_GET()
+
+    server = http.server.ThreadingHTTPServer((host, port), _FixtureHandler)
+    assigned_port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    base_url = f"http://{host}:{assigned_port}"
+    try:
+        yield base_url
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def load_tasks(tasks_path: str | Path) -> list[dict[str, Any]]:
@@ -92,6 +144,7 @@ def load_tasks(tasks_path: str | Path) -> list[dict[str, Any]]:
         else:
             user_replies_list = [str(user_replies)]
 
+        check_kind = str(t.get("check_kind", "correctness"))
         normalized.append(
             {
                 "id": task_id,
@@ -101,6 +154,7 @@ def load_tasks(tasks_path: str | Path) -> list[dict[str, Any]]:
                 "user_replies": user_replies_list,
                 "auto_confirm": bool(t.get("auto_confirm", False)),
                 "check": str(t["check"]) if t.get("check") else None,
+                "check_kind": check_kind,
             }
         )
 
@@ -111,6 +165,7 @@ def run_task(
     task: dict[str, Any],
     config: ReflexConfig | None = None,
     default_max_steps: int = 25,
+    base_url: str | None = None,
 ) -> dict[str, Any]:
     """Execute a single evaluation task in ReflexSession with complete error shielding.
 
@@ -118,12 +173,17 @@ def run_task(
     latency, cost, and evaluates the objective completion state via JS check expression.
     """
     task_id = task["id"]
-    url = task["url"]
+    raw_url = task["url"]
+    if "{BASE}" in raw_url and base_url is None:
+        with managed_web_server() as local_base:
+            return run_task(task, config=config, default_max_steps=default_max_steps, base_url=local_base)
+    url = raw_url.replace("{BASE}", base_url) if base_url else raw_url
     goal = task["goal"]
     max_steps = int(task.get("max_steps") or default_max_steps)
     user_replies: list[str] = list(task.get("user_replies", []))
     auto_confirm: bool = bool(task.get("auto_confirm", False))
     check_expr: str | None = task.get("check")
+    check_kind: str = str(task.get("check_kind", "correctness"))
 
     cfg = (config or ReflexConfig()).model_copy(deep=True)
     cfg.max_steps = max(cfg.max_steps, max_steps + 10)
@@ -151,6 +211,7 @@ def run_task(
                 "success": False,
                 "score": 0.0,
                 "status": task_status,
+                "check_kind": check_kind,
                 "steps": 0,
                 "s1_steps": 0,
                 "s2_escalations": 0,
@@ -169,10 +230,15 @@ def run_task(
         # 2. Execution step loop
         while session.status not in {"done", "blocked", "error"} and len(session.history) < max_steps:
             if session.status == "waiting_user":
-                reply = user_replies.pop(0) if user_replies else ""
+                if not user_replies:
+                    task_status = "asked_user"
+                    session.status = "asked_user"
+                    break
+                reply = user_replies.pop(0)
                 try:
                     session.reply_user(reply)
                 except Exception as exc:
+                    task_status = "error"
                     session.status = "error"
                     session.last_error = f"reply_user failed: {exc}"
                     break
@@ -180,6 +246,7 @@ def run_task(
                 try:
                     session.confirm_action(approved=auto_confirm)
                 except Exception as exc:
+                    task_status = "error"
                     session.status = "error"
                     session.last_error = f"confirm_action failed: {exc}"
                     break
@@ -187,6 +254,7 @@ def run_task(
                 try:
                     session.step()
                 except Exception as exc:
+                    task_status = "error"
                     session.status = "error"
                     session.last_error = f"step failed: {exc}"
                     break
@@ -194,7 +262,9 @@ def run_task(
                 break
 
         # Check termination status
-        if session.status not in {"done", "blocked", "error"} and len(session.history) >= max_steps:
+        if task_status == "asked_user":
+            pass
+        elif session.status not in {"done", "blocked", "error"} and len(session.history) >= max_steps:
             task_status = "max_steps_exceeded"
         else:
             task_status = session.status
@@ -210,7 +280,7 @@ def run_task(
                 check_result = None
 
         # 4. Determine success and score
-        if task_status == "error":
+        if task_status in {"error", "asked_user"}:
             success = False
             score = 0.0
         elif check_expr is not None:
@@ -292,6 +362,7 @@ def run_task(
             "success": bool(success),
             "score": round(float(score), 4),
             "status": task_status,
+            "check_kind": check_kind,
             "steps": len(history),
             "s1_steps": snap.get("metrics", {}).get("s1_steps", 0),
             "s2_escalations": len(escalations),
@@ -318,6 +389,7 @@ def run_task(
             "success": False,
             "score": 0.0,
             "status": task_status,
+            "check_kind": check_kind,
             "steps": len(step_details),
             "s1_steps": 0,
             "s2_escalations": 0,
@@ -346,6 +418,7 @@ def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
     successful_tasks = sum(1 for r in task_results if r.get("success", False))
     failed_tasks = total_tasks - successful_tasks
     error_tasks = sum(1 for r in task_results if r.get("status") == "error")
+    asked_user_tasks = sum(1 for r in task_results if r.get("status") == "asked_user")
 
     success_rate = (successful_tasks / total_tasks) if total_tasks > 0 else 0.0
 
@@ -375,11 +448,21 @@ def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
             if m:
                 all_models.add(str(m))
 
+    by_check_kind: dict[str, dict[str, int]] = {}
+    for r in task_results:
+        kind = r.get("check_kind", "correctness")
+        if kind not in by_check_kind:
+            by_check_kind[kind] = {"total": 0, "successful": 0}
+        by_check_kind[kind]["total"] += 1
+        if r.get("success", False):
+            by_check_kind[kind]["successful"] += 1
+
     return {
         "total_tasks": total_tasks,
         "successful_tasks": successful_tasks,
         "failed_tasks": failed_tasks,
         "error_tasks": error_tasks,
+        "asked_user_tasks": asked_user_tasks,
         "success_rate": round(success_rate, 4),
         "total_steps": total_steps,
         "avg_steps_per_task": round(avg_steps, 2),
@@ -389,6 +472,7 @@ def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
         "p50_latency_ms": p50_lat_ms,
         "p50_latency_seconds": p50_lat_sec,
         "models_used": sorted(all_models),
+        "by_check_kind": by_check_kind,
     }
 
 
@@ -400,15 +484,21 @@ def format_summary_report(summary: dict[str, Any]) -> str:
         "=" * 64,
         f"Total Tasks:             {summary['total_tasks']}",
         f"Success Rate:            {summary['success_rate'] * 100:.2f}% ({summary['successful_tasks']}/{summary['total_tasks']})",
-        f"Failed Tasks:            {summary['failed_tasks']} (Errors: {summary['error_tasks']})",
+        f"Failed Tasks:            {summary['failed_tasks']} (Errors: {summary['error_tasks']}, Asked User: {summary.get('asked_user_tasks', 0)})",
         f"Total Steps:             {summary['total_steps']} (Avg / Task: {summary['avg_steps_per_task']:.2f})",
         f"S2 Escalations:          {summary['total_s2_escalations']}",
         f"S2 Escalation Rate:      {summary['s2_escalation_rate'] * 100:.2f}%",
         f"Total Cost:              ${summary['total_cost_usd']:.6f}",
         f"p50 Latency:             {summary['p50_latency_ms']} ms ({summary['p50_latency_seconds']} s)",
         f"Models Used:             {', '.join(summary['models_used']) if summary['models_used'] else 'None'}",
-        "=" * 64,
     ]
+    if summary.get("by_check_kind"):
+        kind_strs = [
+            f"{k}: {v['successful']}/{v['total']}"
+            for k, v in summary["by_check_kind"].items()
+        ]
+        lines.append(f"Check Kinds:             {', '.join(kind_strs)}")
+    lines.append("=" * 64)
     return "\n".join(lines)
 
 
@@ -419,11 +509,27 @@ def run_eval(
     config: ReflexConfig | None = None,
     default_max_steps: int = 25,
     verbose: bool = True,
+    base_url: str | None = None,
+    web_dir: Path | str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Execute complete evaluation suite, save JSONL results and return summary."""
     tasks = load_tasks(tasks_path)
     if verbose:
         print(f"[eval] Loaded {len(tasks)} tasks from {tasks_path}")
+
+    has_base = any("{BASE}" in t["url"] for t in tasks)
+    if has_base and base_url is None:
+        with managed_web_server(web_dir=web_dir) as local_base:
+            return run_eval(
+                tasks_path=tasks_path,
+                output_path=output_path,
+                summary_path=summary_path,
+                config=config,
+                default_max_steps=default_max_steps,
+                verbose=verbose,
+                base_url=local_base,
+                web_dir=web_dir,
+            )
 
     task_results: list[dict[str, Any]] = []
     output_file = Path(output_path) if output_path else None
@@ -434,9 +540,10 @@ def run_eval(
 
     for idx, task in enumerate(tasks, start=1):
         if verbose:
-            print(f"[eval] [{idx}/{len(tasks)}] Starting task {task['id']} ({task['url']})...")
+            task_display_url = task["url"].replace("{BASE}", base_url) if base_url else task["url"]
+            print(f"[eval] [{idx}/{len(tasks)}] Starting task {task['id']} ({task_display_url})...")
 
-        res = run_task(task, config=config, default_max_steps=default_max_steps)
+        res = run_task(task, config=config, default_max_steps=default_max_steps, base_url=base_url)
         task_results.append(res)
 
         if output_file:
@@ -488,6 +595,19 @@ def managed_isolated_browser(
     - Cleanly shuts down the subprocess and removes the temporary profile directory on exit.
     - Restores previous environment variables and CDP hooks in finally:.
     """
+    env_cdp = os.environ.get("BU_CDP_URL")
+    if env_cdp:
+        try:
+            parsed_port = urlsplit(env_cdp).port
+            if parsed_port == 9333:
+                raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
+            if parsed_port and int(port) == 9444:
+                port = parsed_port
+        except ValueError:
+            raise
+        except Exception:
+            pass
+
     if int(port) == 9333:
         raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
 
@@ -501,7 +621,7 @@ def managed_isolated_browser(
     try:
         import reflex.browser.cdp as r_cdp
         old_ensure = r_cdp.ensure_chromium_cdp
-        r_cdp.ensure_chromium_cdp = lambda p=port: None
+        r_cdp.ensure_chromium_cdp = lambda *args, **kwargs: None
     except Exception:
         pass
 
@@ -611,6 +731,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-steps", type=int, default=25, help="Default maximum steps per task (default: 25)")
     parser.add_argument("--screenshots", action="store_true", help="Capture screenshots during observe")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+    parser.add_argument("--web-port", type=int, default=0, help="Port for local fixture web server (default: 0 for ephemeral port)")
     parser.add_argument("--cdp-port", type=int, default=9444, help="CDP port for isolated Chromium instance (default: 9444; 9333 is forbidden)")
     parser.add_argument("--headed", action="store_true", help="Run browser in headed mode (default: headless)")
 
@@ -633,7 +754,10 @@ def main(argv: list[str] | None = None) -> int:
         cfg.screenshots = True
 
     try:
-        with managed_isolated_browser(port=args.cdp_port, headless=not args.headed):
+        with (
+            managed_web_server(port=args.web_port) as local_base_url,
+            managed_isolated_browser(port=args.cdp_port, headless=not args.headed),
+        ):
             _, summary = run_eval(
                 tasks_path=tasks_file,
                 output_path=args.output,
@@ -641,6 +765,7 @@ def main(argv: list[str] | None = None) -> int:
                 config=cfg,
                 default_max_steps=args.max_steps,
                 verbose=not args.quiet,
+                base_url=local_base_url,
             )
             return 0 if summary["failed_tasks"] == 0 else 1
     except Exception as exc:
