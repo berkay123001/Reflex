@@ -117,6 +117,7 @@ class ReflexSession:
                 pending_fact_key=None,
                 supervisor_model=self.config.supervisor_model,
                 allow_model_fallback=self.config.allow_model_fallback,
+                supervisor_timeout_s=self.config.supervisor_timeout_s,
             )
             self.interpret_calls.append(interp.model_dump())
             self.ctx.allow_arbitrary_choices = interp.allow_arbitrary_choices
@@ -476,6 +477,7 @@ class ReflexSession:
                 s1_decision=s1_decision,
                 supervisor_model=self.config.supervisor_model,
                 allow_model_fallback=self.config.allow_model_fallback,
+                supervisor_timeout_s=self.config.supervisor_timeout_s,
             )
         except Exception as exc:
             self.status = "error"
@@ -785,6 +787,7 @@ class ReflexSession:
                     history=self.history,
                     supervisor_model=self.config.supervisor_model,
                     allow_model_fallback=self.config.allow_model_fallback,
+                    supervisor_timeout_s=self.config.supervisor_timeout_s,
                 )
             except Exception as exc:
                 self.status = "error"
@@ -934,6 +937,7 @@ class ReflexSession:
                 pending_fact_key=self.pending_fact_key,
                 supervisor_model=self.config.supervisor_model,
                 allow_model_fallback=self.config.allow_model_fallback,
+                supervisor_timeout_s=self.config.supervisor_timeout_s,
             )
             self.interpret_calls.append(interp.model_dump())
         except Exception as exc:

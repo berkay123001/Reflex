@@ -769,3 +769,38 @@ def test_chat_completion_finish_reason_length_doubles_max_tokens_on_retry():
     assert sup.operation == "WAIT"
 
 
+def test_supervisor_timeout_config_and_no_retry_on_timeout():
+    """T1: supervisor_timeout_s defaults to 60s (connect=4s), is configurable via ReflexConfig, and does NOT retry on timeout."""
+    import reflex.supervisor as sup_mod
+
+    cfg_default = ReflexConfig()
+    assert cfg_default.supervisor_timeout_s == 60.0
+    assert sup_mod._HTTP_CLIENT.timeout.read == 60.0
+    assert sup_mod._HTTP_CLIENT.timeout.connect == 4.0
+
+    # Verify custom supervisor_timeout_s is passed to _HTTP_CLIENT.post and ReadTimeout is NOT retried
+    recorded_timeouts: list[httpx.Timeout] = []
+
+    def fake_timeout_post(url, *args, **kwargs):
+        recorded_timeouts.append(kwargs.get("timeout"))
+        raise httpx.ReadTimeout("Supervisor read timed out")
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_timeout_post),
+        pytest.raises(RuntimeError),
+    ):
+        _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            allow_model_fallback=False,
+            supervisor_timeout_s=45.0,
+        )
+
+    assert len(recorded_timeouts) == 1
+    assert recorded_timeouts[0].read == 45.0
+    assert recorded_timeouts[0].connect == 4.0
+
+
+

@@ -31,6 +31,7 @@ LOCAL_TURNIKE_URL = "http://127.0.0.1:8794/v1/systemone"
 DEFAULT_DECISION_BACKEND = "local_turnike"
 DEFAULT_JEV_MODEL = "~typesafe/jev-latest"
 DEFAULT_SUPERVISOR_MODEL = "muse-spark-1.3-contributor"
+DEFAULT_SUPERVISOR_TIMEOUT_S = 60.0
 
 SUPERVISOR_PRESETS = [
     {"id": "muse-spark-1.3-contributor", "label": "Muse Spark 1.3 Contributor (Meta API)"},
@@ -216,6 +217,7 @@ class ReflexConfig(BaseModel):
     jev_model: str = DEFAULT_JEV_MODEL
     local_turnike_url: str = LOCAL_TURNIKE_URL
     supervisor_model: str = DEFAULT_SUPERVISOR_MODEL
+    supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S
     allow_model_fallback: bool = False
     max_steps: int = 80
     max_escalations: int = 40
