@@ -62,25 +62,28 @@ def _extract_candidate_url(sup: SupervisorDecision, current_url: str) -> str | N
 class ReflexSession:
     """Stateful, multi-turn hybrid browser agent session."""
 
-    def __init__(self, url: str, goal: str, config: ReflexConfig | None = None):
+    def __init__(
+        self,
+        url: str,
+        goal: str,
+        config: ReflexConfig | None = None,
+        constraints: list[str] | None = None,
+        allow_arbitrary_choices: bool = False,
+    ):
         if not goal or not goal.strip():
             raise ValueError("Supply a non-empty goal")
         self.config = config or ReflexConfig()
         clean_url = url.strip()
         self.url = clean_url
-        allow_arb = any(
+        allow_arb = allow_arbitrary_choices or any(
             kw in goal.lower()
             for kw in ("kafana göre", "rastgele", "kendi yorumuna", "istediğin", "random", "arbitrary")
         )
-        initial_constraints: list[str] = []
-        goal_l = goal.lower()
-        if any(neg in goal_l for neg in ("gönderme", "göndermeden", "do not submit", "don't submit", "without submitting", "formu gönderme")):
-            initial_constraints.append("do not submit form")
         self.ctx = DualTierContext(
             primary_goal=goal.strip(),
             active_subgoal=goal.strip(),
             allow_arbitrary_choices=allow_arb,
-            constraints=initial_constraints,
+            constraints=list(constraints or []),
         )
         self.ctx.add_user_message(goal.strip(), kind="chat")
         self.site_memory = SiteMemoryStore()
@@ -314,7 +317,7 @@ class ReflexSession:
 
     def _is_rejected_target(self, action: dict[str, Any], current_url: str) -> bool:
         """Return True if clicking `action` would revisit a navigation link/URL that was already visited and abandoned,
-        re-click an already-selected radio button, or violate a 'do not submit / gönderme' goal constraint.
+        or re-click an already-selected radio button.
         """
         if action.get("kind") != "click":
             return False

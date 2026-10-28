@@ -18,11 +18,17 @@ def test_no_hardcoded_submit_negation_in_agent_and_system1():
     agent_src = (Path(__file__).resolve().parent.parent / "reflex" / "agent.py").read_text(encoding="utf-8")
     s1_src = (Path(__file__).resolve().parent.parent / "reflex" / "system1.py").read_text(encoding="utf-8")
 
-    forbidden_patterns = ["göndermeden", "without submitting"]
+    forbidden_patterns = [
+        "gönderme",
+        "göndermeden",
+        "formu gönderme",
+        "without submitting",
+        "do not submit",
+        "don't submit",
+    ]
     for pattern in forbidden_patterns:
-        # Should not be in _is_rejected_target or choose_action
-        assert f'"{pattern}"' not in s1_src
-        assert f"'{pattern}'" not in s1_src
+        assert pattern.lower() not in agent_src.lower(), f"Found '{pattern}' in agent.py"
+        assert pattern.lower() not in s1_src.lower(), f"Found '{pattern}' in system1.py"
 
 
 def test_snapshot_js_contains_form_submitter_detection():
@@ -33,7 +39,7 @@ def test_snapshot_js_contains_form_submitter_detection():
 
 
 def test_ctx_constraints_initialization_and_update():
-    """DualTierContext initializes constraints from goal or user message interpretation."""
+    """DualTierContext initializes constraints from caller or user message interpretation."""
     with patch("reflex.agent.Browser") as mock_browser_cls:
         mock_browser = MagicMock()
         mock_browser.observe.return_value = {"url": "https://example.com/survey", "actions": []}
@@ -43,8 +49,12 @@ def test_ctx_constraints_initialization_and_update():
         sess_normal = ReflexSession("https://example.com/survey", "Fill the survey")
         assert sess_normal.ctx.constraints == []
 
-        # Goal with submission constraint
-        sess_constrained = ReflexSession("https://example.com/survey", "Anketi doldur ama gönderme")
+        # Goal with submission constraint passed via structured constraints
+        sess_constrained = ReflexSession(
+            "https://example.com/survey",
+            "Fill the survey",
+            constraints=["do not submit form"],
+        )
         assert "do not submit form" in sess_constrained.ctx.constraints
 
         # User steers with constraints via reply_user
@@ -53,7 +63,7 @@ def test_ctx_constraints_initialization_and_update():
             constraints=["never click submit button"],
         )
         with patch("reflex.agent.interpret_user_message", return_value=fake_interp):
-            sess_normal.reply_user("Soruları doldur fakat göndermeden bırak")
+            sess_normal.reply_user("Leave form without final submission")
             assert "never click submit button" in sess_normal.ctx.constraints
 
 
@@ -127,7 +137,7 @@ def test_end_to_end_step_escalates_on_constrained_submission():
         mock_browser.observe.return_value = mock_page
         mock_browser_cls.return_value = mock_browser
 
-        session = ReflexSession("https://example.com/form", "Fill fields but do not submit")
+        session = ReflexSession("https://example.com/form", "Fill fields", constraints=["do not submit form"])
         assert len(session.ctx.constraints) > 0
 
         # Mock choose_action proposing the submit action
