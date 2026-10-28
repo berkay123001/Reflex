@@ -41,11 +41,9 @@ PAYMENT_PATTERNS = [
     r"\bconfirm\s+(?:payment|purchase|order|transfer)\b",
     r"\böde(?:yin|yiniz)?\b",
     r"\bödeme(?:yi)?\s+(?:yap|onayla|tamamla|et)\b",
-    r"\bödeme\b",
     r"\bsat[ıi]n\s+al(?:[ıi]n|[ıi]n[ıi]z)?\b",
     r"\bsat[ıi]n\s+alma\b",
     r"\bhemen\s+sat[ıi]n\s+al\b",
-    r"\bsipari[şs]\b",
     r"\bsipari[şs](?:i|ini)?\s+(?:ver|tamamla|onayla|olu[şs]tur)\b",
     r"\bsipari[şs]\s*ver\b",
 ]
@@ -53,17 +51,13 @@ PAYMENT_PATTERNS = [
 DELETION_PATTERNS = [
     r"\bdelete\b",
     r"\bdelete\s+(?:account|permanently|repository|project|all)\b",
-    r"\bremove\b",
     r"\bremove\s+account\b",
     r"\bdestroy\b",
     r"\berase\b",
     r"\bpurge\b",
     r"\bsil(?:in|iniz)?\b",
     r"\bkal[ıi]c[ıi]\s+olarak\s+sil\b",
-    r"\bkald[ıi]r(?:[ıi]n|[ıi]n[ıi]z)?\b",
-    r"\btemizle(?:yin|yiniz)?\b",
     r"\bçöpe?\s*at\b",
-    r"\bçöp\b",
 ]
 
 ACCOUNT_PATTERNS = [
@@ -117,6 +111,8 @@ def check_action_safety(
     submit_label = str(action.get("submit_label", "")).strip()
     effective_label = label or submit_label
 
+    role = str(action.get("role", "")).strip().lower() if action.get("role") is not None else None
+
     # Determine origin: explicit arg -> action["origin"] -> action["url"]
     action_origin = origin
     if action_origin is None:
@@ -154,6 +150,14 @@ def check_action_safety(
                 action_signature=sig_legacy,
             )
 
+    # 1. Links are GET navigations and inherently reversible; completely exempt from confirmation.
+    if role == "link":
+        return SafetyCheckResult(
+            requires_confirmation=False,
+            action_summary=sig_origin,
+            action_signature=sig_origin,
+        )
+
     if kind not in DESTRUCTIVE_KINDS:
         return SafetyCheckResult(
             requires_confirmation=False,
@@ -161,13 +165,30 @@ def check_action_safety(
             action_signature=sig_origin,
         )
 
+    # 2. Confirmation guard applies only to button/submit elements.
+    # For clicks, non-button elements (e.g. tabs, checkboxes, comboboxes) do not trigger confirmation.
+    # Note: role is None or empty is allowed for backward compatibility with manual/test action dicts.
+    if kind == "click":
+        is_button_or_submit = (
+            role in ("button", "submit")
+            or bool(action.get("submits_form"))
+            or str(action.get("type", "")).strip().lower() in ("button", "submit")
+            or str(action.get("tag", "")).strip().lower() == "button"
+            or role is None
+            or role == ""
+        )
+        if not is_button_or_submit:
+            return SafetyCheckResult(
+                requires_confirmation=False,
+                action_summary=sig_origin,
+                action_signature=sig_origin,
+            )
+
     texts_to_check: list[str] = []
     if label:
         texts_to_check.append(label)
     if submit_label and submit_label != label:
         texts_to_check.append(submit_label)
-    if kind == "goto_url" and action.get("url"):
-        texts_to_check.append(re.sub(r"[/_\-?&=]", " ", str(action["url"])))
 
     for pat, cat in _COMPILED_CATEGORIZED_PATTERNS:
         for txt in texts_to_check:

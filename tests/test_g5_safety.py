@@ -90,14 +90,13 @@ def test_extract_origin(url: str | None, expected_origin: str) -> None:
         "Checkout",
         "Öde",
         "Pay",
-        "Kaldır",
         "Hesabı Kapat",
     ],
 )
 def test_irreversible_patterns_required_keywords(label: str) -> None:
     """Task G5 requirement: Parametric tests for 'Satın Al', 'Sil', 'Delete',
 
-    'Checkout', 'Öde', 'Pay', 'Kaldır', 'Hesabı Kapat'.
+    'Checkout', 'Öde', 'Pay', 'Hesabı Kapat'.
     """
     action = {"kind": "click", "label": label}
     result = check_action_safety(action)
@@ -111,8 +110,8 @@ def test_irreversible_patterns_required_keywords(label: str) -> None:
     [
         ("Ödeyin", "payment"),
         ("Ödeme Yap", "payment"),
+        ("Ödemeyi Tamamla", "payment"),
         ("Silin", "deletion"),
-        ("Kaldırın", "deletion"),
         ("Kalıcı olarak sil", "deletion"),
         ("Satın Alma", "payment"),
         ("Purchase", "payment"),
@@ -121,12 +120,11 @@ def test_irreversible_patterns_required_keywords(label: str) -> None:
         ("Close Account", "account"),
         ("Delete Account", "account"),
         ("Revoke", "account"),
-        ("Temizle", "deletion"),
-        ("Çöp", "deletion"),
+        ("Remove Account", "deletion"),
         ("Çöpe At", "deletion"),
         ("Destroy", "deletion"),
         ("Erase", "deletion"),
-        ("Sipariş", "payment"),
+        ("Siparişi Ver", "payment"),
         ("Siparişi Tamamla", "payment"),
         ("Place Order", "payment"),
         ("Complete Purchase", "payment"),
@@ -159,10 +157,19 @@ def test_irreversible_patterns_extended_bilingual(label: str, expected_category:
         "İptal",
         "Filtrele",
         "Sonraki Sayfa",
+        "Temizle",
+        "Kaldır",
+        "Kaldırın",
+        "Remove",
+        "Çöp",
+        "Ödeme",
+        "Sipariş",
+        "Filtreyi kaldır",
+        "Remove filter",
     ],
 )
 def test_safe_actions_pass_through(label: str) -> None:
-    """Safe actions (standard navigation, cart additions, search, cancel dialogs) must NOT be blocked."""
+    """Safe actions (standard navigation, cart additions, search, cancel dialogs, benign terms) must NOT be blocked."""
     action = {"kind": "click", "label": label}
     result = check_action_safety(action)
     assert result.requires_confirmation is False
@@ -515,3 +522,99 @@ def test_goto_url_destructive_path() -> None:
     }
     safe_result = check_action_safety(safe_action)
     assert safe_result.requires_confirmation is False
+
+
+# ---------------------------------------------------------------------------
+# 11. Milestone M4 (R4/Ö1 fix(G5)) Safety Guard Tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("action", "description"),
+    [
+        ({"kind": "click", "role": "button", "label": "Temizle"}, "Temizle button"),
+        ({"kind": "click", "label": "Temizle"}, "Temizle bare action"),
+        ({"kind": "click", "role": "button", "label": "Filtreyi kaldır"}, "Filtreyi kaldır button"),
+        ({"kind": "click", "label": "Filtreyi kaldır"}, "Filtreyi kaldır bare action"),
+        ({"kind": "click", "role": "button", "label": "Remove filter"}, "Remove filter button"),
+        ({"kind": "click", "label": "Remove filter"}, "Remove filter bare action"),
+        ({"kind": "click", "role": "link", "label": "Ödeme Yöntemleri"}, "Ödeme Yöntemleri link"),
+        ({"kind": "click", "role": "link", "label": "Sipariş Takibi"}, "Sipariş Takibi link"),
+        ({"kind": "click", "role": "link", "label": "Çöp Kutusu"}, "Çöp Kutusu link"),
+        ({"kind": "click", "role": "link", "label": "Checkout guide"}, "Checkout guide link"),
+    ],
+)
+def test_negative_confirmation_exempted_m4(action: dict[str, Any], description: str) -> None:
+    """R4 / Ö1 fix(G5): Benign terms and role=link navigations must NOT require confirmation."""
+    result = check_action_safety(action)
+    assert result.requires_confirmation is False, f"{description} should NOT require confirmation"
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Satın Al",
+        "Sil",
+        "Delete",
+        "Ödemeyi Tamamla",
+        "Place Order",
+        "Siparişi Ver",
+    ],
+)
+def test_positive_confirmation_required_m4(label: str) -> None:
+    """R4 / Ö1 fix(G5): Dangerous button actions MUST require confirmation."""
+    btn_action = {"kind": "click", "role": "button", "label": label}
+    result = check_action_safety(btn_action)
+    assert result.requires_confirmation is True, f"Button '{label}' MUST require confirmation"
+    assert result.category in {"payment", "deletion", "account"}
+
+    bare_action = {"kind": "click", "label": label}
+    result_bare = check_action_safety(bare_action)
+    assert result_bare.requires_confirmation is True, f"Bare action '{label}' MUST require confirmation"
+
+
+def test_link_role_exempts_even_destructive_labels() -> None:
+    """role='link' navigations are reversible GET requests and completely exempt from confirmation."""
+    for label in ["Satın Al", "Sil", "Delete", "Öde", "Place Order", "Delete Account", "Checkout"]:
+        link_action = {"kind": "click", "role": "link", "label": label, "url": "https://example.com/nav"}
+        result = check_action_safety(link_action)
+        assert result.requires_confirmation is False, f"Link with label '{label}' must be exempt"
+
+
+def test_goto_url_does_not_inspect_url_text() -> None:
+    """goto_url must not trigger confirmation based on URL text alone."""
+    actions = [
+        {"kind": "goto_url", "url": "https://example.com/checkout/guide"},
+        {"kind": "goto_url", "url": "https://example.com/cöp-kutusu/odeme-yontemleri"},
+        {"kind": "goto_url", "url": "https://example.com/admin/delete-item", "label": "View page"},
+    ]
+    for act in actions:
+        result = check_action_safety(act)
+        assert result.requires_confirmation is False, f"goto_url {act.get('url')} should not trigger on URL text"
+
+
+def test_non_button_interactive_roles_do_not_trigger_confirmation() -> None:
+    """Clicks on non-button elements (tabs, checkboxes, etc.) must not trigger confirmation guard."""
+    for role in ["tab", "checkbox", "radio", "combobox"]:
+        action = {"kind": "click", "role": role, "label": "Delete"}
+        result = check_action_safety(action)
+        assert result.requires_confirmation is False, f"Role '{role}' should not trigger confirmation"
+
+
+def test_patterns_exclude_standalone_benign_terms() -> None:
+    """Milestone M4 (Ö1 fix(G5)): Standalone benign nouns and reversible verbs are removed."""
+    forbidden_exact = {
+        r"\bödeme\b",
+        r"\bsipari[şs]\b",
+        r"\btemizle(?:yin|yiniz)?\b",
+        r"\bkald[ıi]r(?:[ıi]n|[ıi]n[ıi]z)?\b",
+        r"\bremove\b",
+        r"\bçöp\b",
+    }
+    for pat in forbidden_exact:
+        assert pat not in PAYMENT_PATTERNS
+        assert pat not in DELETION_PATTERNS
+        assert pat not in IRREVERSIBLE_PATTERNS
+    assert len(ACCOUNT_PATTERNS) > 0
+
+
