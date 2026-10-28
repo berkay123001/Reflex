@@ -1056,3 +1056,110 @@ def test_eval_budget_usd_stops_with_budget_exceeded(tmp_path: Path):
     assert summary["status"] == "budget_exceeded"
     assert summary["budget_exceeded_tasks"] == 1
 
+
+def test_pricing_uses_requested_model_id_first_and_sums_retry_attempts():
+    """Verify:
+    1. Pricing lookup uses requested model ID (meta_model_id / candidate_model) first even if API returns a versioned name.
+    2. Failed/empty retry attempts' usage tokens and costs are summed into the final result.
+    """
+    from reflex.supervisor import _chat_completion
+
+    # Attempt 1: empty content, consumes 1000 prompt (200 cached) + 500 completion tokens
+    resp1 = MagicMock()
+    resp1.status_code = 200
+    resp1.raise_for_status.return_value = None
+    resp1.json.return_value = {
+        "model": "muse-spark-1.3-contributor-20260401-v2",
+        "choices": [{"message": {"content": ""}, "finish_reason": "length"}],
+        "usage": {
+            "prompt_tokens": 1000,
+            "completion_tokens": 500,
+            "prompt_tokens_details": {"cached_tokens": 200},
+        },
+    }
+
+    # Attempt 2: valid JSON, consumes 1000 prompt (800 cached) + 300 completion tokens
+    resp2 = MagicMock()
+    resp2.status_code = 200
+    resp2.raise_for_status.return_value = None
+    resp2.json.return_value = {
+        "model": "muse-spark-1.3-contributor-20260401-v2",
+        "choices": [{"message": {"content": '{"text": "ok"}'}, "finish_reason": "stop"}],
+        "usage": {
+            "prompt_tokens": 1000,
+            "completion_tokens": 300,
+            "prompt_tokens_details": {"cached_tokens": 800},
+        },
+    }
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="meta-test-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=[resp1, resp2]),
+    ):
+        res = _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            max_tokens=500,
+            allow_model_fallback=False,
+        )
+
+    # Recorded model name is preserved from API response
+    assert res["model"] == "muse-spark-1.3-contributor-20260401-v2"
+    assert res.retries == 1
+
+    # Usage is summed across both attempts:
+    # Total prompt = 2000, total cached = 1000 (so uncached = 1000), total completion = 800
+    assert res.usage["prompt_tokens"] == 2000
+    assert res.usage["cached_tokens"] == 1000
+    assert res.usage["completion_tokens"] == 800
+    assert res.usage["total_tokens"] == 2800
+
+    # Cost computed with muse-spark-1.3-contributor rates (0.10 / 0.002 / 0.20 per 1M):
+    expected_cost = (1000 * 0.10 + 1000 * 0.002 + 800 * 0.20) / 1_000_000.0
+    assert res["cost_usd"] == pytest.approx(expected_cost)
+
+
+def test_eval_budget_usd_with_unknown_cost_stops_with_budget_unknown(tmp_path: Path):
+    """When --budget-usd is set and a call has 'bilinmiyor' cost, task stops with status 'budget_unknown' and is reported."""
+    tasks = [
+        {"id": "u1", "url": "http://127.0.0.1:8788/qa/survey", "goal": "Task 1", "check": "true"},
+        {"id": "u2", "url": "http://127.0.0.1:8788/qa/blog", "goal": "Task 2", "check": "true"},
+    ]
+    tasks_file = tmp_path / "unknown_budget_tasks.json"
+    tasks_file.write_text(json.dumps(tasks), encoding="utf-8")
+    out_file = tmp_path / "unknown_budget_out.jsonl"
+    sum_file = tmp_path / "unknown_budget_sum.json"
+
+    mock_session = _make_mock_session(statuses=["ready", "done"], browser_eval_return=True)
+    orig_snap = mock_session.snapshot.side_effect
+
+    def snap_with_unknown_cost():
+        s = orig_snap()
+        s["metrics"]["total_cost_usd"] = "bilinmiyor"
+        s["metrics"]["known_cost_usd"] = 0.0
+        return s
+
+    mock_session.snapshot.side_effect = snap_with_unknown_cost
+
+    with patch("scripts.eval.ReflexSession", return_value=mock_session):
+        results, summary = run_eval(
+            tasks_path=tasks_file,
+            output_path=out_file,
+            summary_path=sum_file,
+            verbose=False,
+            budget_usd=1.00,
+        )
+
+    assert len(results) == 1
+    assert results[0]["id"] == "u1"
+    assert results[0]["status"] == "budget_unknown"
+    assert results[0]["success"] is False
+    assert results[0]["cost_usd"] == "bilinmiyor"
+    assert summary["status"] == "budget_unknown"
+    assert summary["budget_unknown_tasks"] == 1
+    report = format_summary_report(summary)
+    assert "budget_unknown" in report
+    assert "Budget Unknown: 1" in report
+
+

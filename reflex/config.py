@@ -70,8 +70,12 @@ def calculate_usage_cost(
     model: str,
     usage: dict[str, Any] | None,
     pricing_table: dict[str, dict[str, float]] | None = None,
+    response_model: str | None = None,
 ) -> tuple[float | str, dict[str, Any]]:
-    """Compute cost in USD from usage tokens or explicit usage.cost; return 'bilinmiyor' if model price is unknown."""
+    """Compute cost in USD from usage tokens or explicit usage.cost; return 'bilinmiyor' if model price is unknown.
+
+    Looks up `model` (the requested model ID) FIRST in `pricing_table`, falling back to `response_model` only if needed.
+    """
     raw = dict(usage or {})
     prompt_tokens = int(raw.get("prompt_tokens", 0) or 0)
     completion_tokens = int(raw.get("completion_tokens", 0) or 0)
@@ -86,6 +90,10 @@ def calculate_usage_cost(
     clean_model = (model or "").strip()
     short_model = clean_model.removeprefix("meta/")
     rates = table.get(clean_model) or table.get(short_model)
+    if rates is None and response_model:
+        clean_resp = response_model.strip()
+        short_resp = clean_resp.removeprefix("meta/")
+        rates = table.get(clean_resp) or table.get(short_resp)
 
     if rates is not None:
         uncached_prompt = max(0, prompt_tokens - cached_tokens) if cached_tokens <= prompt_tokens else prompt_tokens

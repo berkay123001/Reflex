@@ -250,6 +250,49 @@ def _extract_json(raw_text: str) -> dict[str, Any]:
     raise ValueError(f"Supervisor response did not contain valid JSON: {raw_text[:200]}")
 
 
+def _aggregate_attempt_usages(
+    attempt_records: list[tuple[str, str, dict[str, Any] | None]],
+) -> tuple[float | str, dict[str, Any]]:
+    """Sum token usage and cost across all attempts (including failed/empty retries).
+
+    Each record is `(requested_model_id, response_model_id, raw_usage)`.
+    Looks up pricing using `requested_model_id` first via `calculate_usage_cost`.
+    """
+    prompt_tokens = 0
+    completion_tokens = 0
+    cached_tokens = 0
+    total_tokens = 0
+    known_cost = 0.0
+    has_unknown_cost = False
+
+    for req_model, resp_model, raw_usage in attempt_records:
+        c_val, norm_u = calculate_usage_cost(
+            req_model,
+            raw_usage,
+            response_model=resp_model,
+        )
+        prompt_tokens += int(norm_u.get("prompt_tokens", 0) or 0)
+        completion_tokens += int(norm_u.get("completion_tokens", 0) or 0)
+        cached_tokens += int(norm_u.get("cached_tokens", 0) or 0)
+        total_tokens += int(norm_u.get("total_tokens", 0) or 0)
+        if c_val == "bilinmiyor":
+            has_unknown_cost = True
+        elif isinstance(c_val, (int, float)):
+            known_cost += float(c_val)
+
+    final_cost: float | str = "bilinmiyor" if has_unknown_cost else round(known_cost, 8)
+    agg_usage: dict[str, Any] = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "cached_tokens": cached_tokens,
+        "total_tokens": total_tokens,
+        "cost": final_cost,
+    }
+    if cached_tokens > 0:
+        agg_usage["prompt_tokens_details"] = {"cached_tokens": cached_tokens}
+    return final_cost, agg_usage
+
+
 def _chat_completion(
     model: str,
     system_prompt: str,
@@ -259,6 +302,7 @@ def _chat_completion(
 ) -> CompletionResult:
     """Call Official Meta Model API (`https://api.meta.ai/v1/chat/completions`) or OpenRouter."""
     last_err: Exception | None = None
+    attempt_records: list[tuple[str, str, dict[str, Any] | None]] = []
 
     if model.startswith("meta") or "llama" in model.lower() or "muse" in model.lower():
         meta_key = get_meta_api_key()
@@ -298,6 +342,8 @@ def _chat_completion(
                         resp = _HTTP_CLIENT.post(META_API_CHAT_URL, headers=meta_headers, json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
+                        used_model_id = str(data.get("model") or meta_model_id)
+                        attempt_records.append((meta_model_id, used_model_id, data.get("usage")))
                         choice0 = (data.get("choices") or [{}])[0]
                         last_finish_reason = choice0.get("finish_reason")
                         msg_obj = choice0.get("message") or {}
@@ -309,8 +355,7 @@ def _chat_completion(
                             raise ValueError("Supervisor response content is empty")
                         parsed = _extract_json(content_str)
                         latency_ms = round((time.perf_counter() - call_started) * 1000)
-                        used_model_id = str(data.get("model") or meta_model_id)
-                        cost_val, norm_usage = calculate_usage_cost(used_model_id, data.get("usage"))
+                        cost_val, norm_usage = _aggregate_attempt_usages(attempt_records)
                         return CompletionResult(
                             parsed,
                             latency_ms,
@@ -373,6 +418,8 @@ def _chat_completion(
                     continue
                 resp.raise_for_status()
                 data = resp.json()
+                used_model_id = str(data.get("model") or candidate_model)
+                attempt_records.append((candidate_model, used_model_id, data.get("usage")))
                 choice0 = (data.get("choices") or [{}])[0]
                 last_finish_reason = choice0.get("finish_reason")
                 msg_obj = choice0.get("message") or {}
@@ -384,8 +431,7 @@ def _chat_completion(
                     raise ValueError("Supervisor response content is empty")
                 parsed = _extract_json(content_str)
                 latency_ms = round((time.perf_counter() - call_started) * 1000)
-                used_model_id = str(data.get("model") or candidate_model)
-                cost_val, norm_usage = calculate_usage_cost(used_model_id, data.get("usage"))
+                cost_val, norm_usage = _aggregate_attempt_usages(attempt_records)
                 return CompletionResult(
                     parsed,
                     latency_ms,

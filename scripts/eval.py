@@ -173,6 +173,26 @@ def _session_known_cost_usd(session: ReflexSession) -> float:
     return 0.0
 
 
+def _session_has_unknown_cost(session: ReflexSession) -> bool:
+    snap = session.snapshot()
+    metrics = snap.get("metrics", {})
+    if metrics.get("total_cost_usd") == "bilinmiyor":
+        return True
+    for rec_list in (
+        snap.get("decisions", []),
+        snap.get("escalations", []),
+        snap.get("text_calls", []),
+        snap.get("interpret_calls", []),
+    ):
+        for item in rec_list:
+            if isinstance(item, dict) and (
+                item.get("cost_usd") == "bilinmiyor"
+                or (isinstance(item.get("usage"), dict) and item["usage"].get("cost") == "bilinmiyor")
+            ):
+                return True
+    return False
+
+
 def run_task(
     task: dict[str, Any],
     config: ReflexConfig | None = None,
@@ -246,26 +266,41 @@ def run_task(
                 "elapsed_ms": elapsed_ms,
             }
 
-        # Check if initial session setup (e.g. constraint extraction) already exceeded budget
-        if budget_usd is not None and _session_known_cost_usd(session) > budget_usd:
-            task_status = "budget_exceeded"
-            session.status = "budget_exceeded"
-            session.last_error = (
-                f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
-            )
-
-        # 2. Execution step loop
-        while (
-            session.status not in {"done", "blocked", "error", "budget_exceeded"}
-            and len(session.history) < max_steps
-        ):
-            if budget_usd is not None and _session_known_cost_usd(session) > budget_usd:
+        # Check if initial session setup (e.g. constraint extraction) already exceeded budget or has unknown cost
+        if budget_usd is not None:
+            if _session_has_unknown_cost(session):
+                task_status = "budget_unknown"
+                session.status = "budget_unknown"
+                session.last_error = (
+                    "Budget unknown: call with unknown cost ('bilinmiyor') encountered while --budget-usd is set"
+                )
+            elif _session_known_cost_usd(session) > budget_usd:
                 task_status = "budget_exceeded"
                 session.status = "budget_exceeded"
                 session.last_error = (
                     f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
                 )
-                break
+
+        # 2. Execution step loop
+        while (
+            session.status not in {"done", "blocked", "error", "budget_exceeded", "budget_unknown"}
+            and len(session.history) < max_steps
+        ):
+            if budget_usd is not None:
+                if _session_has_unknown_cost(session):
+                    task_status = "budget_unknown"
+                    session.status = "budget_unknown"
+                    session.last_error = (
+                        "Budget unknown: call with unknown cost ('bilinmiyor') encountered while --budget-usd is set"
+                    )
+                    break
+                if _session_known_cost_usd(session) > budget_usd:
+                    task_status = "budget_exceeded"
+                    session.status = "budget_exceeded"
+                    session.last_error = (
+                        f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
+                    )
+                    break
 
             if session.status == "waiting_user":
                 if not user_replies:
@@ -299,19 +334,27 @@ def run_task(
             else:
                 break
 
-            if budget_usd is not None and _session_known_cost_usd(session) > budget_usd:
-                task_status = "budget_exceeded"
-                session.status = "budget_exceeded"
-                session.last_error = (
-                    f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
-                )
-                break
+            if budget_usd is not None:
+                if _session_has_unknown_cost(session):
+                    task_status = "budget_unknown"
+                    session.status = "budget_unknown"
+                    session.last_error = (
+                        "Budget unknown: call with unknown cost ('bilinmiyor') encountered while --budget-usd is set"
+                    )
+                    break
+                if _session_known_cost_usd(session) > budget_usd:
+                    task_status = "budget_exceeded"
+                    session.status = "budget_exceeded"
+                    session.last_error = (
+                        f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
+                    )
+                    break
 
         # Check termination status
-        if task_status in {"asked_user", "budget_exceeded"}:
+        if task_status in {"asked_user", "budget_exceeded", "budget_unknown"}:
             pass
         elif (
-            session.status not in {"done", "blocked", "error", "budget_exceeded"}
+            session.status not in {"done", "blocked", "error", "budget_exceeded", "budget_unknown"}
             and len(session.history) >= max_steps
         ):
             task_status = "max_steps_exceeded"
@@ -321,7 +364,7 @@ def run_task(
         last_error = session.last_error
 
         # 3. Evaluate JS check expression if provided
-        if check_expr and session.browser and task_status != "budget_exceeded":
+        if check_expr and session.browser and task_status not in {"budget_exceeded", "budget_unknown"}:
             try:
                 check_result = session.browser.evaluate(check_expr)
             except Exception as exc:
@@ -329,7 +372,7 @@ def run_task(
                 check_result = None
 
         # 4. Determine success and score
-        if task_status in {"error", "asked_user", "budget_exceeded"}:
+        if task_status in {"error", "asked_user", "budget_exceeded", "budget_unknown"}:
             success = False
             score = 0.0
         elif check_expr is not None:
@@ -494,6 +537,7 @@ def compute_summary(
     error_tasks = sum(1 for r in task_results if r.get("status") == "error")
     asked_user_tasks = sum(1 for r in task_results if r.get("status") == "asked_user")
     budget_exceeded_tasks = sum(1 for r in task_results if r.get("status") == "budget_exceeded")
+    budget_unknown_tasks = sum(1 for r in task_results if r.get("status") == "budget_unknown")
 
     success_rate = (successful_tasks / total_tasks) if total_tasks > 0 else 0.0
 
@@ -558,11 +602,12 @@ def compute_summary(
         if r.get("success", False):
             by_check_kind[kind]["successful"] += 1
 
-    run_status = (
-        "budget_exceeded"
-        if (budget_exceeded_tasks > 0 or (budget_usd is not None and known_cost > budget_usd))
-        else "completed"
-    )
+    if budget_exceeded_tasks > 0 or (budget_usd is not None and known_cost > budget_usd):
+        run_status = "budget_exceeded"
+    elif budget_unknown_tasks > 0 or (budget_usd is not None and has_unknown_cost):
+        run_status = "budget_unknown"
+    else:
+        run_status = "completed"
 
     return {
         "status": run_status,
@@ -572,6 +617,7 @@ def compute_summary(
         "error_tasks": error_tasks,
         "asked_user_tasks": asked_user_tasks,
         "budget_exceeded_tasks": budget_exceeded_tasks,
+        "budget_unknown_tasks": budget_unknown_tasks,
         "success_rate": round(success_rate, 4),
         "total_steps": total_steps,
         "avg_steps_per_task": round(avg_steps, 2),
@@ -598,7 +644,7 @@ def format_summary_report(summary: dict[str, Any]) -> str:
         f"Status:                  {summary.get('status', 'completed')}",
         f"Total Tasks:             {summary['total_tasks']}",
         f"Success Rate:            {summary['success_rate'] * 100:.2f}% ({summary['successful_tasks']}/{summary['total_tasks']})",
-        f"Failed Tasks:            {summary['failed_tasks']} (Errors: {summary['error_tasks']}, Asked User: {summary.get('asked_user_tasks', 0)}, Budget Exceeded: {summary.get('budget_exceeded_tasks', 0)})",
+        f"Failed Tasks:            {summary['failed_tasks']} (Errors: {summary['error_tasks']}, Asked User: {summary.get('asked_user_tasks', 0)}, Budget Exceeded: {summary.get('budget_exceeded_tasks', 0)}, Budget Unknown: {summary.get('budget_unknown_tasks', 0)})",
         f"Total Steps:             {summary['total_steps']} (Avg / Task: {summary['avg_steps_per_task']:.2f})",
         f"S2 Escalations:          {summary['total_s2_escalations']}",
         f"S2 Escalation Rate:      {summary['s2_escalation_rate'] * 100:.2f}%",
@@ -678,7 +724,14 @@ def run_eval(
         elif isinstance(res.get("cost_usd"), (int, float)):
             cumulative_cost += float(res["cost_usd"])
 
-        if budget_usd is not None and cumulative_cost > budget_usd and res.get("status") != "budget_exceeded":
+        if budget_usd is not None and res.get("cost_usd") == "bilinmiyor" and res.get("status") != "budget_unknown":
+            res["status"] = "budget_unknown"
+            res["success"] = False
+            res["score"] = 0.0
+            res["last_error"] = (
+                "Budget unknown: call with unknown cost ('bilinmiyor') encountered while --budget-usd is set"
+            )
+        elif budget_usd is not None and cumulative_cost > budget_usd and res.get("status") != "budget_exceeded":
             res["status"] = "budget_exceeded"
             res["success"] = False
             res["score"] = 0.0
@@ -708,6 +761,10 @@ def run_eval(
         if res.get("status") == "budget_exceeded":
             if verbose:
                 print(f"[eval] Stopping evaluation: budget_exceeded (${cumulative_cost:.6f} > ${budget_usd:.6f})")
+            break
+        if res.get("status") == "budget_unknown":
+            if verbose:
+                print("[eval] Stopping evaluation: budget_unknown (unknown cost 'bilinmiyor' encountered with --budget-usd)")
             break
 
     summary = compute_summary(task_results, budget_usd=budget_usd)
@@ -919,7 +976,7 @@ def main(argv: list[str] | None = None) -> int:
                 base_url=local_base_url,
                 budget_usd=args.budget_usd,
             )
-            if summary.get("status") == "budget_exceeded":
+            if summary.get("status") in {"budget_exceeded", "budget_unknown"}:
                 return 1
             return 0 if summary["failed_tasks"] == 0 else 1
     except Exception as exc:
