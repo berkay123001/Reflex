@@ -132,6 +132,11 @@ def ensure_chromium_cdp(port: int | None = None) -> None:
         time.sleep(0.15)
 
 
+CLICK_TEXT_QUIET_S = 0.6
+CLICK_TEXT_CAP_S = 10.0
+_PAGE_TEXT_LEN = "(document.body && (document.body.innerText || '').length) || 0"
+
+
 class StalePage(ValueError):
     """Raised when the page DOM mutated after observation before execution."""
 
@@ -369,12 +374,59 @@ class Browser:
             raise StalePage("Document changed during evaluation")
         return response.get("result", {}).get("value")
 
+    def _page_text_length(self) -> int:
+        return int(self.evaluate(_PAGE_TEXT_LEN) or 0)
+
+    def _wait_while_page_text_grows(self) -> None:
+        """After a click, poll until page text stops growing.
+
+        Two equal reads do not end the wait: streaming text can start a moment
+        later. Waiting stops after 600 ms with no growth and never lasts past
+        10 seconds, so a stable page stays near the silence window.
+        """
+        try:
+            last = self._page_text_length()
+        except Exception:
+            return
+        last_growth = time.monotonic()
+        slept: list[float] = []
+        while True:
+            now = time.monotonic()
+            quiet_left = CLICK_TEXT_QUIET_S - (now - last_growth)
+            if quiet_left <= 0:
+                return
+            # Budget is the sum of slices already issued. Adding 0.05 two
+            # hundred times overshoots 10.0 in binary float, so the last
+            # slice is whatever remainder keeps that sum on the cap.
+            cap_left = CLICK_TEXT_CAP_S - sum(slept)
+            if cap_left <= 1e-9:
+                return
+            delay = min(0.05, quiet_left, cap_left)
+            if sum([*slept, delay]) > CLICK_TEXT_CAP_S:
+                delay = cap_left
+            if delay <= 0:
+                return
+            time.sleep(delay)
+            slept.append(delay)
+            if cap_left - delay <= 1e-9:
+                return
+            try:
+                current = self._page_text_length()
+            except Exception:
+                return
+            if current > last:
+                last = current
+                last_growth = time.monotonic()
+
     def observe(self, screenshot: bool = True) -> dict[str, Any]:
         """Observe the current page state atomically via snapshot.js."""
         if self.after_input is not None:
             action, self.after_input = self.after_input, None
-            try:
-                self.call(
+            if action.get("kind") == "click":
+                self._wait_while_page_text_grows()
+            else:
+                try:
+                    self.call(
                     "Runtime.evaluate",
                     expression="""(action => new Promise(resolve => {
                       const field = window.__jevFast?.nodes.get(action.node);
@@ -444,8 +496,8 @@ class Browser:
                     awaitPromise=True,
                     returnByValue=True,
                 )
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
         stale_wait = float(os.environ.get("REFLEX_STALE_WAIT", "0.15") or 0.15)
         for attempt in range(10):

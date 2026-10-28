@@ -123,6 +123,10 @@ def test_observe_wait_syntax_with_fake_call(node_executable, action):
     b.observe(screenshot=False)
 
     eval_calls = [kwargs for method, kwargs in captured_calls if method == "Runtime.evaluate"]
+    if action["kind"] == "click":
+        # Clicks wait on visible text growth in Python, not the in-page promise.
+        assert eval_calls == []
+        return
     assert len(eval_calls) >= 1, "Runtime.evaluate was not called for after_input wait"
     expression = eval_calls[0]["expression"]
 
