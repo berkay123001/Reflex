@@ -111,3 +111,48 @@ def test_app_js_displays_error_visibly():
     assert '$("chat-messages")' in content
     assert "status-pill error" in content
     assert "RUNTIME ERROR" in content
+
+
+def test_allow_remote_emits_security_warning_to_stdout(capsys):
+    """When --allow-remote is passed, main() prints a prominent security warning to stdout."""
+    test_args = ["reflex", "--host", "0.0.0.0", "--allow-remote", "--port", "8788"]
+    with patch.object(sys, "argv", test_args):
+        with patch.object(server, "ThreadingHTTPServer") as mock_http:
+            mock_server_instance = MagicMock()
+            mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
+            mock_http.return_value = mock_server_instance
+
+            try:
+                server.main()
+            finally:
+                server.ALLOW_REMOTE = False
+
+    captured = capsys.readouterr()
+    stdout_text = captured.out
+
+    assert "SECURITY WARNING" in stdout_text
+    assert "--allow-remote" in stdout_text
+    assert "session token is served unauthenticated at '/'" in stdout_text
+    assert "anyone on the network can control the browser" in stdout_text.lower()
+
+
+def test_no_allow_remote_default_does_not_emit_security_warning(capsys):
+    """When --allow-remote is not specified, security warning is not emitted."""
+    test_args = ["reflex", "--host", "127.0.0.1", "--port", "8788"]
+    with patch.object(sys, "argv", test_args):
+        with patch.object(server, "ThreadingHTTPServer") as mock_http:
+            mock_server_instance = MagicMock()
+            mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
+            mock_http.return_value = mock_server_instance
+
+            server.main()
+
+    captured = capsys.readouterr()
+    stdout_text = captured.out
+
+    assert "SECURITY WARNING" not in stdout_text
+    assert "--allow-remote is enabled" not in stdout_text
+    assert "unauthenticated" not in stdout_text
+    assert "control the browser" not in stdout_text
+    assert "Reflex Studio running at http://127.0.0.1:8788" in stdout_text
+

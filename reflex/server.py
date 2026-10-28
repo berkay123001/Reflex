@@ -319,6 +319,16 @@ def main() -> None:
         )
     if args.allow_remote:
         ALLOW_REMOTE = True
+        print(
+            "\n"
+            "======================================================================\n"
+            "SECURITY WARNING: --allow-remote is enabled!\n"
+            "The session token is served unauthenticated at '/'.\n"
+            "Anyone on the network can control the browser.\n"
+            "Do NOT expose this server on untrusted or public networks.\n"
+            "======================================================================\n",
+            flush=True,
+        )
 
     load_env()
     atexit.register(close_session)
