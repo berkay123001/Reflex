@@ -140,6 +140,19 @@ class TargetCoveredError(RuntimeError):
     """Raised when the target element is obscured by a modal/overlay at hit-test time."""
 
 
+_NAVIGATION_CDP_ERRORS = (
+    "Inspected target navigated or closed",
+    "Cannot find context with specified id",
+    "Execution context was destroyed",
+)
+
+
+def _is_navigation_cdp_error(exc: BaseException) -> bool:
+    """Return True if a CDP exception represents an in-flight navigation or destroyed execution context."""
+    msg = str(exc).lower()
+    return any(marker.lower() in msg for marker in _NAVIGATION_CDP_ERRORS)
+
+
 _EPHEMERAL_QUERY_PARAMS = {
     "sxsrf", "ei", "ved", "iflsig", "sca_esv", "gs_lp", "uact", "oq",
     "sclient", "atvm", "ictx", "sa", "source", "sourceid", "aqs",
@@ -304,7 +317,14 @@ class Browser:
 
     def call(self, method: str, **params: Any) -> dict[str, Any]:
         with self._cdp_lock:
-            return cdp(method, session_id=self.session, **params)
+            try:
+                return cdp(method, session_id=self.session, **params)
+            except StalePage:
+                raise
+            except Exception as exc:
+                if _is_navigation_cdp_error(exc):
+                    raise StalePage(str(exc)) from exc
+                raise
 
     def capture_jpeg_bytes(self, quality: int = 68) -> bytes | None:
         """Capture a live JPEG frame non-blockingly for the real-time MJPEG stream."""
@@ -337,7 +357,14 @@ class Browser:
         time.sleep(0.25)
 
     def evaluate(self, expression: str) -> Any:
-        response = self.call("Runtime.evaluate", expression=expression, returnByValue=True)
+        try:
+            response = self.call("Runtime.evaluate", expression=expression, returnByValue=True)
+        except StalePage:
+            raise
+        except Exception as exc:
+            if _is_navigation_cdp_error(exc):
+                raise StalePage(str(exc)) from exc
+            raise
         if response.get("exceptionDetails"):
             raise StalePage("Document changed during evaluation")
         return response.get("result", {}).get("value")

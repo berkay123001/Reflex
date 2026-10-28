@@ -83,3 +83,86 @@ def test_search_detection_logic_execution():
     assert data["formSearch"] is True
     assert data["combobox"] is False
     assert data["normal"] is False
+
+
+@pytest.mark.parametrize(
+    "err_payload",
+    [
+        {"code": -32000, "message": "Inspected target navigated or closed"},
+        {"code": -32000, "message": "Cannot find context with specified id"},
+        {"code": -32000, "message": "Execution context was destroyed."},
+    ],
+)
+def test_cdp_navigation_errors_converted_to_stale_page_and_retried_in_observe(err_payload):
+    """T2: Navigation-induced CDP errors during Runtime.evaluate are converted to StalePage and retried in observe()."""
+    import threading
+    from unittest.mock import patch
+    from reflex.browser.cdp import Browser, StalePage
+
+    browser = Browser.__new__(Browser)
+    browser._cdp_lock = threading.Lock()
+    browser.session = "sess-1"
+    browser.target = "target-1"
+    browser.after_input = None
+    browser.last_action_rect = None
+    browser.last_jpeg_bytes = b"fake"
+
+    valid_state = {
+        "url": "http://127.0.0.1:8788/fixture",
+        "title": "Casa Flora",
+        "text": "Casa Flora",
+        "actions": [],
+        "scroll": {"y": 0, "height": 800},
+    }
+
+    calls = 0
+
+    def fake_cdp(method, session_id=None, **params):
+        nonlocal calls
+        calls += 1
+        if calls <= 2:
+            raise RuntimeError(err_payload)
+        return {"result": {"value": dict(valid_state)}}
+
+    with (
+        patch("reflex.browser.cdp.cdp", side_effect=fake_cdp),
+        patch("reflex.browser.cdp.time.sleep"),
+    ):
+        info = browser.observe(screenshot=False)
+
+    assert calls == 3
+    assert info["title"] == "Casa Flora"
+    assert "fingerprint" in info
+
+    # Also verify evaluate() directly raises StalePage on navigation error
+    with (
+        patch("reflex.browser.cdp.cdp", side_effect=RuntimeError(err_payload)),
+        pytest.raises(StalePage),
+    ):
+        browser.evaluate("1+1")
+
+
+def test_non_navigation_cdp_errors_raise_unchanged():
+    """T2: Non-navigation CDP errors must NOT be converted to StalePage; they must raise as-is."""
+    import threading
+    from unittest.mock import patch
+    from reflex.browser.cdp import Browser, StalePage
+
+    browser = Browser.__new__(Browser)
+    browser._cdp_lock = threading.Lock()
+    browser.session = "sess-1"
+    browser.target = "target-1"
+    browser.after_input = None
+    browser.last_action_rect = None
+    browser.last_jpeg_bytes = b"fake"
+
+    other_err = RuntimeError({"code": -32601, "message": "Wasntfound.method does not exist"})
+    with (
+        patch("reflex.browser.cdp.cdp", side_effect=other_err),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        browser.observe(screenshot=False)
+
+    assert not isinstance(exc_info.value, StalePage)
+    assert "Wasntfound.method" in str(exc_info.value)
+
