@@ -161,11 +161,24 @@ def load_tasks(tasks_path: str | Path) -> list[dict[str, Any]]:
     return normalized
 
 
+def _session_known_cost_usd(session: ReflexSession) -> float:
+    snap = session.snapshot()
+    metrics = snap.get("metrics", {})
+    known = metrics.get("known_cost_usd")
+    if isinstance(known, (int, float)):
+        return float(known)
+    total = metrics.get("total_cost_usd", 0.0)
+    if isinstance(total, (int, float)):
+        return float(total)
+    return 0.0
+
+
 def run_task(
     task: dict[str, Any],
     config: ReflexConfig | None = None,
     default_max_steps: int = 25,
     base_url: str | None = None,
+    budget_usd: float | None = None,
 ) -> dict[str, Any]:
     """Execute a single evaluation task in ReflexSession with complete error shielding.
 
@@ -176,7 +189,13 @@ def run_task(
     raw_url = task["url"]
     if "{BASE}" in raw_url and base_url is None:
         with managed_web_server() as local_base:
-            return run_task(task, config=config, default_max_steps=default_max_steps, base_url=local_base)
+            return run_task(
+                task,
+                config=config,
+                default_max_steps=default_max_steps,
+                base_url=local_base,
+                budget_usd=budget_usd,
+            )
     url = raw_url.replace("{BASE}", base_url) if base_url else raw_url
     goal = task["goal"]
     max_steps = int(task.get("max_steps") or default_max_steps)
@@ -227,8 +246,27 @@ def run_task(
                 "elapsed_ms": elapsed_ms,
             }
 
+        # Check if initial session setup (e.g. constraint extraction) already exceeded budget
+        if budget_usd is not None and _session_known_cost_usd(session) > budget_usd:
+            task_status = "budget_exceeded"
+            session.status = "budget_exceeded"
+            session.last_error = (
+                f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
+            )
+
         # 2. Execution step loop
-        while session.status not in {"done", "blocked", "error"} and len(session.history) < max_steps:
+        while (
+            session.status not in {"done", "blocked", "error", "budget_exceeded"}
+            and len(session.history) < max_steps
+        ):
+            if budget_usd is not None and _session_known_cost_usd(session) > budget_usd:
+                task_status = "budget_exceeded"
+                session.status = "budget_exceeded"
+                session.last_error = (
+                    f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
+                )
+                break
+
             if session.status == "waiting_user":
                 if not user_replies:
                     task_status = "asked_user"
@@ -261,10 +299,21 @@ def run_task(
             else:
                 break
 
+            if budget_usd is not None and _session_known_cost_usd(session) > budget_usd:
+                task_status = "budget_exceeded"
+                session.status = "budget_exceeded"
+                session.last_error = (
+                    f"Budget exceeded: ${_session_known_cost_usd(session):.6f} > ${budget_usd:.6f}"
+                )
+                break
+
         # Check termination status
-        if task_status == "asked_user":
+        if task_status in {"asked_user", "budget_exceeded"}:
             pass
-        elif session.status not in {"done", "blocked", "error"} and len(session.history) >= max_steps:
+        elif (
+            session.status not in {"done", "blocked", "error", "budget_exceeded"}
+            and len(session.history) >= max_steps
+        ):
             task_status = "max_steps_exceeded"
         else:
             task_status = session.status
@@ -272,7 +321,7 @@ def run_task(
         last_error = session.last_error
 
         # 3. Evaluate JS check expression if provided
-        if check_expr and session.browser:
+        if check_expr and session.browser and task_status != "budget_exceeded":
             try:
                 check_result = session.browser.evaluate(check_expr)
             except Exception as exc:
@@ -280,7 +329,7 @@ def run_task(
                 check_result = None
 
         # 4. Determine success and score
-        if task_status in {"error", "asked_user"}:
+        if task_status in {"error", "asked_user", "budget_exceeded"}:
             success = False
             score = 0.0
         elif check_expr is not None:
@@ -313,6 +362,7 @@ def run_task(
         decisions = snap.get("decisions", [])
         escalations = snap.get("escalations", [])
         text_calls = snap.get("text_calls", [])
+        interpret_calls = snap.get("interpret_calls", [])
 
         # Track models used across every step and tier
         models_used_set: set[str] = set()
@@ -325,6 +375,9 @@ def run_task(
         for t in text_calls:
             if t.get("model"):
                 models_used_set.add(str(t["model"]))
+        for ic in interpret_calls:
+            if ic.get("model"):
+                models_used_set.add(str(ic["model"]))
         for h in history:
             if h.get("model"):
                 models_used_set.add(str(h["model"]))
@@ -354,6 +407,22 @@ def run_task(
         median_lat = sorted(latencies)[len(latencies) // 2] if latencies else 0
 
         elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+        metrics = snap.get("metrics", {})
+        raw_total_cost = metrics.get("total_cost_usd", 0.0)
+        cost_usd_out: float | str = (
+            "bilinmiyor"
+            if raw_total_cost == "bilinmiyor"
+            else round(float(raw_total_cost), 6)
+        )
+        known_cost_out = round(
+            float(
+                metrics.get(
+                    "known_cost_usd",
+                    0.0 if raw_total_cost == "bilinmiyor" else raw_total_cost,
+                )
+            ),
+            6,
+        )
 
         return {
             "id": task_id,
@@ -364,10 +433,12 @@ def run_task(
             "status": task_status,
             "check_kind": check_kind,
             "steps": len(history),
-            "s1_steps": snap.get("metrics", {}).get("s1_steps", 0),
+            "s1_steps": metrics.get("s1_steps", 0),
             "s2_escalations": len(escalations),
-            "s1_errors": snap.get("metrics", {}).get("s1_errors", 0),
-            "cost_usd": round(float(snap.get("metrics", {}).get("total_cost_usd", 0.0)), 6),
+            "s1_errors": metrics.get("s1_errors", 0),
+            "cost_usd": cost_usd_out,
+            "known_cost_usd": known_cost_out,
+            "usage": metrics.get("usage", {}),
             "latencies_ms": latencies,
             "median_latency_ms": median_lat,
             "models_used": sorted(models_used_set),
@@ -412,13 +483,17 @@ def run_task(
                 pass
 
 
-def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
+def compute_summary(
+    task_results: list[dict[str, Any]],
+    budget_usd: float | None = None,
+) -> dict[str, Any]:
     """Aggregate individual task results into a comprehensive evaluation summary."""
     total_tasks = len(task_results)
     successful_tasks = sum(1 for r in task_results if r.get("success", False))
     failed_tasks = total_tasks - successful_tasks
     error_tasks = sum(1 for r in task_results if r.get("status") == "error")
     asked_user_tasks = sum(1 for r in task_results if r.get("status") == "asked_user")
+    budget_exceeded_tasks = sum(1 for r in task_results if r.get("status") == "budget_exceeded")
 
     success_rate = (successful_tasks / total_tasks) if total_tasks > 0 else 0.0
 
@@ -428,7 +503,33 @@ def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
     total_s2 = sum(r.get("s2_escalations", 0) for r in task_results)
     s2_rate = (total_s2 / total_steps) if total_steps > 0 else 0.0
 
-    total_cost = sum(r.get("cost_usd", 0.0) for r in task_results)
+    has_unknown_cost = any(r.get("cost_usd") == "bilinmiyor" for r in task_results)
+    known_cost = 0.0
+    for r in task_results:
+        kc = r.get("known_cost_usd")
+        if isinstance(kc, (int, float)):
+            known_cost += float(kc)
+        else:
+            c = r.get("cost_usd", 0.0)
+            if isinstance(c, (int, float)):
+                known_cost += float(c)
+
+    total_cost_out: float | str = "bilinmiyor" if has_unknown_cost else round(known_cost, 6)
+    known_cost_out = round(known_cost, 6)
+
+    total_usage = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cached_tokens": 0,
+        "total_tokens": 0,
+    }
+    for r in task_results:
+        u = r.get("usage")
+        if isinstance(u, dict):
+            total_usage["prompt_tokens"] += int(u.get("prompt_tokens", 0) or 0)
+            total_usage["completion_tokens"] += int(u.get("completion_tokens", 0) or 0)
+            total_usage["cached_tokens"] += int(u.get("cached_tokens", 0) or 0)
+            total_usage["total_tokens"] += int(u.get("total_tokens", 0) or 0)
 
     all_latencies: list[float | int] = []
     for r in task_results:
@@ -457,18 +558,28 @@ def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
         if r.get("success", False):
             by_check_kind[kind]["successful"] += 1
 
+    run_status = (
+        "budget_exceeded"
+        if (budget_exceeded_tasks > 0 or (budget_usd is not None and known_cost > budget_usd))
+        else "completed"
+    )
+
     return {
+        "status": run_status,
         "total_tasks": total_tasks,
         "successful_tasks": successful_tasks,
         "failed_tasks": failed_tasks,
         "error_tasks": error_tasks,
         "asked_user_tasks": asked_user_tasks,
+        "budget_exceeded_tasks": budget_exceeded_tasks,
         "success_rate": round(success_rate, 4),
         "total_steps": total_steps,
         "avg_steps_per_task": round(avg_steps, 2),
         "total_s2_escalations": total_s2,
         "s2_escalation_rate": round(s2_rate, 4),
-        "total_cost_usd": round(total_cost, 6),
+        "total_cost_usd": total_cost_out,
+        "known_cost_usd": known_cost_out,
+        "usage": total_usage,
         "p50_latency_ms": p50_lat_ms,
         "p50_latency_seconds": p50_lat_sec,
         "models_used": sorted(all_models),
@@ -478,17 +589,20 @@ def compute_summary(task_results: list[dict[str, Any]]) -> dict[str, Any]:
 
 def format_summary_report(summary: dict[str, Any]) -> str:
     """Format evaluation summary into a readable report banner."""
+    cost_val = summary.get("total_cost_usd", 0.0)
+    cost_str = "bilinmiyor" if cost_val == "bilinmiyor" else f"${float(cost_val):.6f}"
     lines = [
         "=" * 64,
         "                   REFLEX EVALUATION REPORT",
         "=" * 64,
+        f"Status:                  {summary.get('status', 'completed')}",
         f"Total Tasks:             {summary['total_tasks']}",
         f"Success Rate:            {summary['success_rate'] * 100:.2f}% ({summary['successful_tasks']}/{summary['total_tasks']})",
-        f"Failed Tasks:            {summary['failed_tasks']} (Errors: {summary['error_tasks']}, Asked User: {summary.get('asked_user_tasks', 0)})",
+        f"Failed Tasks:            {summary['failed_tasks']} (Errors: {summary['error_tasks']}, Asked User: {summary.get('asked_user_tasks', 0)}, Budget Exceeded: {summary.get('budget_exceeded_tasks', 0)})",
         f"Total Steps:             {summary['total_steps']} (Avg / Task: {summary['avg_steps_per_task']:.2f})",
         f"S2 Escalations:          {summary['total_s2_escalations']}",
         f"S2 Escalation Rate:      {summary['s2_escalation_rate'] * 100:.2f}%",
-        f"Total Cost:              ${summary['total_cost_usd']:.6f}",
+        f"Total Cost:              {cost_str}",
         f"p50 Latency:             {summary['p50_latency_ms']} ms ({summary['p50_latency_seconds']} s)",
         f"Models Used:             {', '.join(summary['models_used']) if summary['models_used'] else 'None'}",
     ]
@@ -511,6 +625,7 @@ def run_eval(
     verbose: bool = True,
     base_url: str | None = None,
     web_dir: Path | str | None = None,
+    budget_usd: float | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Execute complete evaluation suite, save JSONL results and return summary."""
     tasks = load_tasks(tasks_path)
@@ -529,6 +644,7 @@ def run_eval(
                 verbose=verbose,
                 base_url=local_base,
                 web_dir=web_dir,
+                budget_usd=budget_usd,
             )
 
     task_results: list[dict[str, Any]] = []
@@ -538,12 +654,36 @@ def run_eval(
         # Clear or create file
         output_file.write_text("", encoding="utf-8")
 
+    cumulative_cost = 0.0
     for idx, task in enumerate(tasks, start=1):
+        if budget_usd is not None and cumulative_cost > budget_usd:
+            break
+
         if verbose:
             task_display_url = task["url"].replace("{BASE}", base_url) if base_url else task["url"]
             print(f"[eval] [{idx}/{len(tasks)}] Starting task {task['id']} ({task_display_url})...")
 
-        res = run_task(task, config=config, default_max_steps=default_max_steps, base_url=base_url)
+        remaining_budget = (budget_usd - cumulative_cost) if budget_usd is not None else None
+        res = run_task(
+            task,
+            config=config,
+            default_max_steps=default_max_steps,
+            base_url=base_url,
+            budget_usd=remaining_budget,
+        )
+
+        task_known_cost = res.get("known_cost_usd")
+        if isinstance(task_known_cost, (int, float)):
+            cumulative_cost += float(task_known_cost)
+        elif isinstance(res.get("cost_usd"), (int, float)):
+            cumulative_cost += float(res["cost_usd"])
+
+        if budget_usd is not None and cumulative_cost > budget_usd and res.get("status") != "budget_exceeded":
+            res["status"] = "budget_exceeded"
+            res["success"] = False
+            res["score"] = 0.0
+            res["last_error"] = f"Budget exceeded: ${cumulative_cost:.6f} > ${budget_usd:.6f}"
+
         task_results.append(res)
 
         if output_file:
@@ -552,15 +692,25 @@ def run_eval(
 
         if verbose:
             status_symbol = "✓" if res["success"] else "✗"
+            cost_disp = (
+                "bilinmiyor"
+                if res["cost_usd"] == "bilinmiyor"
+                else f"${float(res['cost_usd']):.6f}"
+            )
             print(
                 f"[eval] [{idx}/{len(tasks)}] {status_symbol} {res['id']}: "
                 f"status={res['status']}, steps={res['steps']}, "
-                f"score={res['score']}, cost=${res['cost_usd']:.6f}"
+                f"score={res['score']}, cost={cost_disp}"
             )
             if res.get("last_error"):
                 print(f"       last_error: {res['last_error']}")
 
-    summary = compute_summary(task_results)
+        if res.get("status") == "budget_exceeded":
+            if verbose:
+                print(f"[eval] Stopping evaluation: budget_exceeded (${cumulative_cost:.6f} > ${budget_usd:.6f})")
+            break
+
+    summary = compute_summary(task_results, budget_usd=budget_usd)
 
     if summary_path:
         sum_path = Path(summary_path)
@@ -734,6 +884,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--web-port", type=int, default=0, help="Port for local fixture web server (default: 0 for ephemeral port)")
     parser.add_argument("--cdp-port", type=int, default=9444, help="CDP port for isolated Chromium instance (default: 9444; 9333 is forbidden)")
     parser.add_argument("--headed", action="store_true", help="Run browser in headed mode (default: headless)")
+    parser.add_argument("--budget-usd", type=float, default=None, help="Maximum budget in USD; stops with budget_exceeded if exceeded")
 
     args = parser.parse_args(argv)
     tasks_file = args.tasks or args.tasks_flag
@@ -766,7 +917,10 @@ def main(argv: list[str] | None = None) -> int:
                 default_max_steps=args.max_steps,
                 verbose=not args.quiet,
                 base_url=local_base_url,
+                budget_usd=args.budget_usd,
             )
+            if summary.get("status") == "budget_exceeded":
+                return 1
             return 0 if summary["failed_tasks"] == 0 else 1
     except Exception as exc:
         print(f"[eval] Fatal evaluation runner error: {exc}", file=sys.stderr)

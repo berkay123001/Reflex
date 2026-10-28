@@ -18,7 +18,9 @@ from pydantic import BaseModel, Field
 
 from .config import (
     META_API_CHAT_URL,
+    MODEL_PRICING,
     OPENROUTER_CHAT_URL,
+    calculate_usage_cost,
     get_meta_api_key,
     get_openrouter_api_key,
 )
@@ -126,7 +128,8 @@ class FieldTextOutcome(BaseModel):
     fact_key: str | None = None
     model: str = ""
     latency_ms: int = 0
-    cost_usd: float = 0.0
+    cost_usd: float | str = 0.0
+    usage: dict[str, Any] = Field(default_factory=dict)
     retries: int = 0
     finish_reason: str | None = None
 
@@ -153,26 +156,29 @@ class SupervisorDecision(BaseModel):
     site_rule: str | None = None
     model: str = ""
     latency_ms: int = 0
-    cost_usd: float = 0.0
+    cost_usd: float | str = 0.0
+    usage: dict[str, Any] = Field(default_factory=dict)
     retries: int = 0
     finish_reason: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
 class _ParsedDict(dict[str, Any]):
-    """Dictionary of parsed JSON output carrying `retries` and `finish_reason` attributes."""
+    """Dictionary of parsed JSON output carrying `retries`, `finish_reason`, and `usage` attributes."""
 
     retries: int = 0
     retry_count: int = 0
     finish_reason: str | None = None
+    usage: dict[str, Any]
 
 
 class CompletionResult(tuple):
-    """4-tuple `(parsed, latency_ms, cost_usd, model)` carrying `retries` and `finish_reason` metadata."""
+    """4-tuple `(parsed, latency_ms, cost_usd, model)` carrying `retries`, `finish_reason`, and `usage` metadata."""
 
     retries: int
     retry_count: int
     finish_reason: str | None
+    usage: dict[str, Any]
 
     def __new__(
         cls,
@@ -183,20 +189,24 @@ class CompletionResult(tuple):
         *,
         retries: int = 0,
         finish_reason: str | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> CompletionResult:
+        usage_dict = dict(usage or {})
         wrapped_parsed = _ParsedDict(parsed)
         wrapped_parsed.retries = retries
         wrapped_parsed.retry_count = retries
         wrapped_parsed.finish_reason = finish_reason
+        wrapped_parsed.usage = usage_dict
         instance = super().__new__(cls, (wrapped_parsed, latency_ms, cost_usd, model))
         instance.retries = retries
         instance.retry_count = retries
         instance.finish_reason = finish_reason
+        instance.usage = usage_dict
         return instance
 
     def __getitem__(self, key: int | slice | str) -> Any:
         if isinstance(key, str):
-            if key in {"retries", "retry_count", "finish_reason"}:
+            if key in {"retries", "retry_count", "finish_reason", "usage"}:
                 return getattr(self, key)
             if key == "parsed":
                 return super().__getitem__(0)
@@ -299,13 +309,16 @@ def _chat_completion(
                             raise ValueError("Supervisor response content is empty")
                         parsed = _extract_json(content_str)
                         latency_ms = round((time.perf_counter() - call_started) * 1000)
+                        used_model_id = str(data.get("model") or meta_model_id)
+                        cost_val, norm_usage = calculate_usage_cost(used_model_id, data.get("usage"))
                         return CompletionResult(
                             parsed,
                             latency_ms,
-                            0.0,
-                            str(data.get("model") or meta_model_id),
+                            cost_val,
+                            used_model_id,
                             retries=retries_used,
                             finish_reason=last_finish_reason,
+                            usage=norm_usage,
                         )
                     resp.raise_for_status()
                 except (ValueError, json.JSONDecodeError, KeyError, IndexError) as exc:
@@ -371,15 +384,16 @@ def _chat_completion(
                     raise ValueError("Supervisor response content is empty")
                 parsed = _extract_json(content_str)
                 latency_ms = round((time.perf_counter() - call_started) * 1000)
-                usage = data.get("usage") or {}
-                cost = float(usage.get("cost", 0.0) or 0.0)
+                used_model_id = str(data.get("model") or candidate_model)
+                cost_val, norm_usage = calculate_usage_cost(used_model_id, data.get("usage"))
                 return CompletionResult(
                     parsed,
                     latency_ms,
-                    cost,
-                    str(data.get("model") or candidate_model),
+                    cost_val,
+                    used_model_id,
                     retries=retries_used,
                     finish_reason=last_finish_reason,
+                    usage=norm_usage,
                 )
             except (ValueError, json.JSONDecodeError, KeyError, IndexError) as exc:
                 last_err = exc
@@ -440,6 +454,7 @@ def generate_field_text(
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
     finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
+    usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
     val = parsed.get("text")
     ask = parsed.get("ask_user")
     fact_key = parsed.get("fact_key")
@@ -451,6 +466,7 @@ def generate_field_text(
             model=used_model,
             latency_ms=latency_ms,
             cost_usd=cost,
+            usage=usage_info,
             retries=retries,
             finish_reason=finish_reason,
         )
@@ -466,6 +482,7 @@ def generate_field_text(
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
+        usage=usage_info,
         retries=retries,
         finish_reason=finish_reason,
     )
@@ -514,6 +531,7 @@ def resolve_escalation(
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
     finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
+    usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
 
     action_type = str(parsed.get("action_type", "OVERRIDE_ACTION")).upper()
     if action_type not in {"OVERRIDE_ACTION", "UPDATE_SUBGOAL", "ASK_USER", "COMPLETE_TASK"}:
@@ -552,6 +570,7 @@ def resolve_escalation(
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
+        usage=usage_info,
         retries=retries,
         finish_reason=finish_reason,
         raw=parsed,
@@ -572,7 +591,8 @@ class UserMessageInterpretation(BaseModel):
     constraints: list[str] = Field(default_factory=list)
     model: str = ""
     latency_ms: int = 0
-    cost_usd: float = 0.0
+    cost_usd: float | str = 0.0
+    usage: dict[str, Any] = Field(default_factory=dict)
     retries: int = 0
     finish_reason: str | None = None
 
@@ -612,6 +632,7 @@ def interpret_user_message(
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
     finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
+    usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
     intent = str(parsed.get("intent") or "CONTINUE_OR_STEER").upper().strip()
     if intent not in {"CHAT_ONLY", "NEW_GOAL", "CONTINUE_OR_STEER", "PROVIDE_FACT"}:
         intent = "CONTINUE_OR_STEER"
@@ -633,6 +654,7 @@ def interpret_user_message(
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
+        usage=usage_info,
         retries=retries,
         finish_reason=finish_reason,
     )

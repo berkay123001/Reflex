@@ -489,7 +489,12 @@ function renderState(state) {
   if ($("m-s1")) $("m-s1").textContent = String(m.s1_steps ?? 0);
   if ($("m-s2")) $("m-s2").textContent = String(m.s2_escalations ?? 0);
   if ($("m-lat")) $("m-lat").textContent = `${m.median_decision_ms ?? 0} ms`;
-  if ($("m-cost")) $("m-cost").textContent = `$${Number(m.total_cost_usd ?? 0).toFixed(4)}`;
+  if ($("m-cost")) {
+    $("m-cost").textContent =
+      m.total_cost_usd === "bilinmiyor"
+        ? "bilinmiyor"
+        : `$${Number(m.total_cost_usd ?? 0).toFixed(4)}`;
+  }
 
   if (state.config) {
     if ($("top-s1-select") && state.config.decision_backend) {

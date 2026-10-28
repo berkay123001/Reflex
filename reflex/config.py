@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -43,6 +45,72 @@ DECISION_PRESETS = [
     {"id": "local_turnike", "label": "Local · Turnike-4B-Web2-FP8 (8794)"},
     {"id": "openrouter_jev", "label": "OpenRouter · Jev (~typesafe/jev-latest)"},
 ]
+
+# USD per 1M tokens (Source: https://dev.meta.ai/docs/pricing-rate-limits)
+MODEL_PRICING: dict[str, dict[str, float]] = {
+    "muse-spark-1.3-contributor": {
+        "input": 0.10,
+        "cached": 0.002,
+        "output": 0.20,
+    },
+    "muse-spark-1.3": {
+        "input": 1.25,
+        "cached": 0.15,
+        "output": 4.25,
+    },
+    "muse-wonder-1.0": {
+        "input": 4.00,
+        "cached": 0.20,
+        "output": 20.00,
+    },
+}
+
+
+def calculate_usage_cost(
+    model: str,
+    usage: dict[str, Any] | None,
+    pricing_table: dict[str, dict[str, float]] | None = None,
+) -> tuple[float | str, dict[str, Any]]:
+    """Compute cost in USD from usage tokens or explicit usage.cost; return 'bilinmiyor' if model price is unknown."""
+    raw = dict(usage or {})
+    prompt_tokens = int(raw.get("prompt_tokens", 0) or 0)
+    completion_tokens = int(raw.get("completion_tokens", 0) or 0)
+    details = raw.get("prompt_tokens_details")
+    if isinstance(details, dict):
+        cached_tokens = int(details.get("cached_tokens", 0) or 0)
+    else:
+        cached_tokens = int(raw.get("cached_tokens", 0) or 0)
+    total_tokens = int(raw.get("total_tokens") or (prompt_tokens + completion_tokens))
+
+    table = pricing_table or MODEL_PRICING
+    clean_model = (model or "").strip()
+    short_model = clean_model.removeprefix("meta/")
+    rates = table.get(clean_model) or table.get(short_model)
+
+    if rates is not None:
+        uncached_prompt = max(0, prompt_tokens - cached_tokens) if cached_tokens <= prompt_tokens else prompt_tokens
+        in_rate = float(rates.get("input", 0.0))
+        cached_rate = float(rates.get("cached", rates.get("cached_input", 0.0)))
+        out_rate = float(rates.get("output", 0.0))
+        cost_val: float | str = round(
+            (uncached_prompt * in_rate + cached_tokens * cached_rate + completion_tokens * out_rate) / 1_000_000,
+            8,
+        )
+    elif "cost" in raw and raw["cost"] is not None and not isinstance(raw["cost"], str):
+        cost_val = float(raw["cost"])
+    else:
+        cost_val = "bilinmiyor"
+
+    norm_usage: dict[str, Any] = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "cached_tokens": cached_tokens,
+        "total_tokens": total_tokens,
+        "cost": cost_val,
+    }
+    if isinstance(details, dict) or cached_tokens > 0:
+        norm_usage["prompt_tokens_details"] = {"cached_tokens": cached_tokens}
+    return cost_val, norm_usage
 
 
 def load_env() -> None:
@@ -148,3 +216,6 @@ class ReflexConfig(BaseModel):
     enable_site_memory: bool = False
     screenshots: bool = True
     thresholds: CalibrationThresholds = Field(default_factory=CalibrationThresholds)
+    model_pricing: dict[str, dict[str, float]] = Field(
+        default_factory=lambda: {k: dict(v) for k, v in MODEL_PRICING.items()}
+    )

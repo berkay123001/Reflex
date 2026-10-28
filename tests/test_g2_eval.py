@@ -896,3 +896,163 @@ def test_eval_cli_main_passes_cdp_port_and_headed(tmp_path: Path):
 
     assert exit_code == 0
     mock_mgr.assert_called_once_with(port=9455, headless=False)
+
+
+# ==============================================================================
+# F2: Cost Calculation, Unknown Model Handling, Interpret Cost & Budget Tests
+# ==============================================================================
+
+
+def test_meta_api_usage_cost_calculation_all_configured_models():
+    """Verify cost calculation from prompt_tokens, completion_tokens, and cached_tokens for all Meta models."""
+    from reflex.config import MODEL_PRICING, calculate_usage_cost
+
+    assert MODEL_PRICING["muse-spark-1.3-contributor"] == {"input": 0.10, "cached": 0.002, "output": 0.20}
+    assert MODEL_PRICING["muse-spark-1.3"] == {"input": 1.25, "cached": 0.15, "output": 4.25}
+    assert MODEL_PRICING["muse-wonder-1.0"] == {"input": 4.00, "cached": 0.20, "output": 20.00}
+
+    usage = {
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "prompt_tokens_details": {"cached_tokens": 400},
+    }
+    # uncached = 600, cached = 400, completion = 500
+    c_contrib, u_contrib = calculate_usage_cost("muse-spark-1.3-contributor", usage)
+    expected_contrib = (600 * 0.10 + 400 * 0.002 + 500 * 0.20) / 1_000_000.0
+    assert c_contrib == pytest.approx(expected_contrib)
+    assert u_contrib["prompt_tokens"] == 1000
+    assert u_contrib["cached_tokens"] == 400
+    assert u_contrib["completion_tokens"] == 500
+    assert u_contrib["total_tokens"] == 1500
+
+    c_spark, _ = calculate_usage_cost("meta/muse-spark-1.3", usage)
+    expected_spark = (600 * 1.25 + 400 * 0.15 + 500 * 4.25) / 1_000_000.0
+    assert c_spark == pytest.approx(expected_spark)
+
+    c_wonder, _ = calculate_usage_cost("muse-wonder-1.0", usage)
+    expected_wonder = (600 * 4.00 + 400 * 0.20 + 500 * 20.00) / 1_000_000.0
+    assert c_wonder == pytest.approx(expected_wonder)
+
+
+def test_unknown_model_marks_cost_as_bilinmiyor_and_preserves_tokens():
+    """Unknown model price must set cost to 'bilinmiyor' (not 0) while preserving token counts."""
+    from reflex.config import calculate_usage_cost
+    from reflex.supervisor import _chat_completion
+
+    usage = {
+        "prompt_tokens": 800,
+        "completion_tokens": 200,
+        "prompt_tokens_details": {"cached_tokens": 300},
+    }
+    cost, norm = calculate_usage_cost("some-unknown-model-v9", usage)
+    assert cost == "bilinmiyor"
+    assert cost != 0
+    assert norm["prompt_tokens"] == 800
+    assert norm["completion_tokens"] == 200
+    assert norm["cached_tokens"] == 300
+    assert norm["total_tokens"] == 1000
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "choices": [{"message": {"content": '{"text": "Merhaba", "submit": false, "reason": "ok"}'}, "finish_reason": "stop"}],
+        "usage": usage,
+    }
+    with (
+        patch("reflex.supervisor.get_openrouter_api_key", return_value="test-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", return_value=mock_resp),
+    ):
+        res = _chat_completion(
+            model="some-unknown-model-v9",
+            system_prompt="sys",
+            user_prompt="hi",
+            max_tokens=100,
+            allow_model_fallback=False,
+        )
+    assert res["cost_usd"] == "bilinmiyor"
+    assert res.usage["prompt_tokens"] == 800
+    assert res.usage["completion_tokens"] == 200
+    assert res.usage["cached_tokens"] == 300
+
+
+def test_session_includes_initial_constraint_and_reply_user_interpret_costs():
+    """Session total_cost_usd must include session-start constraint extraction and reply_user interpret costs."""
+    from reflex.agent import ReflexSession
+    from reflex.supervisor import UserMessageInterpretation
+
+    cfg = ReflexConfig()
+    mock_browser = MagicMock()
+    mock_browser.snapshot.return_value = {
+        "url": "http://127.0.0.1:8788/qa/survey",
+        "title": "Survey",
+        "text": "1. Question",
+        "actions": [{"id": "e1", "node": 1, "kind": "click", "role": "button", "label": "Next"}],
+        "elements": [],
+    }
+
+    init_interp = UserMessageInterpretation(
+        intent="CONTINUE_OR_STEER",
+        constraints=["Do not submit"],
+        model="muse-spark-1.3-contributor",
+        latency_ms=80,
+        cost_usd=0.00012,
+        usage={"prompt_tokens": 500, "completion_tokens": 100, "cached_tokens": 0, "total_tokens": 600},
+    )
+    reply_interp = UserMessageInterpretation(
+        intent="PROVIDE_FACT",
+        fact_value="Ankara",
+        model="muse-spark-1.3-contributor",
+        latency_ms=90,
+        cost_usd=0.00018,
+        usage={"prompt_tokens": 600, "completion_tokens": 150, "cached_tokens": 100, "total_tokens": 750},
+    )
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_browser),
+        patch("reflex.agent.interpret_user_message", side_effect=[init_interp, reply_interp]),
+    ):
+        session = ReflexSession(url="http://127.0.0.1:8788/qa/survey", goal="Formu doldur ama gönderme", config=cfg)
+        snap1 = session.snapshot()
+        assert snap1["metrics"]["total_cost_usd"] == pytest.approx(0.00012)
+        assert snap1["metrics"]["usage"]["prompt_tokens"] == 500
+
+        session.status = "waiting_user"
+        session.pending_question = {"fact_key": "city", "question": "Hangi şehir?"}
+        snap2 = session.reply_user("Ankara")
+        assert snap2["metrics"]["total_cost_usd"] == pytest.approx(0.0003)
+        assert snap2["metrics"]["usage"]["prompt_tokens"] == 1100
+        assert snap2["metrics"]["usage"]["cached_tokens"] == 100
+
+
+def test_eval_budget_usd_stops_with_budget_exceeded(tmp_path: Path):
+    """When cumulative or step cost exceeds --budget-usd, run_eval stops with status 'budget_exceeded'."""
+    tasks = [
+        {"id": "b1", "url": "http://127.0.0.1:8788/qa/survey", "goal": "Task 1", "check": "true"},
+        {"id": "b2", "url": "http://127.0.0.1:8788/qa/blog", "goal": "Task 2", "check": "true"},
+    ]
+    tasks_file = tmp_path / "budget_tasks.json"
+    tasks_file.write_text(json.dumps(tasks), encoding="utf-8")
+    out_file = tmp_path / "budget_out.jsonl"
+    sum_file = tmp_path / "budget_sum.json"
+
+    # Each mock session reports total_cost_usd = 0.0015
+    mock_session = _make_mock_session(statuses=["ready", "done"], browser_eval_return=True)
+
+    with patch("scripts.eval.ReflexSession", return_value=mock_session):
+        results, summary = run_eval(
+            tasks_path=tasks_file,
+            output_path=out_file,
+            summary_path=sum_file,
+            verbose=False,
+            budget_usd=0.0010,
+        )
+
+    # First task already exceeds 0.0010, so it terminates with budget_exceeded and task 2 never runs
+    assert len(results) == 1
+    assert results[0]["id"] == "b1"
+    assert results[0]["status"] == "budget_exceeded"
+    assert results[0]["success"] is False
+    assert summary["status"] == "budget_exceeded"
+    assert summary["budget_exceeded_tasks"] == 1
+

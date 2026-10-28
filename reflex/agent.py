@@ -97,6 +97,7 @@ class ReflexSession:
         self.decisions: list[dict[str, Any]] = []
         self.escalations: list[dict[str, Any]] = []
         self.text_calls: list[dict[str, Any]] = []
+        self.interpret_calls: list[dict[str, Any]] = []
 
         # Pending state for pause/resume & post-verification escalation
         self.pending_fact_key: str | None = None
@@ -117,6 +118,7 @@ class ReflexSession:
                 supervisor_model=self.config.supervisor_model,
                 allow_model_fallback=self.config.allow_model_fallback,
             )
+            self.interpret_calls.append(interp.model_dump())
             self.ctx.allow_arbitrary_choices = interp.allow_arbitrary_choices
             self.ctx.constraints = list(interp.constraints or [])
             if constraints:
@@ -138,12 +140,55 @@ class ReflexSession:
         elements, _, _ = action_space(self.page.get("actions", []))
         s1_calls = sum(1 for h in self.history if h.get("actor") == "S1")
         s2_calls = len(self.escalations)
-        total_cost = round(
-            sum(float((d.get("usage") or {}).get("cost", 0.0) or 0.0) for d in self.decisions)
-            + sum(float(e.get("cost_usd", 0.0) or 0.0) for e in self.escalations)
-            + sum(float(t.get("cost_usd", 0.0) or 0.0) for t in self.text_calls),
+        cost_items: list[Any] = []
+        for d in self.decisions:
+            d_usage = d.get("usage") or {}
+            if "cost" in d_usage and d_usage["cost"] is not None:
+                cost_items.append(d_usage["cost"])
+        for e in self.escalations:
+            if "cost_usd" in e and e["cost_usd"] is not None:
+                cost_items.append(e["cost_usd"])
+        for t in self.text_calls:
+            if "cost_usd" in t and t["cost_usd"] is not None:
+                cost_items.append(t["cost_usd"])
+        for ic in self.interpret_calls:
+            if "cost_usd" in ic and ic["cost_usd"] is not None:
+                cost_items.append(ic["cost_usd"])
+
+        has_unknown_cost = any(isinstance(c, str) and c in {"bilinmiyor", "unknown"} for c in cost_items)
+        known_cost_sum = round(
+            sum(float(c) for c in cost_items if isinstance(c, (int, float))),
             6,
         )
+        total_cost: float | str = "bilinmiyor" if has_unknown_cost else known_cost_sum
+
+        usage_records = (
+            [(d.get("usage") or {}) for d in self.decisions]
+            + [(e.get("usage") or {}) for e in self.escalations]
+            + [(t.get("usage") or {}) for t in self.text_calls]
+            + [(ic.get("usage") or {}) for ic in self.interpret_calls]
+        )
+        prompt_tokens = sum(int(u.get("prompt_tokens", 0) or 0) for u in usage_records if isinstance(u, dict))
+        completion_tokens = sum(int(u.get("completion_tokens", 0) or 0) for u in usage_records if isinstance(u, dict))
+        cached_tokens = sum(
+            int(
+                (
+                    (u.get("prompt_tokens_details") or {}).get("cached_tokens")
+                    if isinstance(u.get("prompt_tokens_details"), dict)
+                    else None
+                )
+                or u.get("cached_tokens", 0)
+                or 0
+            )
+            for u in usage_records
+            if isinstance(u, dict)
+        )
+        total_tokens = sum(
+            int(u.get("total_tokens") or ((u.get("prompt_tokens", 0) or 0) + (u.get("completion_tokens", 0) or 0)))
+            for u in usage_records
+            if isinstance(u, dict)
+        )
+
         latencies = [h["latency_ms"] for h in self.history if isinstance(h.get("latency_ms"), (int, float))]
         median_ms = sorted(latencies)[len(latencies) // 2] if latencies else 0
 
@@ -159,6 +204,7 @@ class ReflexSession:
             "decisions": self.decisions,
             "escalations": self.escalations,
             "text_calls": self.text_calls,
+            "interpret_calls": self.interpret_calls,
             "context": self.ctx.snapshot_dict(),
             "config": self.config.model_dump(),
             "pending_confirmation": (
@@ -181,6 +227,13 @@ class ReflexSession:
                 "text_helper_calls": len(self.text_calls),
                 "median_decision_ms": median_ms,
                 "total_cost_usd": total_cost,
+                "known_cost_usd": known_cost_sum,
+                "usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "cached_tokens": cached_tokens,
+                    "total_tokens": total_tokens,
+                },
             },
         }
 
@@ -451,6 +504,7 @@ class ReflexSession:
             "model": sup.model,
             "latency_ms": sup.latency_ms,
             "cost_usd": sup.cost_usd,
+            "usage": sup.usage,
             "retries": sup.retries,
             "finish_reason": sup.finish_reason,
             "elapsed_ms": self.elapsed(),
@@ -881,6 +935,7 @@ class ReflexSession:
                 supervisor_model=self.config.supervisor_model,
                 allow_model_fallback=self.config.allow_model_fallback,
             )
+            self.interpret_calls.append(interp.model_dump())
         except Exception as exc:
             self.status = "error"
             self.last_error = str(exc)
