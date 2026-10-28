@@ -28,6 +28,40 @@ from .supervisor import (
 from .system1 import action_space, choose_action
 from .verifier import VerificationResult, verify_step
 
+
+def repeated_type_text_nodes(page: dict[str, Any], history: list[dict[str, Any]]) -> set[int]:
+    """Fields whose last step already typed text that is still in the control.
+
+    Only the latest history step counts. A field whose current value no longer
+    contains that text is left available.
+    """
+    if not history:
+        return set()
+    last = history[-1]
+    if not isinstance(last, dict):
+        return set()
+    if last.get("kind") != "fill" and str(last.get("operation") or "") != "TYPE_TEXT":
+        return set()
+    typed = str(last.get("text") or "")
+    if not typed:
+        return set()
+    last_node = last.get("node")
+    last_label = str(last.get("action") or "").strip()
+    masked: set[int] = set()
+    for action in page.get("actions") or []:
+        if action.get("kind") != "fill":
+            continue
+        if typed not in str(action.get("value") or ""):
+            continue
+        node = action.get("node")
+        if type(node) is not int:
+            continue
+        same_node = node == last_node
+        same_label = bool(last_label) and last_label == str(action.get("label") or "").strip()
+        if same_node or same_label:
+            masked.add(node)
+    return masked
+
 _URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
 
 
@@ -322,6 +356,21 @@ class ReflexSession:
                 self.config,
                 suppress_done=suppress_done,
             )
+            repeat_nodes = repeated_type_text_nodes(self.page, self.history)
+            if repeat_nodes and s1_decision.get("operation") == "TYPE_TEXT":
+                chosen = next(
+                    (item for item in self.page.get("actions", []) if item.get("id") == s1_decision.get("choice")),
+                    None,
+                )
+                if chosen is not None and chosen.get("node") in repeat_nodes:
+                    s1_decision = choose_action(
+                        self.page,
+                        compiled_goal,
+                        self.history,
+                        self.config,
+                        suppress_done=suppress_done,
+                        mask_fill_nodes=repeat_nodes,
+                    )
         except ValueError as exc:
             s1_err_ms = round((time.perf_counter() - s1_t0) * 1000)
             self.s1_errors += 1

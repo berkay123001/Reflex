@@ -144,17 +144,44 @@ def _normalize_answer(answer: dict[str, Any], valid_ids: dict[str, Any] | set[st
     }
 
 
+def _mask_type_text(
+    elements: list[dict[str, Any]],
+    targets: dict[str, dict[str, Any]],
+    nodes: set[int],
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Drop TYPE_TEXT for fields that must not be typed into again. Leave other operations."""
+    kept = {
+        index: action
+        for index, action in (targets.get("TYPE_TEXT") or {}).items()
+        if action.get("node") not in nodes
+    }
+    masked_targets = {key: value for key, value in targets.items() if key != "TYPE_TEXT"}
+    if kept:
+        masked_targets["TYPE_TEXT"] = kept
+    masked_elements: list[dict[str, Any]] = []
+    for element in elements:
+        operations = list(element.get("operations") or [])
+        if element.get("node") in nodes and "TYPE_TEXT" in operations:
+            masked_elements.append({**element, "operations": [op for op in operations if op != "TYPE_TEXT"]})
+        else:
+            masked_elements.append(element)
+    return masked_elements, masked_targets
+
+
 def build_system1_request(
     page: dict[str, Any],
     compiled_goal: str,
     history: list[dict[str, Any]],
     config: ReflexConfig | None = None,
     suppress_done: bool = False,
+    mask_fill_nodes: set[int] | None = None,
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, Any]]:
     """Build the System 1 request body, target map, and control map without making network calls."""
     _ = suppress_done
     cfg = config or ReflexConfig()
     elements, targets, controls = action_space(page.get("actions", []))
+    if mask_fill_nodes:
+        elements, targets = _mask_type_text(elements, targets, set(mask_fill_nodes))
 
     labels = {
         "CLICK": "Click an element, button, menu option, autocomplete suggestion, or calendar day.",
@@ -216,6 +243,7 @@ def choose_action(
     config: ReflexConfig,
     *,
     suppress_done: bool = False,
+    mask_fill_nodes: set[int] | None = None,
 ) -> dict[str, Any]:
     """Query System 1 (OpenRouter Jev or Local Turnike) for the next operation and target."""
     elements, _, _ = action_space(page.get("actions", []))
@@ -225,6 +253,7 @@ def choose_action(
         history,
         config,
         suppress_done=suppress_done,
+        mask_fill_nodes=mask_fill_nodes,
     )
     operations = dict(body["questions"]["operation"]["criteria"])
 
