@@ -132,6 +132,7 @@ class FieldTextOutcome(BaseModel):
     cost_usd: float | str = 0.0
     usage: dict[str, Any] = Field(default_factory=dict)
     retries: int = 0
+    retry_reason: str | None = None
     finish_reason: str | None = None
 
 
@@ -160,24 +161,27 @@ class SupervisorDecision(BaseModel):
     cost_usd: float | str = 0.0
     usage: dict[str, Any] = Field(default_factory=dict)
     retries: int = 0
+    retry_reason: str | None = None
     finish_reason: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
 class _ParsedDict(dict[str, Any]):
-    """Dictionary of parsed JSON output carrying `retries`, `finish_reason`, and `usage` attributes."""
+    """Dictionary of parsed JSON output carrying `retries`, `retry_reason`, `finish_reason`, and `usage` attributes."""
 
     retries: int = 0
     retry_count: int = 0
+    retry_reason: str | None = None
     finish_reason: str | None = None
     usage: dict[str, Any]
 
 
 class CompletionResult(tuple):
-    """4-tuple `(parsed, latency_ms, cost_usd, model)` carrying `retries`, `finish_reason`, and `usage` metadata."""
+    """4-tuple `(parsed, latency_ms, cost_usd, model)` carrying `retries`, `retry_reason`, `finish_reason`, and `usage` metadata."""
 
     retries: int
     retry_count: int
+    retry_reason: str | None
     finish_reason: str | None
     usage: dict[str, Any]
 
@@ -189,6 +193,7 @@ class CompletionResult(tuple):
         model: str,
         *,
         retries: int = 0,
+        retry_reason: str | None = None,
         finish_reason: str | None = None,
         usage: dict[str, Any] | None = None,
     ) -> CompletionResult:
@@ -196,18 +201,20 @@ class CompletionResult(tuple):
         wrapped_parsed = _ParsedDict(parsed)
         wrapped_parsed.retries = retries
         wrapped_parsed.retry_count = retries
+        wrapped_parsed.retry_reason = retry_reason
         wrapped_parsed.finish_reason = finish_reason
         wrapped_parsed.usage = usage_dict
         instance = super().__new__(cls, (wrapped_parsed, latency_ms, cost_usd, model))
         instance.retries = retries
         instance.retry_count = retries
+        instance.retry_reason = retry_reason
         instance.finish_reason = finish_reason
         instance.usage = usage_dict
         return instance
 
     def __getitem__(self, key: int | slice | str) -> Any:
         if isinstance(key, str):
-            if key in {"retries", "retry_count", "finish_reason", "usage"}:
+            if key in {"retries", "retry_count", "retry_reason", "finish_reason", "usage"}:
                 return getattr(self, key)
             if key == "parsed":
                 return super().__getitem__(0)
@@ -324,8 +331,10 @@ def _chat_completion(
             call_started = time.perf_counter()
             current_max_tokens = max(max_tokens, 1400)
             retries_used = 0
+            retry_reason: str | None = None
             last_finish_reason: str | None = None
             for attempt in range(2):
+                content_str = ""
                 payload: dict[str, Any] = {
                     "model": meta_model_id,
                     "max_tokens": current_max_tokens,
@@ -365,6 +374,7 @@ def _chat_completion(
                             cost_val,
                             used_model_id,
                             retries=retries_used,
+                            retry_reason=retry_reason,
                             finish_reason=last_finish_reason,
                             usage=norm_usage,
                         )
@@ -374,7 +384,12 @@ def _chat_completion(
                     if attempt == 0:
                         retries_used += 1
                         if last_finish_reason == "length":
+                            retry_reason = "length"
                             current_max_tokens = current_max_tokens * 2
+                        elif not content_str:
+                            retry_reason = "empty"
+                        else:
+                            retry_reason = "invalid_json"
                         continue
                     raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}") from exc
                 except Exception as exc:
@@ -400,8 +415,10 @@ def _chat_completion(
         call_started = time.perf_counter()
         current_max_tokens = max(max_tokens, 1000)
         retries_used = 0
+        retry_reason = None
         last_finish_reason: str | None = None
         for attempt in range(2):
+            content_str = ""
             payload = {
                 "model": candidate_model,
                 "max_tokens": current_max_tokens,
@@ -417,6 +434,7 @@ def _chat_completion(
                 resp = _HTTP_CLIENT.post(OPENROUTER_CHAT_URL, headers=headers, json=payload, timeout=req_timeout)
                 if resp.status_code in {429, 502, 503, 529} and attempt == 0:
                     retries_used += 1
+                    retry_reason = f"http_{resp.status_code}"
                     time.sleep(0.5)
                     continue
                 resp.raise_for_status()
@@ -441,6 +459,7 @@ def _chat_completion(
                     cost_val,
                     used_model_id,
                     retries=retries_used,
+                    retry_reason=retry_reason,
                     finish_reason=last_finish_reason,
                     usage=norm_usage,
                 )
@@ -449,7 +468,12 @@ def _chat_completion(
                 if attempt == 0:
                     retries_used += 1
                     if last_finish_reason == "length":
+                        retry_reason = "length"
                         current_max_tokens = current_max_tokens * 2
+                    elif not content_str:
+                        retry_reason = "empty"
+                    else:
+                        retry_reason = "invalid_json"
                     continue
                 raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}") from exc
             except httpx.TimeoutException as exc:
@@ -501,12 +525,13 @@ def generate_field_text(
         supervisor_model,
         FIELD_TEXT_SYSTEM_PROMPT,
         user_payload,
-        max_tokens=300,
+        max_tokens=2048,
         allow_model_fallback=allow_model_fallback,
         supervisor_timeout_s=supervisor_timeout_s,
     )
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
+    retry_reason = getattr(comp, "retry_reason", getattr(parsed, "retry_reason", None))
     finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
     usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
     val = parsed.get("text")
@@ -522,6 +547,7 @@ def generate_field_text(
             cost_usd=cost,
             usage=usage_info,
             retries=retries,
+            retry_reason=retry_reason,
             finish_reason=finish_reason,
         )
     question = (
@@ -538,6 +564,7 @@ def generate_field_text(
         cost_usd=cost,
         usage=usage_info,
         retries=retries,
+        retry_reason=retry_reason,
         finish_reason=finish_reason,
     )
 
@@ -580,12 +607,13 @@ def resolve_escalation(
         supervisor_model,
         ESCALATION_SYSTEM_PROMPT,
         user_prompt,
-        max_tokens=1500,
+        max_tokens=4096,
         allow_model_fallback=allow_model_fallback,
         supervisor_timeout_s=supervisor_timeout_s,
     )
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
+    retry_reason = getattr(comp, "retry_reason", getattr(parsed, "retry_reason", None))
     finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
     usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
 
@@ -628,6 +656,7 @@ def resolve_escalation(
         cost_usd=cost,
         usage=usage_info,
         retries=retries,
+        retry_reason=retry_reason,
         finish_reason=finish_reason,
         raw=parsed,
     )
@@ -650,6 +679,7 @@ class UserMessageInterpretation(BaseModel):
     cost_usd: float | str = 0.0
     usage: dict[str, Any] = Field(default_factory=dict)
     retries: int = 0
+    retry_reason: str | None = None
     finish_reason: str | None = None
 
 
@@ -683,12 +713,13 @@ def interpret_user_message(
         supervisor_model,
         USER_MESSAGE_SYSTEM_PROMPT,
         user_prompt,
-        max_tokens=500,
+        max_tokens=2048,
         allow_model_fallback=allow_model_fallback,
         supervisor_timeout_s=supervisor_timeout_s,
     )
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
+    retry_reason = getattr(comp, "retry_reason", getattr(parsed, "retry_reason", None))
     finish_reason = getattr(comp, "finish_reason", getattr(parsed, "finish_reason", None))
     usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
     intent = str(parsed.get("intent") or "CONTINUE_OR_STEER").upper().strip()
@@ -714,5 +745,6 @@ def interpret_user_message(
         cost_usd=cost,
         usage=usage_info,
         retries=retries,
+        retry_reason=retry_reason,
         finish_reason=finish_reason,
     )

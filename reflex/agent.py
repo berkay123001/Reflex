@@ -510,6 +510,7 @@ class ReflexSession:
             "cost_usd": sup.cost_usd,
             "usage": sup.usage,
             "retries": sup.retries,
+            "retry_reason": sup.retry_reason,
             "finish_reason": sup.finish_reason,
             "elapsed_ms": self.elapsed(),
         }

@@ -763,10 +763,89 @@ def test_chat_completion_finish_reason_length_doubles_max_tokens_on_retry():
     assert len(calls) == 2
     assert calls[0]["model"] == "muse-spark-1.3-contributor"
     assert calls[1]["model"] == "muse-spark-1.3-contributor"
-    assert calls[1]["max_tokens"] == calls[0]["max_tokens"] * 2
+    assert calls[0]["max_tokens"] == 4096
+    assert calls[1]["max_tokens"] == 8192
     assert sup.retries == 1
+    assert sup.retry_reason == "length"
     assert sup.finish_reason == "stop"
     assert sup.operation == "WAIT"
+
+
+def test_l2_max_tokens_and_retry_reasons():
+    """L2: Verify initial max_tokens (4096 for supervise, 2048 for text/interpret) and retry_reason ('length', 'empty', 'invalid_json')."""
+    ctx = DualTierContext(primary_goal="Goal", active_subgoal="Subgoal")
+    page = {"url": "https://example.com", "title": "T", "text": "Body"}
+
+    # 1. Empty content retry -> retry_reason == 'empty', max_tokens == 2048 for generate_field_text
+    calls_empty: list[dict] = []
+
+    def fake_post_empty(url, *args, **kwargs):
+        calls_empty.append(dict(kwargs.get("json", {})))
+        resp = MagicMock()
+        resp.status_code = 200
+        if len(calls_empty) == 1:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": ""}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        else:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": '{"text": "hello", "ask_user": null, "fact_key": null}'}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        return resp
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post_empty),
+    ):
+        ft = generate_field_text(
+            ctx=ctx,
+            action={"kind": "fill", "label": "Search"},
+            page=page,
+            history=[],
+            supervisor_model="muse-spark-1.3-contributor",
+        )
+    assert calls_empty[0]["max_tokens"] == 2048
+    assert ft.retries == 1
+    assert ft.retry_reason == "empty"
+    assert ft.text == "hello"
+
+    # 2. Invalid JSON retry -> retry_reason == 'invalid_json', max_tokens == 2048 for interpret_user_message
+    calls_bad_json: list[dict] = []
+
+    def fake_post_bad_json(url, *args, **kwargs):
+        calls_bad_json.append(dict(kwargs.get("json", {})))
+        resp = MagicMock()
+        resp.status_code = 200
+        if len(calls_bad_json) == 1:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": "not valid json at all"}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        else:
+            resp.json.return_value = {
+                "choices": [{"message": {"content": '{"intent": "CONTINUE_OR_STEER", "constraints": []}'}, "finish_reason": "stop"}],
+                "model": "muse-spark-1.3-contributor",
+            }
+        return resp
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post_bad_json),
+    ):
+        interp = interpret_user_message(
+            user_message="Devam et",
+            ctx=ctx,
+            page=page,
+            history=[],
+            pending_fact_key=None,
+            supervisor_model="muse-spark-1.3-contributor",
+        )
+    assert calls_bad_json[0]["max_tokens"] == 2048
+    assert interp.retries == 1
+    assert interp.retry_reason == "invalid_json"
+    assert interp.intent == "CONTINUE_OR_STEER"
 
 
 def test_supervisor_timeout_config_and_no_retry_on_timeout():
