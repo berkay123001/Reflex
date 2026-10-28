@@ -25,6 +25,7 @@ class VerificationResult(BaseModel):
     effective_progress: bool = False
     loop_detected: bool = False
     oscillation_detected: bool = False
+    scroll_budget_exceeded: bool = False
     reason: str = "ok"
     details: dict[str, Any] = Field(default_factory=dict)
 
@@ -138,15 +139,20 @@ def verify_step(
                 break
 
     scroll_streak = 0
+    scroll_budget_exceeded = False
     if kind == "scroll":
-        scroll_streak = 1
-        for h in reversed(history):
-            if h.get("kind") == "scroll":
-                scroll_streak += 1
-            else:
-                break
-        # Scrolling without scroll.y moving OR scrolling >= 4 times in a row without acting triggers Supervisor
-        repeated_without_progress = (not effective_progress) or (scroll_streak >= 4)
+        if effective_progress:
+            scroll_streak = 1
+            for h in reversed(history):
+                if h.get("kind") == "scroll" and h.get("effective_progress", True):
+                    scroll_streak += 1
+                else:
+                    break
+            details["moving_scroll_streak"] = scroll_streak
+            if scroll_streak >= 12 and scroll_streak % 12 == 0:
+                scroll_budget_exceeded = True
+        # Scrolling is only a loop when scroll.y stops moving (not effective_progress)
+        repeated_without_progress = not effective_progress
     else:
         repeated_without_progress = (
             (same_action_count >= 2 and not url_changed)
@@ -207,6 +213,8 @@ def verify_step(
             reason = f"Repeated action ({action.get('kind')}: {action.get('label')}) without progress"
         else:
             reason = f"{no_progress_streak} consecutive steps with no element or page progress"
+    elif scroll_budget_exceeded:
+        reason = "12 kez kaydırıldı; hedef sayfa metninden cevaplanabilir mi?"
     elif not effective_progress:
         reason = "No observable element or page state change"
 
@@ -218,6 +226,7 @@ def verify_step(
         effective_progress=effective_progress,
         loop_detected=loop_detected,
         oscillation_detected=oscillation_detected,
+        scroll_budget_exceeded=scroll_budget_exceeded,
         reason=reason,
         details=details,
     )

@@ -912,11 +912,20 @@ class ReflexSession:
         }
         self.history.append(step_record)
 
-        # 5. Schedule post-step escalation if a loop or oscillation was detected
-        if verification.loop_detected or verification.oscillation_detected:
-            if action.get("kind") == "click":
+        # 5. Schedule post-step escalation if a loop, oscillation, or scroll budget was reached
+        if (
+            verification.loop_detected
+            or verification.oscillation_detected
+            or verification.scroll_budget_exceeded
+        ):
+            if action.get("kind") == "click" and (verification.loop_detected or verification.oscillation_detected):
                 self._record_rejected_from_history(after_url)
-            trig = "oscillation" if verification.oscillation_detected else "loop_detected"
+            if verification.oscillation_detected:
+                trig = "oscillation"
+            elif verification.scroll_budget_exceeded:
+                trig = "scroll_budget"
+            else:
+                trig = "loop_detected"
             self.pending_escalation_reason = (trig, verification.reason)
 
         self.status = "ready"

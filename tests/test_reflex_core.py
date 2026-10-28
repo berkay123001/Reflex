@@ -239,6 +239,40 @@ def test_verifier_consecutive_scrolls_with_progress_not_flagged_as_loop():
     assert res_stuck.loop_detected is True
 
 
+def test_l1_moving_scrolls_never_trigger_loop_and_trigger_scroll_budget_at_12():
+    """L1: Moving scrolls (even >= 4) must NOT trigger loop_detected; 12 moving scrolls trigger scroll_budget."""
+    # 5 moving scrolls in a row -> loop_detected is False, scroll_budget_exceeded is False
+    hist_4 = [
+        {"kind": "scroll", "node": None, "action": "Scroll down", "text": None, "effective_progress": True, "after_fingerprint": f"fp{i}"}
+        for i in range(1, 5)
+    ]
+    res_5 = verify_step(
+        action={"id": "scroll_down", "kind": "scroll", "label": "Scroll down"},
+        before_page={"url": "https://example.com/feed", "fingerprint": "fp4", "scroll": {"y": 1600}, "actions": []},
+        after_page={"url": "https://example.com/feed", "fingerprint": "fp5", "scroll": {"y": 2000}, "actions": []},
+        history=hist_4,
+    )
+    assert res_5.effective_progress is True
+    assert res_5.loop_detected is False
+    assert res_5.scroll_budget_exceeded is False
+
+    # 12th moving scroll -> loop_detected is False, scroll_budget_exceeded is True with honest reason
+    hist_11 = [
+        {"kind": "scroll", "node": None, "action": "Scroll down", "text": None, "effective_progress": True, "after_fingerprint": f"fp{i}"}
+        for i in range(1, 12)
+    ]
+    res_12 = verify_step(
+        action={"id": "scroll_down", "kind": "scroll", "label": "Scroll down"},
+        before_page={"url": "https://example.com/feed", "fingerprint": "fp11", "scroll": {"y": 4400}, "actions": []},
+        after_page={"url": "https://example.com/feed", "fingerprint": "fp12", "scroll": {"y": 4800}, "actions": []},
+        history=hist_11,
+    )
+    assert res_12.effective_progress is True
+    assert res_12.loop_detected is False
+    assert res_12.scroll_budget_exceeded is True
+    assert res_12.reason == "12 kez kaydırıldı; hedef sayfa metninden cevaplanabilir mi?"
+
+
 def test_action_space_caps_at_60_elements():
     """Ensure action_space caps interactive elements and targets at 60 to stay within single-symbol limit."""
     raw_actions = [
