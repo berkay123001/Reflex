@@ -86,6 +86,35 @@
     }
     return false;
   };
+  const owningForm=el=>el && (el.form || el.closest('form'));
+  const hasClickHandler=el=>!!el && (el.hasAttribute('onclick') || /(^|;)\s*click:/.test(el.getAttribute('jsaction')||''));
+  const looseRadioNames=new Set();
+  for (const r of document.querySelectorAll('input[type="radio"],[role="radio"]')) {
+    if (r.matches(':disabled') || r.closest('[aria-disabled="true"]') || owningForm(r)) continue;
+    const groupName=r.getAttribute('name') || (r.closest('[role="radiogroup"]') ? 'rg'+identity(r.closest('[role="radiogroup"]')) : '');
+    if (groupName) looseRadioNames.add(groupName);
+  }
+  // A button-like control outside any <form> commits the document's loose radio groups
+  // (custom quiz/survey finish controls). Native submitters keep submits_form via isFormSubmitter.
+  const isCommitControl=el=>{
+    if (!el) return false;
+    if (isFormSubmitter(el)) return true;
+    const rname=role(el);
+    if (['radio','checkbox','textbox','searchbox','combobox','option','spinbutton','link','tab','menuitem','menuitemradio'].includes(rname)) return false;
+    if (el.tagName==='LABEL' && el.querySelector('input,textarea,select')) return false;
+    const buttonLike=el.tagName==='BUTTON' || rname==='button' || hasClickHandler(el);
+    if (!buttonLike || owningForm(el)) return false;
+    return looseRadioNames.size>0;
+  };
+  const controlRequired=el=>!!el && (el.required===true || el.getAttribute('aria-required')==='true');
+  const controlEmpty=el=>{
+    if (!el) return false;
+    if (el.tagName==='SELECT') return ![...el.selectedOptions].some(o=>String(o.value||'')!=='');
+    if (el.type==='checkbox' || el.getAttribute('role')==='checkbox') return !(el.checked===true || el.getAttribute('aria-checked')==='true');
+    if (el.tagName==='INPUT' || el.tagName==='TEXTAREA') return String(el.value||'').trim()==='';
+    if (el.isContentEditable) return (el.innerText||'').trim()==='';
+    return false;
+  };
   // Custom-styled choices hide the native radio/checkbox (opacity 0) and show a styled <label>.
   // Such an input is listed through its visible label; Browser.act() clicks the label.
   const choiceProxy=e=>{
@@ -136,11 +165,13 @@
         lbl=`${hTxt} · ${lbl}`;
       }
     }
+    let groupLabel='';
     if (['radio','checkbox','textbox'].includes(rname)) {
-      const qItem=e.closest('[role="listitem"],[role="group"],fieldset');
+      const qItem=e.closest('[role="listitem"],[role="group"],[role="radiogroup"],fieldset');
       const qHead=qItem?.querySelector('[role="heading"],legend,h2,h3,h4');
       let qTxt=qHead?.innerText?.replace(/\s*\*\s*$/,'').replace(/\s+/g,' ').trim();
       if (!qTxt && rname!=='textbox') qTxt=choiceQuestion(e);
+      groupLabel=(qTxt||'').replace(/\s*\*\s*$/,'').trim();
       if (qTxt && !lbl.toLowerCase().includes(qTxt.slice(0,25).toLowerCase())) {
         lbl=`${qTxt.slice(0,75)} → ${lbl.trim()}`;
       }
@@ -159,7 +190,29 @@
     const base={node:identity(e),role:rname,label:lbl,
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
     if (rawHref || rname==='link') base.href=rawHref;
-    if (isFormSubmitter(e)) base.submits_form=true;
+    const form=owningForm(e);
+    const fkey=form ? 'f'+identity(form) : null;
+    if (isFormSubmitter(e) || isCommitControl(e)) {
+      base.submits_form=true;
+      base.form_key=fkey || 'loose';
+    }
+    if (rname==='radio') {
+      const radioGroup=e.closest('[role="radiogroup"]');
+      const groupName=e.getAttribute('name') || (radioGroup ? 'rg'+identity(radioGroup) : '');
+      if (groupName) base.group=groupName;
+      if (groupLabel) base.group_label=groupLabel;
+      base.form_key=fkey || (groupName ? 'loose' : base.form_key);
+    }
+    if (controlRequired(e)) base.required=true;
+    if (rname!=='radio' && controlEmpty(e)) base.empty=true;
+    if (fkey && (rname==='checkbox' || e.tagName==='SELECT' || ['textbox','searchbox','spinbutton','combobox'].includes(rname))) {
+      base.form_key=fkey;
+    } else if (!fkey && controlRequired(e) && rname!=='radio') {
+      base.form_key='loose';
+    }
+    if (e.tagName==='SELECT' || ['textbox','searchbox','spinbutton','combobox'].includes(rname)) {
+      base.field_label=(name(e)||lbl).replace(/\s*\*\s*$/,'').trim();
+    }
     for (const key of ['checked','selected','expanded']) {
       const value=e.getAttribute('aria-'+key);
       if (value!==null) base[key]=value;
@@ -187,7 +240,6 @@
     for (const x of listedEls) if (x===el || x.contains(el) || el.contains(x)) return true;
     return false;
   };
-  const clickHandler=el=>el.hasAttribute('onclick') || /(^|;)\s*click:/.test(el.getAttribute('jsaction')||'');
   const pointerRoot=el=>getComputedStyle(el).cursor==='pointer' &&
     (!el.parentElement || getComputedStyle(el.parentElement).cursor!=='pointer');
   const maxCustomArea=innerWidth*innerHeight*0.25;
@@ -198,7 +250,7 @@
     const r=e.getBoundingClientRect();  // cheap filters first: most elements of a long page are off-screen
     if (r.width<=0 || r.height<=0 || r.bottom<=0 || r.top>=innerHeight || r.right<=0 || r.left>=innerWidth) continue;
     if (r.width*r.height>maxCustomArea) continue;
-    if (!clickHandler(e) && !pointerRoot(e)) continue;
+    if (!hasClickHandler(e) && !pointerRoot(e)) continue;
     if (e.matches(selector) || (e.closest('svg') && e.tagName.toLowerCase()!=='svg')) continue;
     if (!visible(e) || e.closest('[aria-disabled="true"]') || touchesListed(e) || e.querySelector(selector)) continue;
     const clip=getClipRect(e.parentElement);
@@ -207,8 +259,13 @@
     if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
     const lbl=name(e);
     if (!lbl || lbl.length>80) continue;
-    actions.push({node:identity(e),role:'button',label:lbl,custom:true,kind:'click',value:'',
-      rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}});
+    const customAction={node:identity(e),role:'button',label:lbl,custom:true,kind:'click',value:'',
+      rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+    if (isCommitControl(e)) {
+      customAction.submits_form=true;
+      customAction.form_key=owningForm(e) ? 'f'+identity(owningForm(e)) : 'loose';
+    }
+    actions.push(customAction);
     listedEls.add(e);
     customAdded++;
   }

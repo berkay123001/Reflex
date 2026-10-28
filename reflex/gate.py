@@ -10,11 +10,16 @@ Evaluates:
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel
 
 from .config import CalibrationThresholds
+
+# A form-submitting CLICK below this joint confidence escalates as low_conf_submit.
+SUBMIT_JOINT_MIN = 0.6
+_WS_RE = re.compile(r"\s+")
 
 
 class GateEvaluation(BaseModel):
@@ -28,6 +33,69 @@ class GateEvaluation(BaseModel):
     joint_confidence: float = 1.0
     target_margin: float = 1.0
     second_best_target: str | None = None
+
+
+def _clean_label(value: Any) -> str:
+    return _WS_RE.sub(" ", str(value or "")).strip()
+
+
+def _field_label(action: dict[str, Any]) -> str:
+    raw = _clean_label(action.get("field_label") or action.get("group_label") or action.get("label") or "")
+    if "→" in raw:
+        raw = _clean_label(raw.split("→")[0])
+    return raw
+
+
+def _required_control_empty(action: dict[str, Any]) -> bool:
+    if action.get("role") == "checkbox":
+        return str(action.get("checked", "")).lower() != "true"
+    if action.get("empty") is True:
+        return True
+    if action.get("kind") == "select":
+        return False
+    return _clean_label(action.get("value")) == ""
+
+
+def missing_form_labels(action: dict[str, Any] | None, page_actions: list[dict[str, Any]] | None) -> list[str]:
+    """Labels of unchecked radio groups and empty required fields in the same form as `action`.
+
+    Radio groups count even without `required`. Other controls count only when marked
+    `required` or `aria-required`. An empty non-required select is not missing.
+    """
+    if not action or not action.get("submits_form"):
+        return []
+    form_key = action.get("form_key")
+    if not form_key:
+        return []
+    labels: list[str] = []
+    seen: set[str] = set()
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for item in page_actions or []:
+        if item.get("form_key") != form_key or item.get("role") != "radio" or not item.get("group"):
+            continue
+        groups.setdefault(str(item["group"]), []).append(item)
+    for name, members in groups.items():
+        if any(str(member.get("checked", "")).lower() == "true" for member in members):
+            continue
+        label = next((_clean_label(member.get("group_label")) for member in members if _clean_label(member.get("group_label"))), "")
+        if not label:
+            label = name
+        if label not in seen:
+            seen.add(label)
+            labels.append(label)
+    seen_nodes: set[Any] = set()
+    for item in page_actions or []:
+        if item.get("form_key") != form_key or not item.get("required") or item.get("role") == "radio":
+            continue
+        node = item.get("node")
+        if node in seen_nodes or not _required_control_empty(item):
+            continue
+        seen_nodes.add(node)
+        label = _field_label(item)
+        if label and label not in seen:
+            seen.add(label)
+            labels.append(label)
+    return labels
 
 
 def compute_margin(probabilities: dict[str, float]) -> tuple[float, str | None]:
@@ -52,6 +120,7 @@ def evaluate_decision(
     allow_arbitrary_choices: bool = False,
     constraints: list[str] | None = None,
     action: dict[str, Any] | None = None,
+    page_actions: list[dict[str, Any]] | None = None,
 ) -> GateEvaluation:
     """Decide whether a System 1 prediction is safe to execute directly or should escalate to System 2."""
     arbitrary_allowed = allow_arbitrary_choices or allow_subjective
@@ -62,7 +131,24 @@ def evaluate_decision(
     joint_conf = round(op_conf * target_conf, 4)
     target_margin, second_best = compute_margin(target_probs)
 
-    # 0. Submission Constraint Check:
+    # 0. Incomplete form: do not execute a submitting CLICK while a radio group in the
+    # same form is unchecked or a required/aria-required field is empty.
+    if operation == "CLICK" and action and action.get("submits_form"):
+        missing = missing_form_labels(action, page_actions if page_actions is not None else [action])
+        if missing:
+            listed = "; ".join(missing)
+            return GateEvaluation(
+                should_escalate=True,
+                reason=f"incomplete_form: {listed}",
+                trigger_type="incomplete_form",
+                op_confidence=op_conf,
+                target_confidence=target_conf,
+                joint_confidence=joint_conf,
+                target_margin=target_margin,
+                second_best_target=second_best,
+            )
+
+    # 0b. Submission Constraint Check:
     # If active constraints exist and the selected action submits a form (or press_enter on form),
     # escalate to System 2 so Supervisor verifies whether submitting is permitted by the constraints.
     if constraints and action:
@@ -78,6 +164,20 @@ def evaluate_decision(
                 target_margin=target_margin,
                 second_best_target=second_best,
             )
+
+    # 0c. Low-confidence form submit. Checked after a complete form so incomplete_form wins,
+    # and before the generic confidence gates so the trigger stays low_conf_submit.
+    if operation == "CLICK" and action and action.get("submits_form") and joint_conf < SUBMIT_JOINT_MIN:
+        return GateEvaluation(
+            should_escalate=True,
+            reason=f"low_conf_submit: joint {joint_conf:.2f} < {SUBMIT_JOINT_MIN:.2f}",
+            trigger_type="low_conf_submit",
+            op_confidence=op_conf,
+            target_confidence=target_conf,
+            joint_confidence=joint_conf,
+            target_margin=target_margin,
+            second_best_target=second_best,
+        )
 
     # 1. Explicit BLOCKED -> Escalate to Supervisor (never abort directly!)
     if operation == "BLOCKED":

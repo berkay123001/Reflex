@@ -350,6 +350,7 @@ class ReflexSession:
             allow_arbitrary_choices=self.ctx.allow_arbitrary_choices,
             constraints=self.ctx.constraints,
             action=selected_action,
+            page_actions=self.page.get("actions") or [],
         )
 
         self.decisions.append(
