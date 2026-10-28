@@ -194,6 +194,28 @@ def _session_has_unknown_cost(session: ReflexSession) -> bool:
     return False
 
 
+def _extract_final_answer(snap: dict[str, Any]) -> str | None:
+    """Last non-empty assistant message in context.chat_log, or None when there is none."""
+    chat_log = (snap.get("context") or {}).get("chat_log") or []
+    for msg in reversed(chat_log):
+        if not isinstance(msg, dict) or msg.get("role") != "assistant":
+            continue
+        content = str(msg.get("content") or "").strip()
+        if content:
+            return content
+    return None
+
+
+def _visited_hosts(history: list[dict[str, Any]]) -> list[str]:
+    """Distinct hosts in visiting order (consecutive repeats collapsed)."""
+    hosts: list[str] = []
+    for h in history:
+        host = urlsplit(str(h.get("url") or "")).hostname or ""
+        if host and (not hosts or hosts[-1] != host):
+            hosts.append(host)
+    return hosts
+
+
 def _extract_asked_question(session: ReflexSession | None, snap: dict[str, Any]) -> str | None:
     """Extract the question text asked by the agent when terminating with status == 'asked_user'."""
     if isinstance(snap.get("asked_question"), str) and snap["asked_question"].strip():
@@ -302,6 +324,8 @@ def run_task(
                 "check_result": None,
                 "check_error": None,
                 "elapsed_ms": elapsed_ms,
+                "final_answer": None,
+                "visited_hosts": [],
             }
 
         if session.status == "error":
@@ -553,12 +577,22 @@ def run_task(
             "check_result": check_result,
             "check_error": check_error,
             "elapsed_ms": elapsed_ms,
+            "final_answer": _extract_final_answer(snap),
+            "visited_hosts": _visited_hosts(history),
         }
 
     except Exception as exc:
         task_status = "error"
         last_error = f"Unexpected runner error: {exc}"
         elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+        error_snap: dict[str, Any] = {}
+        error_history: list[dict[str, Any]] = []
+        if session is not None:
+            try:
+                error_snap = session.snapshot()
+                error_history = list(error_snap.get("history") or [])
+            except Exception:
+                error_history = list(getattr(session, "history", []) or [])
         return {
             "id": task_id,
             "url": url,
@@ -582,6 +616,8 @@ def run_task(
             "check_result": check_result,
             "check_error": check_error,
             "elapsed_ms": elapsed_ms,
+            "final_answer": _extract_final_answer(error_snap),
+            "visited_hosts": _visited_hosts(error_history),
         }
     finally:
         if session is not None:
