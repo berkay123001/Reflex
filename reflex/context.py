@@ -48,6 +48,8 @@ class DualTierContext(BaseModel):
     plan: TaskLedger | None = None
     # False for unattended runs (eval, batch): System 2 must not pause for preferences nobody will answer.
     user_present: bool = True
+    # Session-level tracking for questions converted in unattended mode
+    unattended_questions: list[str] = Field(default_factory=list)
     subgoal_queue: list[str] = Field(default_factory=list)
     completed_subgoals: list[str] = Field(default_factory=list)
     visited_urls: list[str] = Field(default_factory=list)
@@ -88,6 +90,11 @@ class DualTierContext(BaseModel):
             }
             for m in self.chat_log
         ]
+
+    @property
+    def asked_questions(self) -> list[str]:
+        """Alias for session-level unattended questions."""
+        return self.unattended_questions
 
     def add_user_message(self, content: str, kind: str = "chat", fact_key: str | None = None) -> None:
         """Record a user message and store structured facts in `user_facts` when `fact_key` is provided."""

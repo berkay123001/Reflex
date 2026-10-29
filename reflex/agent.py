@@ -424,6 +424,14 @@ class ReflexSession:
             },
         }
 
+    @property
+    def unattended_questions(self) -> list[str]:
+        return getattr(self.ctx, "unattended_questions", [])
+
+    @property
+    def _unattended_questions(self) -> list[str]:
+        return getattr(self.ctx, "unattended_questions", [])
+
     def _observe_settled(self, deadline_s: float = 8.0) -> dict[str, Any] | None:
         """Observe page with retries until DOM settles or deadline expires.
 
@@ -1132,8 +1140,33 @@ class ReflexSession:
 
         # Case 2: Supervisor asks the human user for missing info / clarification
         if sup.action_type == "ASK_USER":
+            question = (sup.question_for_user or sup.reasoning or "Could you clarify how you want to proceed?").strip()
+
+            if not getattr(self.ctx, "user_present", True):
+                unattended = getattr(self.ctx, "unattended_questions", None)
+                if unattended is None:
+                    unattended = []
+                    self.ctx.unattended_questions = unattended
+                q_clean = question.strip()
+                past_norm_questions = [q.strip().casefold() for q in unattended]
+                if q_clean.casefold() not in past_norm_questions and len(unattended) < 2:
+                    unattended.append(q_clean)
+                    self.pending_fact_key = None
+                    self.last_asked_question = None
+                    hint = f"User is unavailable: choose a sensible default for: {question}, state it in the final answer"
+                    self.ctx.tactical_hint = hint
+                    self.pending_escalation_reason = (
+                        "ask_user_default",
+                        f"Unattended default for: {question}",
+                    )
+                    self.ctx.add_agent_message(
+                        f"Unattended default: {hint}",
+                        kind="escalation_note",
+                    )
+                    self.status = "ready"
+                    return self.snapshot()
+
             self.status = "waiting_user"
-            question = sup.question_for_user or sup.reasoning or "Could you clarify how you want to proceed?"
             self.pending_fact_key = sup.fact_key or "user_clarification"
             self.last_asked_question = question
             self.ctx.add_agent_message(question, kind="ask_user")
