@@ -13,9 +13,11 @@ dependencies = [
 
 [project.optional-dependencies]
 turnike = ["torch>=2.11", "transformers>=5.17", "torchao>=0.18", "accelerate"]
+mcp = ["mcp>=1.9,<2"]
 
 [project.scripts]
 reflex = "reflex.server:main"
+reflex-mcp = "reflex.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]
