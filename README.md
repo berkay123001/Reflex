@@ -7,3 +7,13 @@ Reflex separates high-level reasoning and failure recovery (**System 2 Superviso
 - **3-Layer Action Verification:** Verifies technical CDP execution, element-level state diffs (`value`, `checked`, `selected`, `expanded`, options), and semantic loop / `A -> B -> A -> B` oscillation patterns.
 - **Interactive Co-Pilot & `ASK_USER`:** Pauses cleanly when required form data is missing or choices are ambiguous, asking the human user in chat and resuming from the exact browser state.
 - **Irreversible Action Safety Guard (`CONFIRM_USER`) & Untrusted DOM Isolation:** Intercepts high-consequence actions (payments, deletions) for human approval and isolates webpage text inside `<untrusted_page_data>` boundaries.
+
+
+## MCP Server (Claude Code / Antigravity)
+
+Install with the `mcp` extra and register the stdio server in Claude Code:
+
+```bash
+pip install -e ".[mcp]"
+claude mcp add reflex -- reflex-mcp
+```
