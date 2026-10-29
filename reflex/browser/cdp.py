@@ -771,11 +771,13 @@ class Browser:
               if (!node?.isConnected || node.matches(':disabled') || node.closest('[aria-disabled="true"],[inert]')) return null;
               const shown=el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
               let e=node;
+              const isChoiceInput=node.tagName==='INPUT' && ['radio','checkbox'].includes(node.type);
               // Custom-styled radio/checkbox: the native input is hidden, its visible <label> takes the click.
-              if (!shown(node) && node.tagName==='INPUT' && ['radio','checkbox'].includes(node.type)) {
+              if (!shown(node) && isChoiceInput) {
                 e=[...(node.labels||[]), node.closest('label')].find(l=>l && shown(l)) || node;
               }
-              if (!shown(e)) return null;
+              const overlayChoice=!shown(e) && e===node && isChoiceInput;
+              if (!shown(e) && !overlayChoice) return null;
               if (action.kind==='fill' && (e.readOnly || e.getAttribute('aria-readonly')==='true')) return null;
               if (action.kind==='click') {
                 const link=e.tagName==='A'?e:e.closest('a[href]');
@@ -784,6 +786,7 @@ class Browser:
                 document.querySelectorAll('base[target]').forEach(b=>b.removeAttribute('target'));
               }
               let r=e.getBoundingClientRect();
+              if (overlayChoice && (r.width<=0 || r.height<=0)) return null;
               if (r.top<0 || r.bottom>innerHeight || r.left<0 || r.right>innerWidth) {
                 e.scrollIntoView({behavior:'instant',block:'center',inline:'nearest'});
                 r=e.getBoundingClientRect();
@@ -797,6 +800,7 @@ class Browser:
               if (!r.width || !r.height || x<0 || y<0 || x>=innerWidth || y>=innerHeight) return null;
               const rx=Math.round(r.x), ry=Math.round(r.y), rw=Math.round(r.width), rh=Math.round(r.height);
               const hit=document.elementFromPoint(x,y);
+              if (overlayChoice && hit!==node) return null;
               const interactiveSel='button,a,[role="button"],[role="link"],[role="option"],[role="menuitem"],[role="tab"]';
               const hitOk=hit && (
                 e.contains(hit) ||
