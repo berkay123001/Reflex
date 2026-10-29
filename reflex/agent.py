@@ -424,6 +424,47 @@ class ReflexSession:
             },
         }
 
+    def _observe_settled(self, deadline_s: float = 8.0) -> dict[str, Any] | None:
+        """Observe page with retries until DOM settles or deadline expires.
+
+        Catches StalePage ("Document is navigating", etc.). Polls document.readyState
+        and document.body until page is interactive/complete.
+        If deadline expires, does not raise; records 'page_unsettled' note,
+        sets status='ready', and returns None so the step finishes cleanly.
+        """
+        if deadline_s == 8.0:
+            cfg_deadline = getattr(getattr(self, "config", None), "observe_deadline_s", None)
+            if cfg_deadline is not None:
+                deadline_s = float(cfg_deadline)
+            elif hasattr(self, "_observe_deadline_s"):
+                deadline_s = float(self._observe_deadline_s)
+
+        start = time.monotonic()
+        screenshots = bool(getattr(getattr(self, "config", None), "screenshots", False))
+        while True:
+            try:
+                try:
+                    return self.browser.observe(screenshot=screenshots)
+                except TypeError:
+                    return self.browser.observe()
+            except StalePage:
+                elapsed = time.monotonic() - start
+                if elapsed >= deadline_s:
+                    break
+                try:
+                    self.browser.evaluate(
+                        "Boolean(document.readyState && (document.readyState === 'complete' || document.readyState === 'interactive') && document.body)"
+                    )
+                except Exception:
+                    pass
+                time.sleep(0.06)
+
+        # Deadline reached without settling
+        if hasattr(self, "ctx") and hasattr(self.ctx, "add_agent_message"):
+            self.ctx.add_agent_message("page_unsettled", kind="escalation_note")
+        self.status = "ready"
+        return None
+
     def step(self) -> dict[str, Any]:
         """Execute a single hybrid step (Observe -> S1 or S2 Escalate -> Safety Guard -> Act -> Verify)."""
         if self.status in {"waiting_user", "waiting_confirmation", "done", "blocked", "error"}:
@@ -438,14 +479,17 @@ class ReflexSession:
         step_t0 = time.perf_counter()
         pre_obs_ms = 0
         try:
-            if not self.browser.fresh(self.page):
-                obs_t0 = time.perf_counter()
-                self.page = self.browser.observe(screenshot=self.config.screenshots)
-                pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
+            needs_obs = not self.browser.fresh(self.page)
         except StalePage:
+            needs_obs = True
+
+        if needs_obs:
             obs_t0 = time.perf_counter()
-            self.page = self.browser.observe(screenshot=self.config.screenshots)
+            settled_page = self._observe_settled()
             pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
+            if settled_page is None:
+                return self.snapshot()
+            self.page = settled_page
 
         self._sync_ineffective_clicks(current_url=str(self.page.get("url", "")), page=self.page)
 
@@ -1414,8 +1458,11 @@ class ReflexSession:
         except StalePage as exc:
             act_ms += round((time.perf_counter() - act_t0) * 1000)
             obs_retry_t0 = time.perf_counter()
-            self.page = self.browser.observe(screenshot=self.config.screenshots)
+            stale_page = self._observe_settled()
             stale_obs_ms += round((time.perf_counter() - obs_retry_t0) * 1000)
+            if stale_page is None:
+                return self.snapshot()
+            self.page = stale_page
             refreshed_act = next(
                 (
                     a
@@ -1448,8 +1495,10 @@ class ReflexSession:
                 return self.snapshot()
 
         obs_after_t0 = time.perf_counter()
-        after_page = self.browser.observe(screenshot=self.config.screenshots)
+        after_page = self._observe_settled()
         observe_ms = pre_obs_ms + stale_obs_ms + round((time.perf_counter() - obs_after_t0) * 1000)
+        if after_page is None:
+            return self.snapshot()
         self.page = after_page
         after_url = str(after_page.get("url", ""))
         if after_url and after_url not in self.ctx.visited_urls:
@@ -1786,4 +1835,28 @@ class ReflexSession:
 
 
 ReflexAgent = ReflexSession
+
+
+def _observe_settled(target: Any, deadline_s: float = 8.0) -> dict[str, Any] | None:
+    """Module-level helper for _observe_settled."""
+    if isinstance(target, ReflexSession):
+        return target._observe_settled(deadline_s=deadline_s)
+    fn = getattr(type(target), "_observe_settled", None)
+    if callable(fn):
+        return fn(target, deadline_s=deadline_s)
+    start = time.monotonic()
+    while True:
+        try:
+            return target.observe()
+        except StalePage:
+            if time.monotonic() - start >= deadline_s:
+                break
+            try:
+                target.evaluate(
+                    "Boolean(document.readyState && (document.readyState === 'complete' || document.readyState === 'interactive') && document.body)"
+                )
+            except Exception:
+                pass
+            time.sleep(0.06)
+    return None
 
