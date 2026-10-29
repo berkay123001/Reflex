@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Anket</title>
+  <style>
+    body { font: 16px sans-serif; margin: 24px; }
+    .mb-4 { margin-bottom: 16px; }
+    .form-check { position: relative; padding: 8px 12px; margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="mb-4">
+    <h4>1. Uyku düzeniniz nasıl?</h4>
+    <div class="form-check">
+      <input type="radio" name="q1" value="0" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Her zamanki gibi uyuyorum.</label>
+    </div>
+    <div class="form-check">
+      <input type="radio" name="q1" value="1" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Sabahları erken uyanıyorum.</label>
+    </div>
+    <div class="form-check">
+      <input type="radio" name="q1" value="2" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Gece sık sık uyanıyorum.</label>
+    </div>
+  </div>
+  <div class="mb-4">
+    <h4>2. Gün içinde enerjiniz nasıl?</h4>
+    <div class="form-check">
+      <input type="radio" name="q2" value="0" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Kendimi dinç hissediyorum.</label>
+    </div>
+    <div class="form-check">
+      <input type="radio" name="q2" value="1" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Normalden çabuk yoruluyorum.</label>
+    </div>
+    <div class="form-check">
+      <input type="radio" name="q2" value="2" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Hiçbir şey yapacak gücüm yok.</label>
+    </div>
+  </div>
+  <div class="mb-4">
+    <h4>3. Karar verme süreciniz nasıl?</h4>
+    <div class="form-check">
+      <input type="radio" name="q3" value="0" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Karar verirken güçlük çekmiyorum.</label>
+    </div>
+    <div class="form-check">
+      <input type="radio" name="q3" value="1" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Eskisine göre daha zor karar veriyorum.</label>
+    </div>
+    <div class="form-check">
+      <input type="radio" name="q3" value="2" style="opacity:0;position:absolute;inset:0;width:100%;height:100%">
+      <label class="form-check-label">Artık hiç karar veremiyorum.</label>
+    </div>
+  </div>
+  <button id="sonuc" onclick="window.__done=1">Sonucu gör</button>
+</body>
+</html>
