@@ -609,5 +609,23 @@ def test_f3_all_mcp_tools_are_async() -> None:
         assert inspect.iscoroutinefunction(fn), f"{fn.__name__} must be async def"
 
 
+def test_f4_tool_descriptions_include_client_instructions() -> None:
+    """F4: Tool descriptions must instruct client models on flow and explicit user confirmation."""
+    confirm_doc = reflex_confirm.__doc__ or ""
+    assert "approved=true YALNIZCA insan kullanıcı bu eylemi bu konuşmada" in confirm_doc
+    assert "Kendi kararınla asla onaylama" in confirm_doc
+    assert "pending_action" in confirm_doc
+
+    start_doc = reflex_start.__doc__ or ""
+    wait_doc = reflex_wait.__doc__ or ""
+    for doc in (start_doc, wait_doc):
+        assert "running" in doc
+        assert "waiting_user" in doc
+        assert "waiting_confirmation" in doc
+        assert "reflex_wait" in doc
+        assert "reflex_reply" in doc
+
+
+
 
 

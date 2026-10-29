@@ -696,9 +696,18 @@ async def reflex_start(
 ) -> dict[str, Any]:
     """Start an autonomous Reflex browser session in its own isolated browser instance.
 
-    Constraint: Only one active session is allowed per server process (including sessions
-    in `done`, `blocked`, or `error` state whose browser is still open). Call `reflex_stop`
-    on any existing session before starting a new one.
+    Constraint (tek aktif oturum): Süreç başına yalnızca tek bir aktif oturum açılabilir
+    (`done`, `blocked` veya `error` durumunda olup tarayıcısı hâlâ açık olan oturumlar dahil).
+    Yeni bir oturum başlatmadan önce mevcut oturum için `reflex_stop` çağırın.
+
+    Akış (Flow):
+    1. `reflex_start` çağrısından dönen `session_id` ile `reflex_wait(session_id)` çağırın.
+    2. `status == "running"` dönerse (süre doldu ama görev devam ediyor) tekrar `reflex_wait` çağırın.
+    3. `status == "waiting_user"` dönerse `question` alanını insan kullanıcıya sorun (veya bu konuşmada
+       kullanıcının zaten verdiği bilinen bilgiyle) `reflex_reply` çağırıp ardından tekrar `reflex_wait` çağırın.
+    4. `status == "waiting_confirmation"` dönerse `pending_action` özetini insan kullanıcıya gösterip
+       açık onayını isteyin; yanıtına göre `reflex_confirm` çağırıp ardından `reflex_wait` çağırın.
+    5. `status` `done`, `blocked` veya `error` olduğunda işiniz bitince `reflex_stop(session_id)` çağırın.
     """
     if not goal or not goal.strip():
         raise ValueError("Supply a non-empty goal")
@@ -728,8 +737,17 @@ async def reflex_wait(
 ) -> dict[str, Any]:
     """Wait until the session status changes (paused/done/blocked/error) or timeout_s (<=50s) expires.
 
-    If the client supports MCP elicitation (`ctx.elicit`), `waiting_user` and
-    `waiting_confirmation` states are prompted directly inside `reflex_wait`.
+    Akış (Flow):
+    - `status == "running"`: Görev hâlâ çalışıyor; tekrar `reflex_wait` çağır.
+    - `status == "waiting_user"`: `question` sorusunu kullanıcıya sor veya bilinen bilgiyle
+      `reflex_reply(session_id, text)` çağır, ardından tekrar `reflex_wait` çağır.
+    - `status == "waiting_confirmation"`: `pending_action` özetini kullanıcıya göster ve
+      kullanıcıya sor; kendi kararınla asla onaylama. Yanıt aldıktan sonra `reflex_confirm` çağır.
+    - `status` in (`"done"`, `"blocked"`, `"error"`): Sonucu (`final_answer` / `error`) kullanıcıya ilet
+      ve tarayıcıyı kapatmak için `reflex_stop(session_id)` çağır.
+
+    İstemci MCP elicitation (`ctx.elicit`) destekliyorsa `waiting_user` ve
+    `waiting_confirmation` durumları `reflex_wait` içinde doğrudan kullanıcıya sorulur.
     """
     worker = _get_worker(session_id)
     clamped = min(max(float(timeout_s), 0.0), MAX_WAIT_TIMEOUT_S)
@@ -745,7 +763,10 @@ async def reflex_reply(
     session_id: str,
     text: str,
 ) -> dict[str, Any]:
-    """Queue a user reply (`session.reply_user`) to the session's background thread."""
+    """Queue a user reply (`session.reply_user`) when the session is in `waiting_user` status.
+
+    Yanıtı kuyruğa aldıktan sonra oturumun devam etmesini beklemek için `reflex_wait(session_id)` çağırın.
+    """
     worker = _get_worker(session_id)
     return await anyio.to_thread.run_sync(worker.enqueue_reply, text)
 
@@ -756,7 +777,15 @@ async def reflex_confirm(
     approved: bool,
     alternative_instruction: str = "",
 ) -> dict[str, Any]:
-    """Queue an action confirmation (`session.confirm_action`) to the session's background thread."""
+    """Queue an action confirmation (`session.confirm_action`) when the session is in `waiting_confirmation` status.
+
+    KRİTİK KURAL: approved=true YALNIZCA insan kullanıcı bu eylemi bu konuşmada
+    açıkça onayladıysa. Kendi kararınla asla onaylama.
+    Onay istemeden önce `pending_action` özetini (`summary`, `action_label`, `reason`, `url`)
+    mutlaka kullanıcıya göster ve açık yanıtını bekle. Kullanıcı reddederse veya alternatif
+    bir talimat verirse `approved=false` (ve varsa `alternative_instruction`) gönder.
+    Ardından `reflex_wait(session_id)` çağır.
+    """
     worker = _get_worker(session_id)
     return await anyio.to_thread.run_sync(
         worker.enqueue_confirm,
@@ -769,7 +798,11 @@ async def reflex_confirm(
 async def reflex_stop(
     session_id: str,
 ) -> dict[str, Any]:
-    """Stop the session and clean up its isolated browser instance."""
+    """Stop the session and clean up its isolated browser instance.
+
+    Görev tamamlandığında (`done`), tıkandığında (`blocked`/`error`) veya yeni bir
+    `reflex_start` çağrısı yapmadan önce mutlaka çağrılmalıdır.
+    """
     with _SESSIONS_LOCK:
         worker = _SESSIONS.pop(session_id, None)
     if worker is None:
