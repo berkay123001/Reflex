@@ -17,9 +17,11 @@ from pydantic import BaseModel
 
 from .config import CalibrationThresholds
 
-# A form-submitting CLICK below this joint confidence escalates as low_conf_submit.
+# A committed form submit below this joint confidence escalates as low_conf_submit.
 SUBMIT_JOINT_MIN = 0.6
 _WS_RE = re.compile(r"\s+")
+_CHOICE_ROLES = frozenset({"radio", "checkbox"})
+_TEXT_ROLES = frozenset({"textbox", "searchbox"})
 
 
 class GateEvaluation(BaseModel):
@@ -98,6 +100,35 @@ def missing_form_labels(action: dict[str, Any] | None, page_actions: list[dict[s
     return labels
 
 
+def _is_visible_text_field(item: dict[str, Any]) -> bool:
+    role = item.get("role")
+    if role in _TEXT_ROLES:
+        return True
+    return role == "combobox" and item.get("kind") == "fill"
+
+
+def form_submit_is_committed(action: dict[str, Any] | None, page_actions: list[dict[str, Any]] | None) -> bool:
+    """A submitting click is committed when its form asks for more than one free-text value.
+
+    Radio, checkbox, or select counts. So do two or more visible text fields. A single
+    search or text box does not, and a loose control (no owning form) never does.
+    """
+    if not action or not action.get("submits_form"):
+        return False
+    form_key = action.get("form_key")
+    if not form_key or form_key == "loose":
+        return False
+    text_nodes: set[Any] = set()
+    for item in page_actions or []:
+        if item.get("form_key") != form_key:
+            continue
+        if item.get("role") in _CHOICE_ROLES or item.get("kind") == "select":
+            return True
+        if _is_visible_text_field(item):
+            text_nodes.add(item.get("node"))
+    return len(text_nodes) >= 2
+
+
 def compute_margin(probabilities: dict[str, float]) -> tuple[float, str | None]:
     """Return (top1 - top2 probability margin, second_best_key)."""
     if not probabilities:
@@ -165,9 +196,14 @@ def evaluate_decision(
                 second_best_target=second_best,
             )
 
-    # 0c. Low-confidence form submit. Checked after a complete form so incomplete_form wins,
-    # and before the generic confidence gates so the trigger stays low_conf_submit.
-    if operation == "CLICK" and action and action.get("submits_form") and joint_conf < SUBMIT_JOINT_MIN:
+    # 0c. Low-confidence form submit. Only a committed form (choices, a select, or at least
+    # two visible text fields). A loose control and a single search box stay on the generic
+    # gates. Checked after a complete form so incomplete_form wins.
+    if (
+        operation == "CLICK"
+        and joint_conf < SUBMIT_JOINT_MIN
+        and form_submit_is_committed(action, page_actions if page_actions is not None else [action])
+    ):
         return GateEvaluation(
             should_escalate=True,
             reason=f"low_conf_submit: joint {joint_conf:.2f} < {SUBMIT_JOINT_MIN:.2f}",

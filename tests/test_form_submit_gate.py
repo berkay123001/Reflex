@@ -1,8 +1,10 @@
 """Incomplete-form and low-confidence submit gate.
 
 A submits_form CLICK is not executed when the same form still has an unchecked
-radio group or an empty required/aria-required field. Otherwise a joint
-confidence below 0.6 escalates as low_conf_submit.
+radio group or an empty required/aria-required field. A committed form
+(radio, checkbox, select, or at least two visible text fields) whose joint
+confidence is below 0.6 escalates as low_conf_submit. A loose control and a
+single search box do not.
 """
 
 from __future__ import annotations
@@ -319,6 +321,120 @@ def test_low_conf_submit_only_below_joint_threshold() -> None:
         page_actions=ready,
     )
     assert other.trigger_type != "low_conf_submit"
+
+
+def _joint_03_click(action_id: str) -> dict[str, Any]:
+    return _click(action_id, confidence=0.5, target_confidence=0.6)
+
+
+def test_single_search_field_does_not_escalate_at_joint_03() -> None:
+    field = {
+        "id": "q",
+        "node": 1,
+        "kind": "fill",
+        "role": "searchbox",
+        "label": "Search",
+        "form_key": "f9",
+        "value": "",
+    }
+    submit = {
+        "id": "go",
+        "node": 2,
+        "kind": "click",
+        "role": "button",
+        "label": "Search",
+        "submits_form": True,
+        "form_key": "f9",
+    }
+    result = evaluate_decision(
+        _joint_03_click("go"),
+        CalibrationThresholds(),
+        action=submit,
+        page_actions=[field, submit],
+    )
+    assert result.joint_confidence == 0.3
+    assert result.trigger_type != "low_conf_submit"
+    assert result.should_escalate is False
+
+
+def test_two_text_fields_or_a_choice_still_low_conf_submit() -> None:
+    fields = [
+        {"id": "a", "node": 1, "kind": "fill", "role": "textbox", "form_key": "f2", "value": "A"},
+        {"id": "b", "node": 2, "kind": "fill", "role": "textbox", "form_key": "f2", "value": "B"},
+    ]
+    submit = {
+        "id": "go",
+        "node": 3,
+        "kind": "click",
+        "role": "button",
+        "label": "Send",
+        "submits_form": True,
+        "form_key": "f2",
+    }
+    two_fields = evaluate_decision(
+        _joint_03_click("go"),
+        CalibrationThresholds(),
+        action=submit,
+        page_actions=[*fields, submit],
+    )
+    assert two_fields.trigger_type == "low_conf_submit"
+
+    checkbox = {"id": "c", "node": 4, "kind": "click", "role": "checkbox", "form_key": "f3", "checked": "true"}
+    select = {
+        "id": "d",
+        "node": 5,
+        "kind": "select",
+        "role": "combobox",
+        "form_key": "f4",
+        "value": "one",
+    }
+    for form_key, extra in (("f3", checkbox), ("f4", select)):
+        committed = {**submit, "form_key": form_key}
+        result = evaluate_decision(
+            _joint_03_click("go"),
+            CalibrationThresholds(),
+            action=committed,
+            page_actions=[extra, committed],
+        )
+        assert result.trigger_type == "low_conf_submit"
+
+
+def test_loose_control_skips_low_conf_submit_when_complete() -> None:
+    submit = {
+        "id": "go",
+        "kind": "click",
+        "role": "button",
+        "label": "Finish",
+        "submits_form": True,
+        "form_key": "loose",
+    }
+    actions = [
+        {
+            "id": "a",
+            "node": 1,
+            "role": "radio",
+            "kind": "click",
+            "group": "s1",
+            "group_label": "Acts without a plan",
+            "form_key": "loose",
+            "checked": "true",
+        },
+        {
+            "id": "b",
+            "node": 2,
+            "role": "radio",
+            "kind": "click",
+            "group": "s1",
+            "group_label": "Acts without a plan",
+            "form_key": "loose",
+            "checked": "false",
+        },
+        submit,
+    ]
+    result = evaluate_decision(_joint_03_click("go"), CalibrationThresholds(), action=submit, page_actions=actions)
+    assert result.joint_confidence == 0.3
+    assert result.trigger_type != "low_conf_submit"
+    assert result.should_escalate is False
 
 
 def test_unchecked_radio_blocks_even_without_required_attribute() -> None:
