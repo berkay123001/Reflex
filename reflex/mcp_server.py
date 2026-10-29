@@ -688,7 +688,7 @@ mcp = FastMCP("reflex")
 
 
 @mcp.tool()
-def reflex_start(
+async def reflex_start(
     goal: str,
     url: str = "https://www.google.com",
     max_steps: int = 40,
@@ -717,7 +717,7 @@ def reflex_start(
             show_browser=show_browser,
         )
         _SESSIONS[session_id] = worker
-    return worker.start()
+    return await anyio.to_thread.run_sync(worker.start)
 
 
 @mcp.tool()
@@ -741,31 +741,32 @@ async def reflex_wait(
 
 
 @mcp.tool()
-def reflex_reply(
+async def reflex_reply(
     session_id: str,
     text: str,
 ) -> dict[str, Any]:
     """Queue a user reply (`session.reply_user`) to the session's background thread."""
     worker = _get_worker(session_id)
-    return worker.enqueue_reply(text=text)
+    return await anyio.to_thread.run_sync(worker.enqueue_reply, text)
 
 
 @mcp.tool()
-def reflex_confirm(
+async def reflex_confirm(
     session_id: str,
     approved: bool,
     alternative_instruction: str = "",
 ) -> dict[str, Any]:
     """Queue an action confirmation (`session.confirm_action`) to the session's background thread."""
     worker = _get_worker(session_id)
-    return worker.enqueue_confirm(
-        approved=approved,
-        alternative_instruction=alternative_instruction,
+    return await anyio.to_thread.run_sync(
+        worker.enqueue_confirm,
+        approved,
+        alternative_instruction,
     )
 
 
 @mcp.tool()
-def reflex_stop(
+async def reflex_stop(
     session_id: str,
 ) -> dict[str, Any]:
     """Stop the session and clean up its isolated browser instance."""
@@ -773,7 +774,7 @@ def reflex_stop(
         worker = _SESSIONS.pop(session_id, None)
     if worker is None:
         raise KeyError(f"Unknown session_id: {session_id}")
-    return worker.stop()
+    return await anyio.to_thread.run_sync(worker.stop)
 
 
 def _stop_all_sessions(timeout_s: float = 4.0) -> None:

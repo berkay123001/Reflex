@@ -195,7 +195,7 @@ async def test_mcp_flow_start_wait_waiting_user_reply_done() -> None:
         mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9501"
         mock_iso.return_value.__exit__.return_value = None
 
-        start_res = reflex_start(goal="Uçuş ara", url="https://example.com", max_steps=20, show_browser=False)
+        start_res = await reflex_start(goal="Uçuş ara", url="https://example.com", max_steps=20, show_browser=False)
         session_id = start_res["session_id"]
         assert session_id
         assert start_res["status"] in {"running", "waiting_user"}
@@ -208,7 +208,7 @@ async def test_mcp_flow_start_wait_waiting_user_reply_done() -> None:
         assert wait_res1["visited_hosts"] == ["example.com"]
 
         # 2. Reply to user question
-        reply_res = reflex_reply(session_id=session_id, text="İstanbul")
+        reply_res = await reflex_reply(session_id=session_id, text="İstanbul")
         assert reply_res["session_id"] == session_id
 
         # 3. Wait until done
@@ -223,7 +223,7 @@ async def test_mcp_flow_start_wait_waiting_user_reply_done() -> None:
         assert wait_res2["cost_usd"] == pytest.approx(0.0025)
 
         # 4. Stop session
-        stop_res = reflex_stop(session_id=session_id)
+        stop_res = await reflex_stop(session_id=session_id)
         assert stop_res == {"session_id": session_id, "status": "stopped"}
 
     assert len(created_sessions) == 1
@@ -254,7 +254,7 @@ async def test_mcp_flow_confirm_rejection_and_stop() -> None:
         mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9502"
         mock_iso.return_value.__exit__.return_value = None
 
-        start_res = reflex_start(goal="Delete workspace", url="https://admin.example.com", show_browser=False)
+        start_res = await reflex_start(goal="Delete workspace", url="https://admin.example.com", show_browser=False)
         session_id = start_res["session_id"]
 
         wait_res = await reflex_wait(session_id=session_id, timeout_s=10)
@@ -265,13 +265,13 @@ async def test_mcp_flow_confirm_rejection_and_stop() -> None:
             "action_label": "Delete Workspace",
         }
 
-        confirm_res = reflex_confirm(session_id=session_id, approved=False)
+        confirm_res = await reflex_confirm(session_id=session_id, approved=False)
         assert confirm_res["status"] == "blocked"
 
         wait_after = await reflex_wait(session_id=session_id, timeout_s=5)
         assert wait_after["status"] == "blocked"
 
-        stop_res = reflex_stop(session_id=session_id)
+        stop_res = await reflex_stop(session_id=session_id)
         assert stop_res["status"] == "stopped"
 
     fake_sess = created_sessions[0]
@@ -314,12 +314,12 @@ async def test_mcp_elicitation_waiting_user_and_declined_confirmation() -> None:
         mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9503"
         mock_iso.return_value.__exit__.return_value = None
 
-        start_res = reflex_start(goal="Uçuş ara", url="https://example.com", show_browser=False)
+        start_res = await reflex_start(goal="Uçuş ara", url="https://example.com", show_browser=False)
         sid = start_res["session_id"]
         wait_res = await reflex_wait(session_id=sid, timeout_s=10, ctx=fake_ctx_accept)
         assert wait_res["status"] == "done"
         assert wait_res["final_answer"] == "Ankara uçuşu başarıyla bulundu."
-        reflex_stop(session_id=sid)
+        await reflex_stop(session_id=sid)
 
     # 2. waiting_confirmation with declined elicitation -> approved=False -> blocked
     fake_ctx_decline = MagicMock()
@@ -339,11 +339,11 @@ async def test_mcp_elicitation_waiting_user_and_declined_confirmation() -> None:
         mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9504"
         mock_iso.return_value.__exit__.return_value = None
 
-        start_res = reflex_start(goal="Delete workspace", url="https://admin.example.com", show_browser=False)
+        start_res = await reflex_start(goal="Delete workspace", url="https://admin.example.com", show_browser=False)
         sid = start_res["session_id"]
         wait_res = await reflex_wait(session_id=sid, timeout_s=10, ctx=fake_ctx_decline)
         assert wait_res["status"] == "blocked"
-        reflex_stop(session_id=sid)
+        await reflex_stop(session_id=sid)
 
     assert created_sessions[-1].confirmations == [(False, "")]
 
@@ -363,11 +363,11 @@ async def test_mcp_elicitation_waiting_user_and_declined_confirmation() -> None:
         mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9505"
         mock_iso.return_value.__exit__.return_value = None
 
-        start_res = reflex_start(goal="Delete workspace", url="https://admin.example.com", show_browser=False)
+        start_res = await reflex_start(goal="Delete workspace", url="https://admin.example.com", show_browser=False)
         sid = start_res["session_id"]
         wait_res = await reflex_wait(session_id=sid, timeout_s=10, ctx=fake_ctx_cancel)
         assert wait_res["status"] == "blocked"
-        reflex_stop(session_id=sid)
+        await reflex_stop(session_id=sid)
 
     assert created_sessions[-1].confirmations == [(False, "")]
 
@@ -422,7 +422,7 @@ async def test_mcp_real_isolated_browser_smoke_on_local_fixture() -> None:
             ),
         ),
     ):
-        start_res = reflex_start(
+        start_res = await reflex_start(
             goal="Sayfadaki ilk bağlantıya tıkla ve tamamla",
             url=f"{base_url}/qa/blog",
             max_steps=5,
@@ -443,7 +443,7 @@ async def test_mcp_real_isolated_browser_smoke_on_local_fixture() -> None:
             assert "127.0.0.1" in wait_res["visited_hosts"]
             assert wait_res["final_answer"] is not None
         finally:
-            stop_res = reflex_stop(session_id=sid)
+            stop_res = await reflex_stop(session_id=sid)
             assert stop_res["status"] == "stopped"
 
     assert observed_ports and all(p != 9333 for p in observed_ports)
@@ -464,30 +464,30 @@ async def test_f1_single_active_session_rejects_second_start_until_stopped() -> 
         mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9510"
         mock_iso.return_value.__exit__.return_value = None
 
-        start1 = reflex_start(goal="İlk görev", url="https://example.com", show_browser=False)
+        start1 = await reflex_start(goal="İlk görev", url="https://example.com", show_browser=False)
         sid1 = start1["session_id"]
 
         # 1. While waiting_user, second start is rejected
         wait1 = await reflex_wait(session_id=sid1, timeout_s=5)
         assert wait1["status"] == "waiting_user"
         with pytest.raises(RuntimeError, match=f"Aktif oturum {sid1} var; önce reflex_stop çağırın"):
-            reflex_start(goal="İkinci görev", url="https://example.com", show_browser=False)
+            await reflex_start(goal="İkinci görev", url="https://example.com", show_browser=False)
 
         # 2. Even after reaching 'done' (browser still open), second start is rejected
-        reflex_reply(session_id=sid1, text="İzmir")
+        await reflex_reply(session_id=sid1, text="İzmir")
         wait2 = await reflex_wait(session_id=sid1, timeout_s=5)
         assert wait2["status"] == "done"
         with pytest.raises(RuntimeError, match=f"Aktif oturum {sid1} var; önce reflex_stop çağırın"):
-            reflex_start(goal="İkinci görev", url="https://example.com", show_browser=False)
+            await reflex_start(goal="İkinci görev", url="https://example.com", show_browser=False)
 
         # 3. After reflex_stop, a new reflex_start succeeds
-        stop1 = reflex_stop(session_id=sid1)
+        stop1 = await reflex_stop(session_id=sid1)
         assert stop1["status"] == "stopped"
 
-        start2 = reflex_start(goal="Yeni görev", url="https://example.com", show_browser=False)
+        start2 = await reflex_start(goal="Yeni görev", url="https://example.com", show_browser=False)
         sid2 = start2["session_id"]
         assert sid2 != sid1
-        reflex_stop(session_id=sid2)
+        await reflex_stop(session_id=sid2)
 
 
 @pytest.mark.anyio
@@ -593,5 +593,21 @@ with (
 
     assert is_port_open("127.0.0.1", port, timeout=0.2) is False
     assert profile_dir.exists() is False
+
+
+def test_f3_all_mcp_tools_are_async() -> None:
+    """F3: All 5 MCP tools must be async def so they do not block the anyio event loop."""
+    import inspect
+
+    for fn in (
+        reflex_start,
+        reflex_wait,
+        reflex_reply,
+        reflex_confirm,
+        reflex_stop,
+    ):
+        assert inspect.iscoroutinefunction(fn), f"{fn.__name__} must be async def"
+
+
 
 
