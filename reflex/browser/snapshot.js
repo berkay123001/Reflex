@@ -76,13 +76,17 @@
     clipRectCache.set(el,res);
     return res;
   };
-  // Native submit only. el.form is null for a formless control, including one whose
-  // default type is submit, and for a role=link button. form="id" still sets el.form.
+  // Native submit when the control owns a form (el.form, including form="id").
+  // A role=button inside a <form> submits too, unless its type is button or reset.
+  // role=link never submits. A formless control has el.form == null and no ancestor form.
   const isFormSubmitter=el=>{
-    if (!el || el.form==null) return false;
-    if (el.getAttribute('role')==='link') return false;
-    if (el.tagName==='BUTTON') return el.type!=='button' && el.type!=='reset';
-    return el.tagName==='INPUT' && (el.type==='submit' || el.type==='image');
+    if (!el || el.getAttribute('role')==='link') return false;
+    if (el.type==='button' || el.type==='reset') return false;
+    const native=el.tagName==='BUTTON' || (el.tagName==='INPUT' && (el.type==='submit' || el.type==='image'));
+    const roleButton=role(el)==='button';
+    if (!native && !roleButton) return false;
+    if (el.form!=null) return true;
+    return roleButton && !!el.closest('form');
   };
   const owningForm=el=>el && (el.form || el.closest('form'));
   const hasClickHandler=el=>!!el && (el.hasAttribute('onclick') || /(^|;)\s*click:/.test(el.getAttribute('jsaction')||''));
@@ -92,11 +96,11 @@
     const groupName=r.getAttribute('name') || (r.closest('[role="radiogroup"]') ? 'rg'+identity(r.closest('[role="radiogroup"]')) : '');
     if (groupName) looseRadioNames.add(groupName);
   }
-  // A non-button control outside any <form> commits the document's loose radio groups
-  // (custom quiz/survey finish controls). A formless <button>, including role=link, never does.
-  // Native submitters keep submits_form via isFormSubmitter.
+  // A button-like control outside any <form> commits the document's loose radio groups
+  // (quiz/survey finish controls). Links, tabs, and menu items never do.
+  // Native submitters and in-form role=button controls keep submits_form via isFormSubmitter.
   const isCommitControl=el=>{
-    if (!el || el.tagName==='BUTTON') return false;
+    if (!el) return false;
     if (isFormSubmitter(el)) return true;
     const rname=role(el);
     if (['radio','checkbox','textbox','searchbox','combobox','option','spinbutton','link','tab','menuitem','menuitemradio'].includes(rname)) return false;

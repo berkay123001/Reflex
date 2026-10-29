@@ -22,7 +22,7 @@ import pytest
 
 from reflex.agent import ReflexSession
 from reflex.config import CalibrationThresholds, ReflexConfig
-from reflex.gate import evaluate_decision
+from reflex.gate import evaluate_decision, form_submit_is_committed, missing_form_labels
 from reflex.supervisor import SupervisorDecision, UserMessageInterpretation
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -584,10 +584,66 @@ def test_native_submit_requires_owning_form(chromium_port: int, tmp_path: Path) 
 
     assert bare["kind"] == "click"
     assert link["role"] == "link"
-    assert not bare.get("submits_form")
+    assert bare.get("submits_form") is True
+    assert bare.get("form_key") == "loose"
     assert not link.get("submits_form")
     assert inside.get("submits_form") is True
     assert linked.get("submits_form") is True
     assert inside["form_key"] == linked["form_key"]
     assert inside["form_key"] != "loose"
     assert linked["form_key"] != "loose"
+
+
+_FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+def _fixture_page(chromium_port: int, name: str) -> dict[str, Any]:
+    return _snapshot_url(chromium_port, (_FIXTURES / name).resolve().as_uri())
+
+
+def test_fixture_pages_mark_real_submitters(chromium_port: int) -> None:
+    gforms = _fixture_page(chromium_port, "gforms.html")
+    jsquiz = _fixture_page(chromium_port, "jsquiz.html")
+    flights = _fixture_page(chromium_port, "flightslike.html")
+    search = _fixture_page(chromium_port, "search.html")
+
+    send = _action_named(gforms["actions"], "Gönder")
+    assert send.get("submits_form") is True
+    assert str(send.get("form_key", "")).startswith("f")
+    assert send["form_key"] != "loose"
+    assert missing_form_labels(send, gforms["actions"])
+    gforms_gate = evaluate_decision(
+        _click(send["id"]),
+        CalibrationThresholds(),
+        action=send,
+        page_actions=gforms["actions"],
+    )
+    assert gforms_gate.trigger_type == "incomplete_form"
+
+    finish = _action_named(jsquiz["actions"], "Bitir")
+    assert finish.get("submits_form") is True
+    assert finish.get("form_key") == "loose"
+    assert missing_form_labels(finish, jsquiz["actions"]) == ["Soru 1: Hangisi?"]
+    jsquiz_gate = evaluate_decision(
+        _click(finish["id"]),
+        CalibrationThresholds(),
+        action=finish,
+        page_actions=jsquiz["actions"],
+    )
+    assert jsquiz_gate.trigger_type == "incomplete_form"
+
+    for name in ("Keşfet", "Ankara", "1 yolcu"):
+        control = _action_named(flights["actions"], name)
+        assert not control.get("submits_form"), name
+
+    query = _action_named(search["actions"], "Google'da Ara")
+    assert query.get("submits_form") is True
+    assert form_submit_is_committed(query, search["actions"]) is False
+    search_gate = evaluate_decision(
+        _click(query["id"], confidence=0.5, target_confidence=0.6),
+        CalibrationThresholds(),
+        action=query,
+        page_actions=search["actions"],
+    )
+    assert search_gate.trigger_type != "low_conf_submit"
+    assert search_gate.should_escalate is False
