@@ -119,6 +119,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
         cfg = ReflexConfig(
             decision_backend=_requested_decision_backend(body),
             supervisor_model=str(body.get("supervisor_model", DEFAULT_SUPERVISOR_MODEL)),
+            interactive=True,  # Studio user is watching and can answer questions
             require_confirmation_for_destructive=bool(body.get("require_confirmation_for_destructive", True)),
             verify_done_with_supervisor=bool(body.get("verify_done_with_supervisor", True)),
             enable_site_memory=bool(body.get("enable_site_memory", False)),
@@ -142,6 +143,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
             cfg = ReflexConfig(
                 decision_backend=_requested_decision_backend(body),
                 supervisor_model=str(body.get("supervisor_model", DEFAULT_SUPERVISOR_MODEL)),
+                interactive=True,
                 max_steps=60,
                 max_escalations=35,
             )

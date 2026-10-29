@@ -16,6 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from .planner import TaskLedger
 from .safety import sanitize_untrusted_text
 
 
@@ -44,6 +45,9 @@ class DualTierContext(BaseModel):
     active_subgoal: str = ""
     tactical_hint: str = ""
     working_memory: str = ""
+    plan: TaskLedger | None = None
+    # False for unattended runs (eval, batch): System 2 must not pause for preferences nobody will answer.
+    user_present: bool = True
     subgoal_queue: list[str] = Field(default_factory=list)
     completed_subgoals: list[str] = Field(default_factory=list)
     visited_urls: list[str] = Field(default_factory=list)
@@ -70,6 +74,20 @@ class DualTierContext(BaseModel):
 
     # Goal & user constraints (e.g. "do not submit form", "only add to cart")
     constraints: list[str] = Field(default_factory=list)
+
+    @property
+    def messages(self) -> list[dict[str, Any]]:
+        """Return chat messages as dictionaries for backward and test compatibility."""
+        return [
+            {
+                "role": m.role,
+                "content": m.content,
+                "message": m.content,
+                "kind": m.kind,
+                "timestamp": m.timestamp,
+            }
+            for m in self.chat_log
+        ]
 
     def add_user_message(self, content: str, kind: str = "chat", fact_key: str | None = None) -> None:
         """Record a user message and store structured facts in `user_facts` when `fact_key` is provided."""
@@ -137,9 +155,20 @@ class DualTierContext(BaseModel):
         ]
         if self.constraints:
             lines.append(f"Active Constraints: {'; '.join(self.constraints)}")
+        if not self.user_present:
+            lines.append(
+                "User Availability: the user is NOT available during this run. Do not ASK_USER for preferences, "
+                "ranges or choices: pick a sensible default and state it in summary_for_user. ASK_USER only for "
+                "data that must not be invented (login credentials, personal data, payment details)."
+            )
         if self.tactical_hint:
             lines.append(f"Current Tactical Hint: {self.tactical_hint}")
-        if self.working_memory:
+        if self.plan and self.plan.needs_plan:
+            lines.append("Structured Task Ledger:")
+            lines.append(self.plan.format_for_s2())
+            if self.working_memory and self.working_memory != self.plan.format_for_s2():
+                lines.append(f"Cumulative Working Memory: {self.working_memory}")
+        elif self.working_memory:
             lines.append(f"Cumulative Working Memory: {self.working_memory}")
         if self.rejected_links:
             lines.append(f"Already Visited & Rejected Links (DO NOT CLICK THESE AGAIN): {self.rejected_links[-10:]}")
@@ -202,6 +231,7 @@ class DualTierContext(BaseModel):
             "constraints": self.constraints,
             "tactical_hint": self.tactical_hint,
             "working_memory": self.working_memory,
+            "plan": self.plan.model_dump() if self.plan else None,
             "visited_urls": self.visited_urls[-15:],
             "rejected_links": self.rejected_links[-15:],
             "ineffective_clicks": [list(item) for item in self.ineffective_clicks[-15:]],

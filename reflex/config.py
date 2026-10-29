@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -219,6 +218,7 @@ class ReflexConfig(BaseModel):
     supervisor_model: str = DEFAULT_SUPERVISOR_MODEL
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S
     allow_model_fallback: bool = False
+    interactive: bool = False
     max_steps: int = 80
     max_escalations: int = 40
     require_confirmation_for_destructive: bool = True

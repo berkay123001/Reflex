@@ -401,7 +401,7 @@ class _SessionWorker:
         session: Any = None
         try:
             with managed_isolated_browser(port=self.port, headless=not self.show_browser):
-                cfg = ReflexConfig()
+                cfg = ReflexConfig(interactive=True)  # the MCP client relays questions to its user
                 cfg.max_steps = max(cfg.max_steps, self.max_steps)
 
                 try:

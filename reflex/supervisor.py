@@ -19,13 +19,13 @@ from pydantic import BaseModel, Field
 from .config import (
     DEFAULT_SUPERVISOR_TIMEOUT_S,
     META_API_CHAT_URL,
-    MODEL_PRICING,
     OPENROUTER_CHAT_URL,
     calculate_usage_cost,
     get_meta_api_key,
     get_openrouter_api_key,
 )
 from .context import DualTierContext
+from .planner import TaskLedger, parse_task_ledger
 from .safety import sanitize_untrusted_text, wrap_untrusted_dom
 
 _HTTP_CLIENT = httpx.Client(http2=True, timeout=httpx.Timeout(DEFAULT_SUPERVISOR_TIMEOUT_S, connect=4.0))
@@ -79,7 +79,13 @@ Return ONLY a valid JSON object with these keys:
   "target_url": "full https:// URL if the user wants to open a different site/URL, or null",
   "fact_value": "extracted fact value if intent is PROVIDE_FACT, or null",
   "allow_arbitrary_choices": "true if the user permits arbitrary, sample, random, or subjective choices, else false",
-  "constraints": ["extracted constraints or negative instructions, e.g. 'do not submit', 'without submitting', etc."]
+  "constraints": ["extracted constraints or negative instructions, e.g. 'do not submit', 'without submitting', etc."],
+  "needs_plan": "true for multi-step/multi-site research or comparison tasks, false for simple single-site tasks",
+  "clarify": "optional single question if scope is ambiguous (e.g. {'question': '...', 'options': ['...'], 'default': '...'}), or null",
+  "subgoals": ["optional list of subgoals for multi-step tasks, e.g. [{'id': 'sg_1', 'text': 'imperative step, e.g. Find the price on site X', 'done_when': 'short observable condition', 'status': 'active', 'results': []}]"],
+  "candidates": ["optional candidate table for comparison tasks, e.g. [{'item': '...', 'source_url': '...', 'attributes': {}}]"],
+  "finish_criteria": "explicit condition for task completion, or null",
+  "budget": {"sources": "integer: number of DISTINCT websites the user explicitly asked to consult (e.g. 'several sites', 'different sellers', 'birkaç siteden' -> 3); 1 if the user did not ask for multiple websites. Several pages of one website count as 1", "max_steps": "integer: rough step estimate"}
 }"""
 
 ESCALATION_SYSTEM_PROMPT = """You are the System 2 Supervisor of Reflex, a Kahneman-inspired hybrid browser agent.
@@ -123,7 +129,13 @@ Return ONLY a valid JSON object with these keys (CRITICAL: Keep evaluation_previ
   "summary_for_user": "detailed completion message in the user's language if action_type is COMPLETE_TASK, or null",
   "verified_fact_key": "optional key of a fact verified from the page, or null",
   "verified_fact_value": "optional value of a fact verified from the page, or null",
-  "site_rule": "optional short structural tip for this domain (max 120 chars, no URLs), or null"
+  "site_rule": "optional short structural tip for this domain (max 120 chars, no URLs), or null",
+  "new_results": ["optional 0-3 distilled facts, e.g. [{'fact': '...', 'source_url': '...', 'step': 1}]"],
+  "new_candidates": ["for comparison tasks: one entry per compared option (store, product, flight...) seen on this page, with its comparable attributes, e.g. [{'item': 'Store A - Product X', 'source_url': '...', 'attributes': {'price': '...', 'shipping': '...'}}]; record compared options here, not in new_results"],
+  "new_notes": "optional short observation note, or null",
+  "subgoal_done": "optional boolean, true if active subgoal criteria are satisfied, else false",
+  "next_subgoal": "optional string ID/text of next subgoal or null",
+  "stuck": "optional boolean, true if agent is in a non-productive loop or blocked, else false"
 }"""
 
 
@@ -162,6 +174,12 @@ class SupervisorDecision(BaseModel):
     verified_fact_key: str | None = None
     verified_fact_value: str | None = None
     site_rule: str | None = None
+    extracted_results: list[dict[str, Any]] = Field(default_factory=list)
+    extracted_candidates: list[dict[str, Any]] = Field(default_factory=list)
+    new_notes: str | None = None
+    subgoal_done: bool = False
+    next_subgoal: str | None = None
+    stuck: bool = False
     model: str = ""
     latency_ms: int = 0
     cost_usd: float | str = 0.0
@@ -660,6 +678,22 @@ def resolve_escalation(
     tactical_str = str(parsed.get("tactical_hint") or next_goal_str or "").strip()
     subgoal_str = str(parsed.get("updated_subgoal") or "").strip()
 
+    raw_results = parsed.get("new_results") or parsed.get("extracted_results") or parsed.get("results") or []
+    extracted_results = list(raw_results) if isinstance(raw_results, (list, tuple)) else []
+    raw_cands = parsed.get("new_candidates") or parsed.get("extracted_candidates") or parsed.get("candidates") or []
+    extracted_candidates = (
+        list(raw_cands) if isinstance(raw_cands, (list, tuple)) else ([raw_cands] if isinstance(raw_cands, dict) else [])
+    )
+    new_notes = str(parsed["new_notes"]).strip() if isinstance(parsed.get("new_notes"), str) and parsed["new_notes"].strip() else None
+    subgoal_done = bool(parsed.get("subgoal_done", False))
+    next_subgoal_raw = parsed.get("next_subgoal")
+    next_subgoal = (
+        str(next_subgoal_raw).strip()
+        if isinstance(next_subgoal_raw, str) and next_subgoal_raw.strip()
+        else None
+    )
+    stuck = bool(parsed.get("stuck", False))
+
     return SupervisorDecision(
         action_type=action_type,
         evaluation_previous_goal=str(parsed.get("evaluation_previous_goal") or "").strip(),
@@ -678,6 +712,12 @@ def resolve_escalation(
         verified_fact_key=str(parsed["verified_fact_key"]).strip() if isinstance(parsed.get("verified_fact_key"), str) and parsed["verified_fact_key"].strip() else None,
         verified_fact_value=str(parsed["verified_fact_value"]).strip() if isinstance(parsed.get("verified_fact_value"), str) and parsed["verified_fact_value"].strip() else None,
         site_rule=str(parsed["site_rule"]).strip() if isinstance(parsed.get("site_rule"), str) and parsed["site_rule"].strip() else None,
+        extracted_results=extracted_results,
+        extracted_candidates=extracted_candidates,
+        new_notes=new_notes,
+        subgoal_done=subgoal_done,
+        next_subgoal=next_subgoal,
+        stuck=stuck,
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,
@@ -701,6 +741,7 @@ class UserMessageInterpretation(BaseModel):
     fact_value: str | None = None
     allow_arbitrary_choices: bool = False
     constraints: list[str] = Field(default_factory=list)
+    plan: TaskLedger | None = None
     model: str = ""
     latency_ms: int = 0
     cost_usd: float | str = 0.0
@@ -757,6 +798,11 @@ def interpret_user_message(
     if isinstance(raw_constraints, str):
         raw_constraints = [raw_constraints]
     extracted_constraints = [str(c).strip() for c in raw_constraints if str(c).strip()]
+    parsed_plan: TaskLedger | None = None
+    if isinstance(parsed.get("plan"), (dict, str)):
+        parsed_plan = parse_task_ledger(parsed["plan"])
+    elif parsed.get("needs_plan") is not None or "subgoals" in parsed:
+        parsed_plan = parse_task_ledger(parsed)
     return UserMessageInterpretation(
         intent=intent,
         direct_reply=str(parsed["direct_reply"]).strip() if isinstance(parsed.get("direct_reply"), str) and parsed["direct_reply"].strip() else None,
@@ -767,6 +813,7 @@ def interpret_user_message(
         fact_value=str(parsed["fact_value"]).strip() if isinstance(parsed.get("fact_value"), str) and parsed["fact_value"].strip() else None,
         allow_arbitrary_choices=allow_arb,
         constraints=extracted_constraints,
+        plan=parsed_plan,
         model=used_model,
         latency_ms=latency_ms,
         cost_usd=cost,

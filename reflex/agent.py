@@ -7,10 +7,25 @@ escalation gates, irreversible action safety guards, and interactive human-in-th
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+
+
+def _is_raw_dom(text: str) -> bool:
+    """Check if text looks like raw DOM/HTML rather than distilled factual knowledge."""
+    s = text.strip()
+    if not s:
+        return True
+    s_low = s.lower()
+    if s_low.startswith(("<html", "<!doctype", "<body", "<div", "<table", "<section", "<header", "<nav", "<form")):
+        return True
+    return bool(
+        ("</div>" in s_low and "<div" in s_low)
+        or ("</span>" in s_low and "<span" in s_low)
+        or ("</p>" in s_low and "<p" in s_low)
+    )
 
 from .browser import Browser, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
@@ -18,6 +33,7 @@ from .config import ReflexConfig
 from .context import DualTierContext
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
+from .planner import Subgoal, _extract_domain
 from .safety import check_action_safety, extract_origin
 from .supervisor import (
     SupervisorDecision,
@@ -115,6 +131,7 @@ class ReflexSession:
             active_subgoal=goal.strip(),
             allow_arbitrary_choices=allow_arbitrary_choices,
             constraints=list(constraints or []),
+            user_present=self.config.interactive,
         )
         self.ctx.add_user_message(goal.strip(), kind="chat")
         self.site_memory = SiteMemoryStore()
@@ -139,6 +156,9 @@ class ReflexSession:
         self._ineffective_fp: str = ""
         self.last_error: str | None = None
         self.s1_errors: int = 0
+        self._s1_steps_since_s2: int = 0
+        self._stuck_counter: int = 0
+        self._plan_done_rejections: int = 0
 
         initial_page_stub: dict[str, Any] = {
             "url": self.url,
@@ -178,6 +198,36 @@ class ReflexSession:
                             self.ctx.constraints.append(c)
                 if allow_arbitrary_choices:
                     self.ctx.allow_arbitrary_choices = True
+
+                if interp.plan and interp.plan.needs_plan:
+                    self.ctx.plan = interp.plan
+                    active_sg = self.ctx.plan.get_active_subgoal()
+                    if active_sg:
+                        self.ctx.active_subgoal = active_sg.text
+                    if self.ctx.plan.clarify:
+                        clarify = self.ctx.plan.clarify
+                        if self.config.interactive:
+                            self.status = "waiting_user"
+                            self.pending_fact_key = "clarify_scope"
+                            opts_str = f" ({', '.join(clarify.options)})" if clarify.options else ""
+                            def_str = f" [Varsayılan: {clarify.default}]" if clarify.default else ""
+                            q_msg = f"{clarify.question}{opts_str}{def_str}"
+                            self.last_asked_question = q_msg
+                            self.ctx.add_agent_message(q_msg, kind="ask_user")
+                        else:
+                            if clarify.default:
+                                self.ctx.user_facts["clarify_scope"] = clarify.default
+                                match = re.search(r"\b\d+\b", clarify.default)
+                                if match:
+                                    try:
+                                        self.ctx.plan.budget.sources = max(1, int(match.group(0)))
+                                    except (ValueError, TypeError):
+                                        pass
+                                self.ctx.add_agent_message(
+                                    f"Varsayılan kapsam kabul edildi: {clarify.default} ({clarify.question})",
+                                    kind="chat",
+                                )
+                            self.status = "ready"
             except Exception as exc:
                 self.status = "error"
                 self.last_error = f"Goal constraint extraction failed: {exc}"
@@ -357,6 +407,8 @@ class ReflexSession:
                 "steps": len(self.history),
                 "s1_steps": s1_calls,
                 "s2_escalations": s2_calls,
+                "s1_steps_since_s2": self._s1_steps_since_s2,
+                "stuck_counter": self._stuck_counter,
                 "s1_errors": self.s1_errors,
                 "text_helper_calls": len(self.text_calls),
                 "median_decision_ms": median_ms,
@@ -404,6 +456,17 @@ class ReflexSession:
             return self._handle_escalation(
                 trigger_type=trig,
                 reason=reason,
+                s1_decision=None,
+                step_t0=step_t0,
+                s1_ms=0,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        # 1b. Check consecutive S1 steps milestone trigger (only when planned task)
+        if self.ctx.plan and self.ctx.plan.needs_plan and self._s1_steps_since_s2 >= 12:
+            return self._handle_escalation(
+                trigger_type="progress_milestone",
+                reason=f"12 consecutive S1 steps without S2 ({self._s1_steps_since_s2} steps)",
                 s1_decision=None,
                 step_t0=step_t0,
                 s1_ms=0,
@@ -514,11 +577,42 @@ class ReflexSession:
             }
         )
 
+        # All subgoals completed and System 1 says DONE: System 2 verifies on the page and writes the
+        # final answer from the ledger; the ledger check result is passed along as evidence.
+        if (
+            s1_decision.get("operation") == "DONE"
+            and self.ctx.plan
+            and self.ctx.plan.needs_plan
+            and (
+                not self.ctx.active_subgoal
+                or self.ctx.plan.get_active_subgoal() is None
+                or all(sg.status == "completed" for sg in self.ctx.plan.subgoals)
+            )
+        ):
+            _, ledger_reason, _ = self.ctx.plan.verify_done()
+            return self._handle_escalation(
+                trigger_type="verify_done",
+                reason=(
+                    f"System 1 signaled DONE and all subgoals are completed. Ledger check: {ledger_reason}. "
+                    "Verify on the page; if complete, write the final answer from the ledger results in summary_for_user."
+                ),
+                s1_decision=s1_decision,
+                gate_eval=gate_eval,
+                step_t0=step_t0,
+                s1_ms=s1_ms,
+                pre_obs_ms=pre_obs_ms,
+            )
+
         # 3. Escalation Gate Check
         if gate_eval.should_escalate:
+            trig_type = gate_eval.trigger_type
+            esc_reason = gate_eval.reason
+            if self.ctx.plan and self.ctx.plan.needs_plan and trig_type == "verify_done":
+                trig_type = "progress_milestone"
+                esc_reason = "System 1 signaled subgoal completion (DONE verification)"
             return self._handle_escalation(
-                trigger_type=gate_eval.trigger_type,
-                reason=gate_eval.reason,
+                trigger_type=trig_type,
+                reason=esc_reason,
                 s1_decision=s1_decision,
                 gate_eval=gate_eval,
                 step_t0=step_t0,
@@ -528,6 +622,16 @@ class ReflexSession:
 
         # 4. High-Confidence DONE from System 1
         if s1_decision["operation"] == "DONE":
+            if self.ctx.plan and self.ctx.plan.needs_plan:
+                return self._handle_escalation(
+                    trigger_type="progress_milestone",
+                    reason="System 1 signaled subgoal completion (DONE operation)",
+                    s1_decision=s1_decision,
+                    gate_eval=gate_eval,
+                    step_t0=step_t0,
+                    s1_ms=s1_ms,
+                    pre_obs_ms=pre_obs_ms,
+                )
             self.status = "done"
             self.ctx.add_agent_message(
                 "Goal completed by System 1 (high confidence verification passed).",
@@ -599,6 +703,30 @@ class ReflexSession:
             pre_obs_ms=pre_obs_ms,
         )
 
+    def _is_subgoal_completion_signaled(
+        self,
+        active_sg: Subgoal | None,
+        verification: VerificationResult | None,
+        page: dict[str, Any],
+    ) -> bool:
+        """Check whether active subgoal completion criteria appear met from verifier or page state."""
+        if not active_sg:
+            return False
+        if verification is not None and (
+            getattr(verification, "subgoal_done", False)
+            or (isinstance(verification.details, dict) and verification.details.get("subgoal_done"))
+        ):
+            return True
+        if active_sg.done_when:
+            dw = active_sg.done_when.strip().lower()
+            if dw:
+                page_text = str(page.get("text") or "").lower()
+                page_full = str(page.get("full_text") or "").lower()
+                headings = " ".join(str(h) for h in page.get("headings") or []).lower()
+                if dw in page_text or dw in page_full or dw in headings:
+                    return True
+        return False
+
     def _is_rejected_target(self, action: dict[str, Any], current_url: str) -> bool:
         """Return True if clicking `action` would revisit a navigation link/URL that was already visited and abandoned,
         or re-click an already-selected radio button.
@@ -662,6 +790,64 @@ class ReflexSession:
                     self.ctx.rejected_links.append(entry)
                 break
 
+    def _verify_and_complete_task_from_plan(self, summary: str | None = None) -> dict[str, Any]:
+        """Finish a planned task after System 2 returned COMPLETE_TASK.
+
+        The ledger check is advisory: it sends System 2 back once, but a repeated COMPLETE_TASK is final,
+        so an over-strict budget (e.g. sources=2 on a single-site task) cannot lock the task forever.
+        System 2's own summary is the answer; the ledger template is only a fallback.
+        """
+        if not self.ctx.plan or not self.ctx.plan.needs_plan:
+            self.status = "done"
+            self.ctx.add_agent_message(summary or "Task completed.", kind="chat")
+            return self.snapshot()
+
+        # System 2 judged the task complete, so the subgoal it was working on is complete too. Planners often
+        # end with a reporting subgoal ("compare and report") that no page visit can satisfy; its result is the
+        # summary itself.
+        active_sg = self.ctx.plan.get_active_subgoal()
+        if summary and active_sg is not None:
+            if not active_sg.results:
+                self.ctx.plan.add_result(
+                    fact=summary[:500],
+                    source_url=str(self.page.get("url", "")),
+                    step=len(self.history),
+                    subgoal_id=active_sg.id,
+                )
+            active_sg.status = "completed"
+
+        is_done, reason, missing_sg = self.ctx.plan.verify_done()
+
+        if not is_done and self._plan_done_rejections < 1:
+            self._plan_done_rejections += 1
+            self.ctx.tactical_hint = f"Ledger check before finishing: {reason}"
+            # Reject DONE: do NOT set self.status = "done", remain in ready
+            self.status = "ready"
+            if missing_sg is not None:
+                for s in self.ctx.plan.subgoals:
+                    if s.id != missing_sg.id and s.status == "active":
+                        s.status = "pending"
+                missing_sg.status = "active"
+                self.ctx.active_subgoal = missing_sg.text
+            page_dict = self.page if isinstance(self.page, dict) else {}
+            cur_norm = str(page_dict.get("url", "")).split("#")[0].rstrip("/")
+            self._done_rejected_url = (cur_norm, len(self.history))
+            self.ctx.add_agent_message(
+                f"DONE rejected by plan verification: {reason}. Reactivated subgoal: {self.ctx.active_subgoal}",
+                kind="escalation_note",
+            )
+            return self.snapshot()
+
+        if not is_done:
+            self.ctx.add_agent_message(
+                f"Ledger check still open ({reason}); System 2 confirmed completion again, accepting.",
+                kind="escalation_note",
+            )
+        self.status = "done"
+        final_answer = summary or self.ctx.plan.synthesize_final_answer(self.ctx.primary_goal)
+        self.ctx.add_agent_message(final_answer, kind="chat")
+        return self.snapshot()
+
     def _handle_escalation(
         self,
         *,
@@ -703,8 +889,128 @@ class ReflexSession:
             return self.snapshot()
 
         s2_ms = int(sup.latency_ms or round((time.perf_counter() - s2_t0) * 1000))
-        if sup.memory:
-            self.ctx.working_memory = sup.memory
+        cur_url = str(self.page.get("url", "")).strip()
+        step_num = len(self.history) + 1
+        self._s1_steps_since_s2 = 0
+
+        if self.ctx.plan and self.ctx.plan.needs_plan:
+            # Plan-as-Memory (Anti-Clobbering): Do NOT overwrite with 15-word sup.memory.
+            # Instead, accumulate distilled results (0-3 facts) additively to active subgoal.
+            facts_to_add: list[tuple[str, str]] = []
+
+            raw_results = (
+                getattr(sup, "extracted_results", None)
+                or sup.raw.get("new_results")
+                or sup.raw.get("extracted_results")
+                or sup.raw.get("results")
+                or []
+            )
+            if isinstance(raw_results, (list, tuple)):
+                for r in raw_results:
+                    if len(facts_to_add) >= 3:
+                        break
+                    if isinstance(r, dict):
+                        f_text = str(r.get("fact") or "").strip()
+                        f_url = str(r.get("source_url") or cur_url).strip()
+                        if f_text and not _is_raw_dom(f_text):
+                            facts_to_add.append((f_text, f_url))
+                    elif isinstance(r, str) and r.strip() and not _is_raw_dom(r):
+                        facts_to_add.append((r.strip(), cur_url))
+
+            if len(facts_to_add) < 3 and sup.verified_fact_key and sup.verified_fact_value:
+                vf_text = f"{sup.verified_fact_key}: {sup.verified_fact_value}".strip()
+                if not _is_raw_dom(vf_text) and not any(vf_text == f[0] for f in facts_to_add):
+                    facts_to_add.append((vf_text, cur_url))
+
+            new_notes = getattr(sup, "new_notes", None) or sup.raw.get("new_notes")
+            if len(facts_to_add) < 3 and isinstance(new_notes, str) and new_notes.strip() and not _is_raw_dom(new_notes):
+                clean_notes = new_notes.strip()
+                if not any(clean_notes == f[0] for f in facts_to_add):
+                    facts_to_add.append((clean_notes, cur_url))
+
+            for f_text, f_url in facts_to_add[:3]:
+                self.ctx.plan.add_result(fact=f_text, source_url=f_url, step=step_num)
+
+            raw_cands = (
+                getattr(sup, "extracted_candidates", None)
+                or sup.raw.get("new_candidates")
+                or sup.raw.get("extracted_candidates")
+                or sup.raw.get("candidates")
+                or []
+            )
+            if isinstance(raw_cands, dict):
+                raw_cands = [raw_cands]
+            if isinstance(raw_cands, (list, tuple)):
+                for c in raw_cands:
+                    if isinstance(c, dict):
+                        item_name = c.get("item") or c.get("name")
+                        if item_name and str(item_name).strip():
+                            c_item = str(item_name).strip()
+                            c_url = str(c.get("source_url") or cur_url).strip()
+                            c_attrs = dict(c.get("attributes") or {}) if isinstance(c.get("attributes"), dict) else {}
+                            self.ctx.plan.add_candidate(item=c_item, source_url=c_url, attributes=c_attrs)
+
+            # Evaluate progress check response
+            subgoal_done = getattr(sup, "subgoal_done", False) or bool(sup.raw.get("subgoal_done", False))
+            next_subgoal = getattr(sup, "next_subgoal", None) or sup.raw.get("next_subgoal")
+            stuck = getattr(sup, "stuck", False) or bool(sup.raw.get("stuck", False))
+
+            if subgoal_done:
+                if next_subgoal:
+                    for s in self.ctx.plan.subgoals:
+                        if s.status == "active":
+                            s.status = "completed"
+                    target_sg = next(
+                        (s for s in self.ctx.plan.subgoals if s.id == next_subgoal or s.text == next_subgoal),
+                        None,
+                    )
+                    if target_sg is not None:
+                        target_sg.status = "active"
+                        self.ctx.active_subgoal = target_sg.text
+                    else:
+                        next_sg = self.ctx.plan.advance_subgoal()
+                        if next_sg is not None:
+                            self.ctx.active_subgoal = next_sg.text
+                        else:
+                            self.ctx.active_subgoal = ""
+                else:
+                    next_sg = self.ctx.plan.advance_subgoal()
+                    if next_sg is not None:
+                        self.ctx.active_subgoal = next_sg.text
+                    else:
+                        self.ctx.active_subgoal = ""
+
+                if self.ctx.active_subgoal:
+                    self.ctx.add_agent_message(
+                        f"Subgoal completed. Active subgoal advanced to: {self.ctx.active_subgoal}",
+                        kind="escalation_note",
+                    )
+                else:
+                    self.ctx.add_agent_message(
+                        "Subgoal completed. All subgoals completed.",
+                        kind="escalation_note",
+                    )
+
+            if stuck:
+                self._stuck_counter += 1
+                if self._stuck_counter >= 3:
+                    recovery_hint = (
+                        sup.tactical_hint
+                        or "Progress stuck across multiple checks. Consider alternative search queries or navigation paths."
+                    )
+                    self.ctx.tactical_hint = recovery_hint
+                    self.ctx.add_agent_message(
+                        f"Stuck counter reached {self._stuck_counter}: applying recovery hint '{recovery_hint}'",
+                        kind="escalation_note",
+                    )
+            else:
+                self._stuck_counter = 0
+
+            self.ctx.plan.summarize_completed_results(threshold=2500)
+            self.ctx.working_memory = self.ctx.plan.format_for_s2()
+        else:
+            if sup.memory:
+                self.ctx.working_memory = sup.memory
 
         esc_record = {
             "step": len(self.history) + 1,
@@ -746,11 +1052,17 @@ class ReflexSession:
 
         if sup.updated_subgoal:
             self.ctx.active_subgoal = sup.updated_subgoal
+            if self.ctx.plan and self.ctx.plan.needs_plan:
+                active_sg = self.ctx.plan.get_active_subgoal()
+                if active_sg:
+                    active_sg.text = sup.updated_subgoal
         if sup.tactical_hint:
             self.ctx.tactical_hint = sup.tactical_hint
 
         # Case 1: Supervisor verifies the task is complete
         if sup.action_type == "COMPLETE_TASK":
+            if self.ctx.plan and self.ctx.plan.needs_plan:
+                return self._verify_and_complete_task_from_plan(sup.summary_for_user)
             self.status = "done"
             msg = sup.summary_for_user or sup.reasoning or "Task verified complete by Supervisor."
             self.ctx.add_agent_message(msg, kind="chat")
@@ -776,14 +1088,15 @@ class ReflexSession:
             # If System 1 was BLOCKED and Supervisor suggested navigating to a new URL in hint/url, execute GOTO_URL!
             nav_url = _extract_candidate_url(sup, self.page.get("url", "")) if trigger_type in {"blocked", "s1_blocked"} else None
             if nav_url is None:
-                self._noop_escalation_counts[current_fp] = self._noop_escalation_counts.get(current_fp, 0) + 1
-                if self._noop_escalation_counts[current_fp] >= 2:
-                    self.status = "waiting_user"
-                    self.pending_fact_key = "user_guidance"
-                    ask_msg = f"I am stuck on this page ({sup.reasoning}). Could you clarify or provide a different instruction?"
-                    self.last_asked_question = ask_msg
-                    self.ctx.add_agent_message(ask_msg, kind="ask_user")
-                    return self.snapshot()
+                if trigger_type != "progress_milestone":
+                    self._noop_escalation_counts[current_fp] = self._noop_escalation_counts.get(current_fp, 0) + 1
+                    if self._noop_escalation_counts[current_fp] >= 2:
+                        self.status = "waiting_user"
+                        self.pending_fact_key = "user_guidance"
+                        ask_msg = f"I am stuck on this page ({sup.reasoning}). Could you clarify or provide a different instruction?"
+                        self.last_asked_question = ask_msg
+                        self.ctx.add_agent_message(ask_msg, kind="ask_user")
+                        return self.snapshot()
                 self.ctx.add_agent_message(
                     f"Supervisor updated subgoal: {self.ctx.active_subgoal} ({sup.reasoning})",
                     kind="escalation_note",
@@ -794,6 +1107,13 @@ class ReflexSession:
         # Case 4: Supervisor overrides/forces a specific action (or recovery primitive)
         action_dict = self._resolve_supervisor_action(sup, targets, controls)
         if action_dict is None:
+            if trigger_type == "progress_milestone":
+                self.ctx.add_agent_message(
+                    f"Progress milestone verified: {sup.reasoning}",
+                    kind="escalation_note",
+                )
+                self.status = "ready"
+                return self.snapshot()
             self._noop_escalation_counts[current_fp] = self._noop_escalation_counts.get(current_fp, 0) + 1
             if self._noop_escalation_counts[current_fp] >= 2:
                 self.status = "waiting_user"
@@ -1164,6 +1484,11 @@ class ReflexSession:
                 str(after_page.get("fingerprint", "") or ""),
             )
 
+        if actor == "S1":
+            self._s1_steps_since_s2 += 1
+        elif actor == "S2":
+            self._s1_steps_since_s2 = 0
+
         action_label = str(action.get("label", ""))
         if act_res.get("auto_submitted"):
             action_label = f"{action_label} (submitted search)"
@@ -1226,6 +1551,34 @@ class ReflexSession:
                 trig = "loop_detected"
             self.pending_escalation_reason = (trig, verification.reason)
 
+        # 6. Milestone Triggers (only for planned tasks)
+        if self.ctx.plan and self.ctx.plan.needs_plan and self.pending_escalation_reason is None:
+            before_url_str = str(before_page.get("url", ""))
+            b_dom = _extract_domain(before_url_str)
+            a_dom = _extract_domain(after_url)
+            site_changed = bool(b_dom and a_dom and b_dom != a_dom)
+
+            twelve_s1 = self._s1_steps_since_s2 >= 12
+
+            active_sg = self.ctx.plan.get_active_subgoal()
+            subgoal_met = self._is_subgoal_completion_signaled(active_sg, verification, after_page)
+
+            if site_changed:
+                self.pending_escalation_reason = (
+                    "progress_milestone",
+                    f"Site changed from {b_dom} to {a_dom}",
+                )
+            elif twelve_s1:
+                self.pending_escalation_reason = (
+                    "progress_milestone",
+                    f"12 consecutive S1 steps without S2 ({self._s1_steps_since_s2} steps)",
+                )
+            elif subgoal_met and active_sg:
+                self.pending_escalation_reason = (
+                    "progress_milestone",
+                    f"Active subgoal criteria appear met for '{active_sg.text}'",
+                )
+
         self.status = "ready"
         return self.snapshot()
 
@@ -1272,6 +1625,13 @@ class ReflexSession:
             self._noop_escalation_counts.clear()
             self.ctx.add_user_message(text, kind="user_reply", fact_key=fact_key)
             self.ctx.user_facts[fact_key] = val
+            if fact_key == "clarify_scope" and self.ctx.plan:
+                match = re.search(r"\b\d+\b", val)
+                if match:
+                    try:
+                        self.ctx.plan.budget.sources = max(1, int(match.group(0)))
+                    except (ValueError, TypeError):
+                        pass
             self.ctx.tactical_hint = interp.tactical_hint or f"User provided {fact_key}: {val}"
             self.config.max_steps = max(self.config.max_steps, len(self.history) + 60)
             self.config.max_escalations = max(self.config.max_escalations, len(self.escalations) + 30)
@@ -1294,6 +1654,13 @@ class ReflexSession:
             self.ctx.active_subgoal = interp.updated_subgoal or clean_goal
             self.ctx.tactical_hint = interp.tactical_hint or ""
             self.ctx.working_memory = ""
+            if interp.plan and interp.plan.needs_plan:
+                self.ctx.plan = interp.plan
+                active_sg = self.ctx.plan.get_active_subgoal()
+                if active_sg:
+                    self.ctx.active_subgoal = active_sg.text
+            elif interp.plan and not interp.plan.needs_plan:
+                self.ctx.plan = None
             self.ctx.rejected_links.clear()
             self._clear_ineffective_clicks()
             self.ctx.approved_actions.clear()
@@ -1402,3 +1769,7 @@ class ReflexSession:
 
     def __exit__(self, *_args: Any) -> None:
         self.close()
+
+
+ReflexAgent = ReflexSession
+
