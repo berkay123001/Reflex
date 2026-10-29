@@ -9,6 +9,20 @@
   const safe = e => !['password','file','hidden'].includes(e.type);
   const visible = e => !e.closest('[aria-hidden="true"],[inert]') &&
     e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+  const choiceFallbackLabel = (e,seen) => {
+    if (e.tagName!=='INPUT' || !['radio','checkbox'].includes(e.type)) return '';
+    const cl=e.closest('label');
+    if (cl) { const t=name(cl,seen); if (t) return t; }
+    const p=e.parentElement;
+    if (!p || ['BODY','HTML','FORM','FIELDSET'].includes(p.tagName)) return '';
+    const sib=[...p.children].filter(c=>c.tagName==='LABEL').map(l=>name(l,seen)).filter(Boolean).join(' ');
+    if (sib) return sib;
+    if (p.querySelectorAll('input[type="radio"],input[type="checkbox"]').length===1) {
+      const pTxt=(name(p,seen)||p.innerText||'').replace(/\s+/g,' ').trim();
+      if (pTxt.length>0 && pTxt.length<=80) return pTxt;
+    }
+    return '';
+  };
   const name = (e,seen=new Set()) => {
     if (!e || seen.has(e)) return '';
     seen.add(e);
@@ -16,6 +30,7 @@
       .map(id=>name(document.getElementById(id),seen)).filter(Boolean).join(' ');
     const raw = referenced || e.getAttribute('aria-label') ||
       [...(e.labels||[])].map(l=>name(l,seen)).filter(Boolean).join(' ') ||
+      choiceFallbackLabel(e,seen) ||
       (['button','submit','reset'].includes(e.type) ? e.value : '') || e.getAttribute('alt') ||
       (e.tagName==='INPUT' ? '' : [...e.childNodes].map(n=>n.nodeType===3 ? n.textContent :
         n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' ? name(n,seen) : '').join(' ').trim()) ||
@@ -49,7 +64,7 @@
     [...document.querySelectorAll('input,textarea,select')].filter(safe)
       .map(e=>[identity(e),e.value,e.checked,e.selectedIndex,e.disabled,e.readOnly])];
   cache.guard=e=>{
-    if (!e?.isConnected || !(visible(e) || choiceProxy(e))) return null;
+    if (!e?.isConnected || !(visible(e) || choiceProxy(e) || choiceOverlay(e))) return null;
     const scope=e.closest('form,dialog,[role="dialog"],article,li,tr,[role="row"]') || e.parentElement;
     return [identity(e),role(e),name(e),e.value??null,e.checked??null,e.selectedIndex??null,
       e.readOnly??null,e.matches(':disabled'),e.getAttribute('aria-disabled'),
@@ -129,6 +144,16 @@
     }
     return null;
   };
+  // Invisible overlay radio/checkbox (opacity 0, stretched over its row) that takes the click at its center.
+  const choiceOverlay=e=>{
+    if (e.tagName!=='INPUT' || !['radio','checkbox'].includes(e.type)) return false;
+    if (e.closest('[aria-hidden="true"],[inert]')) return false;
+    const r=e.getBoundingClientRect();
+    if (r.width<=0 || r.height<=0 || r.bottom<=0 || r.top>=innerHeight || r.right<=0 || r.left>=innerWidth) return false;
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    if (cx<0 || cx>=innerWidth || cy<0 || cy>=innerHeight) return false;
+    return document.elementFromPoint(cx,cy)===e;
+  };
   // Question text for repeated options ("Evet"/"Hayır"): the first line an ancestor holding the whole
   // radio group adds beyond the option labels themselves.
   const choiceQuestion=e=>{
@@ -170,7 +195,7 @@
   for (const e of document.querySelectorAll(selector)) {
     if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
     const proxy=visible(e) ? null : choiceProxy(e);
-    if (!visible(e) && !proxy) continue;
+    if (!visible(e) && !proxy && !choiceOverlay(e)) continue;
     const box=proxy || e;
     const parentClickable=e.parentElement?.closest('a[href],button,[role="button"],[role="link"]');
     if (parentClickable && (name(parentClickable)||'').trim() && (name(parentClickable)||'').trim()===(name(e)||'').trim()) continue;
@@ -263,6 +288,13 @@
   // cursor becomes pointer, or an explicit click handler, when it is short-labelled, in view and not
   // already represented by (or wrapping) a listed control.
   const listedEls=new Set(actions.map(a=>cache.nodes.get(a.node)).filter(Boolean));
+  for (const x of [...listedEls]) {
+    if (x.tagName==='INPUT' && ['radio','checkbox'].includes(x.type)) {
+      for (const l of [...(x.labels||[]), x.closest('label'), ...(x.parentElement?.children||[])]) {
+        if (l?.tagName==='LABEL') listedEls.add(l);
+      }
+    }
+  }
   const touchesListed=el=>{
     for (const x of listedEls) if (x===el || x.contains(el) || el.contains(x)) return true;
     return false;
