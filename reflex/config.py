@@ -219,6 +219,7 @@ class ReflexConfig(BaseModel):
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S
     allow_model_fallback: bool = False
     interactive: bool = False
+    s2_every_step: bool = False  # evaluation baseline: no System 1, System 2 decides every step
     max_steps: int = 80
     max_escalations: int = 40
     require_confirmation_for_destructive: bool = True

@@ -473,6 +473,19 @@ class ReflexSession:
                 pre_obs_ms=pre_obs_ms,
             )
 
+        # Evaluation baseline: System 2 decides every step and System 1 is never called, to measure
+        # what the hybrid saves. Bypasses the gate entirely (threshold tweaks cannot: scroll/wait and
+        # arbitrary-choice clicks have fixed gate rules).
+        if self.config.s2_every_step:
+            return self._handle_escalation(
+                trigger_type="s2_every_step",
+                reason="Evaluation baseline: System 2 decides every step",
+                s1_decision=None,
+                step_t0=step_t0,
+                s1_ms=0,
+                pre_obs_ms=pre_obs_ms,
+            )
+
         # 2. Query System 1 (OpenRouter Jev or Local Turnike)
         cur_url_str = str(self.page.get("url", ""))
         cur_norm_url = cur_url_str.split("#")[0].rstrip("/")
