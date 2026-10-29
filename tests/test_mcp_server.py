@@ -441,3 +441,45 @@ async def test_mcp_real_isolated_browser_smoke_on_local_fixture() -> None:
             assert stop_res["status"] == "stopped"
 
     assert observed_ports and all(p != 9333 for p in observed_ports)
+
+
+@pytest.mark.anyio
+async def test_f1_single_active_session_rejects_second_start_until_stopped() -> None:
+    """F1: reflex_start rejects a second session while an unstopped session exists (including done/blocked/error),
+    and accepts a new start after reflex_stop is called.
+    """
+    def fake_factory(url: str, goal: str, config: Any = None) -> _FakeReflexSession:
+        return _FakeReflexSession(url=url, goal=goal, config=config, scenario="ask_then_done")
+
+    with (
+        patch("reflex.mcp_server.managed_isolated_browser") as mock_iso,
+        patch("reflex.mcp_server.ReflexSession", side_effect=fake_factory),
+    ):
+        mock_iso.return_value.__enter__.return_value = "http://127.0.0.1:9510"
+        mock_iso.return_value.__exit__.return_value = None
+
+        start1 = reflex_start(goal="İlk görev", url="https://example.com", show_browser=False)
+        sid1 = start1["session_id"]
+
+        # 1. While waiting_user, second start is rejected
+        wait1 = await reflex_wait(session_id=sid1, timeout_s=5)
+        assert wait1["status"] == "waiting_user"
+        with pytest.raises(RuntimeError, match=f"Aktif oturum {sid1} var; önce reflex_stop çağırın"):
+            reflex_start(goal="İkinci görev", url="https://example.com", show_browser=False)
+
+        # 2. Even after reaching 'done' (browser still open), second start is rejected
+        reflex_reply(session_id=sid1, text="İzmir")
+        wait2 = await reflex_wait(session_id=sid1, timeout_s=5)
+        assert wait2["status"] == "done"
+        with pytest.raises(RuntimeError, match=f"Aktif oturum {sid1} var; önce reflex_stop çağırın"):
+            reflex_start(goal="İkinci görev", url="https://example.com", show_browser=False)
+
+        # 3. After reflex_stop, a new reflex_start succeeds
+        stop1 = reflex_stop(session_id=sid1)
+        assert stop1["status"] == "stopped"
+
+        start2 = reflex_start(goal="Yeni görev", url="https://example.com", show_browser=False)
+        sid2 = start2["session_id"]
+        assert sid2 != sid1
+        reflex_stop(session_id=sid2)
+

@@ -42,7 +42,6 @@ from pydantic import BaseModel, Field
 
 from reflex.agent import ReflexSession
 from reflex.browser.isolated import (
-    _set_harness_daemon_name,
     find_free_port,
     managed_isolated_browser,
 )
@@ -328,17 +327,9 @@ class _SessionWorker:
             status_out = (
                 self._initial_status
                 if self.status == "starting"
-                else ("running" if self.status in {"starting", "ready"} else self._initial_status)
+                else ("running" if self.status in {"starting", "ready"} else self.status)
             )
             return {"session_id": self.session_id, "status": status_out}
-
-    def _activate_thread_browser_env(self) -> None:
-        """Ensure browser_harness points at this session's isolated daemon before any CDP call."""
-        cdp_url = f"http://127.0.0.1:{self.port}"
-        daemon_name = f"eval_{self.port}"
-        os.environ["BU_CDP_URL"] = cdp_url
-        os.environ["BU_NAME"] = daemon_name
-        _set_harness_daemon_name(daemon_name)
 
     def _sync_from_session_locked(self, session: Any, *, actively_running: bool) -> None:
         try:
@@ -422,7 +413,6 @@ class _SessionWorker:
             return True
 
         try:
-            self._activate_thread_browser_env()
             if cmd == "reply":
                 session.reply_user(str(kwargs.get("text") or ""))
             elif cmd == "confirm":
@@ -458,7 +448,6 @@ class _SessionWorker:
         session: Any = None
         try:
             with managed_isolated_browser(port=self.port, headless=not self.show_browser):
-                self._activate_thread_browser_env()
                 cfg = ReflexConfig()
                 cfg.max_steps = max(cfg.max_steps, self.max_steps)
 
@@ -492,7 +481,6 @@ class _SessionWorker:
                             continue
 
                         try:
-                            self._activate_thread_browser_env()
                             session.step()
                             with self._cond:
                                 next_status = str(getattr(session, "status", "ready"))
@@ -528,7 +516,6 @@ class _SessionWorker:
         finally:
             if session is not None:
                 try:
-                    self._activate_thread_browser_env()
                     session.close()
                 except Exception:
                     pass
@@ -706,18 +693,28 @@ def reflex_start(
     max_steps: int = 40,
     show_browser: bool = True,
 ) -> dict[str, Any]:
-    """Start an autonomous Reflex browser session in its own isolated browser instance."""
+    """Start an autonomous Reflex browser session in its own isolated browser instance.
+
+    Constraint: Only one active session is allowed per server process (including sessions
+    in `done`, `blocked`, or `error` state whose browser is still open). Call `reflex_stop`
+    on any existing session before starting a new one.
+    """
     if not goal or not goal.strip():
         raise ValueError("Supply a non-empty goal")
-    session_id = uuid.uuid4().hex[:12]
-    worker = _SessionWorker(
-        session_id=session_id,
-        goal=goal.strip(),
-        url=url.strip() or "https://www.google.com",
-        max_steps=max_steps,
-        show_browser=show_browser,
-    )
     with _SESSIONS_LOCK:
+        for existing_id, existing_worker in list(_SESSIONS.items()):
+            if existing_worker.status == "stopped":
+                _SESSIONS.pop(existing_id, None)
+                continue
+            raise RuntimeError(f"Aktif oturum {existing_id} var; önce reflex_stop çağırın")
+        session_id = uuid.uuid4().hex[:12]
+        worker = _SessionWorker(
+            session_id=session_id,
+            goal=goal.strip(),
+            url=url.strip() or "https://www.google.com",
+            max_steps=max_steps,
+            show_browser=show_browser,
+        )
         _SESSIONS[session_id] = worker
     return worker.start()
 
