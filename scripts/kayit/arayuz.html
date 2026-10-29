@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Reflex · Gösterim Kaydı</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f1115; color: #e6e6e6; margin: 0; padding: 20px; }
+  h1 { font-size: 18px; margin: 0 0 14px; }
+  label { display: block; font-size: 12px; color: #9aa0aa; margin: 10px 0 4px; }
+  textarea, input { width: 100%; box-sizing: border-box; background: #181b22; color: #e6e6e6; border: 1px solid #2a2f3a; border-radius: 6px; padding: 8px; font-size: 14px; }
+  textarea { height: 64px; resize: vertical; }
+  .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  button { border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; font-size: 13px; }
+  button:disabled { opacity: .35; cursor: default; }
+  .start { background: #a3e635; color: #111; } .done { background: #22c55e; color: #111; }
+  .fail { background: #f59e0b; color: #111; } .cancel { background: #3a3f4b; color: #e6e6e6; }
+  .undo { background: #3a3f4b; color: #e6e6e6; }
+  .status { margin-top: 14px; padding: 10px; border-radius: 6px; background: #181b22; font-size: 13px; }
+  .rec { color: #f87171; font-weight: 700; } .idle { color: #9aa0aa; }
+  ol { margin: 8px 0 0; padding-left: 22px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .tips { margin-top: 14px; font-size: 12px; color: #9aa0aa; line-height: 1.5; }
+  .err { color: #f87171; font-size: 12px; margin-top: 6px; min-height: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  td, th { text-align: left; padding: 5px 6px; border-bottom: 1px solid #232733; }
+  th { color: #9aa0aa; font-weight: 600; }
+  .ok { color: #22c55e; } .no { color: #f59e0b; }
+  .del { background: transparent; color: #9aa0aa; padding: 2px 6px; font-weight: 400; }
+  h2 { font-size: 14px; margin: 18px 0 0; }
+</style>
+</head>
+<body>
+<h1>Reflex · Gösterim Kaydı</h1>
+<label>Görev (ajana söyler gibi yaz)</label>
+<textarea id="goal" placeholder="ör. gotoquiz'de bir kişilik testi bul ve kendine göre çöz"></textarea>
+<label>Başlangıç adresi</label>
+<input id="url" value="https://www.google.com">
+<div class="row">
+  <button class="start" id="b-start">▶ Başlat</button>
+  <button class="done" id="b-done">✓ Bitti (başarılı)</button>
+  <button class="fail" id="b-fail">✗ Bitti (başarısız)</button>
+  <button class="undo" id="b-undo">↶ Son adımı sil</button>
+  <button class="cancel" id="b-cancel">İptal</button>
+</div>
+<label>Cevap / kısa özet (isteğe bağlı — ajanın özetini bununla karşılaştıracağız)</label>
+<textarea id="note" placeholder="ör. En ucuz direkt uçuş 09:40 THY 1.250 TL"></textarea>
+<div class="err" id="err"></div>
+<div class="status" id="status">…</div>
+<h2>Kayıtlı görevler</h2>
+<table><thead><tr><th>Tarih</th><th>Görev</th><th>Adım</th><th>Sonuç</th><th></th></tr></thead>
+<tbody id="sessions"></tbody></table>
+<div class="tips">
+  • Sadece kayıt penceresindeki <b>tek sekmede</b> çalış; yeni sekme açma.<br>
+  • Kaydırmayı <b>fare tekerleğiyle</b> yap (klavye ve kaydırma çubuğu kaydedilmez).<br>
+  • Tarayıcının geri / ileri / yenile tuşları kaydedilir; görev sırasında adres çubuğuna adres yazma.<br>
+  • Ajan gibi davran: önce ekranda görünen soruları cevapla, sonra kaydır; formu en sonda gönder.<br>
+  • Yanlış tıkladıysan "Son adımı sil"; hedefi bitirince "Bitti (başarılı)".<br>
+  • Şifre alanları kaydedilmez, ama giriş yapılmış hesaplarla kayıt yapma; sayfa metni kayda girer.
+</div>
+<script>
+const $ = id => document.getElementById(id);
+async function post(path, body) {
+  $('err').textContent = '';
+  const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Kayit': '1'},
+                               body: JSON.stringify(body || {})});
+  const data = await r.json();
+  if (!r.ok) { $('err').textContent = data.error || 'hata'; return false; }
+  render(data);
+  return true;
+}
+function esc(s) { return String(s ?? '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c])); }
+function render(s) {
+  if (!s || s.active === undefined) return;
+  $('b-start').disabled = s.active;
+  for (const id of ['b-done', 'b-fail', 'b-undo', 'b-cancel']) $(id).disabled = !s.active;
+  const head = s.active
+    ? `<span class="rec">● KAYIT</span> — ${esc(s.goal)} — ${s.steps} adım${s.pending ? ' (+ ' + s.pending + ' sürüyor)' : ''}`
+    : `<span class="idle">Kayıt kapalı</span>${s.last_saved ? ' — son kayıt: ' + esc(s.last_saved.split('/').pop()) : ''}`;
+  const steps = (s.recent || []).map(x => `<li value="${x.step}">${x.op} ${esc(x.label || '')}` +
+    `${x.text ? ' ← "' + esc(x.text) + '"' : ''}${x.option ? ' → ' + esc(x.option) : ''}</li>`).join('');
+  const browser = s.browser ? '' : ' — <span class="no">kayıt tarayıcısı kapalı (Başlat yeniden açar)</span>';
+  $('status').innerHTML = `${head}${browser}<br>Toplam: ${s.saved_sessions} görev ` +
+    `(${s.successful_sessions} başarılı), ${s.saved_steps} adım` + (steps ? `<ol>${steps}</ol>` : '');
+  $('sessions').innerHTML = (s.sessions || []).map(x => {
+    const d = x.started ? new Date(x.started * 1000).toLocaleString('tr-TR') : '';
+    const res = x.success ? '<span class="ok">başarılı</span>' : '<span class="no">başarısız</span>';
+    return `<tr><td>${d}</td><td>${esc(x.goal)}</td><td>${x.steps}</td><td>${res}</td>` +
+      `<td><button class="del" data-file="${esc(x.file)}">sil</button></td></tr>`;
+  }).join('');
+}
+$('sessions').onclick = e => {
+  const f = e.target?.dataset?.file;
+  if (f && confirm('Bu kayıt silinsin mi?')) post('/api/sil', {file: f});
+};
+$('b-start').onclick = () => post('/api/basla', {goal: $('goal').value, url: $('url').value});
+$('b-done').onclick = () => post('/api/bitir', {success: true, note: $('note').value}).then(ok => { if (ok) $('note').value = ''; });
+$('b-fail').onclick = () => post('/api/bitir', {success: false, note: $('note').value}).then(ok => { if (ok) $('note').value = ''; });
+$('b-undo').onclick = () => post('/api/geri_al');
+$('b-cancel').onclick = () => post('/api/iptal');
+async function poll() {
+  try {
+    render(await (await fetch('/api/durum')).json());
+  } catch (_) {
+    $('status').innerHTML = '<span class="no">Kaydedici çalışmıyor — terminalden yeniden başlatılmalı.</span>';
+  }
+  setTimeout(poll, 1000);
+}
+poll();
+</script>
+</body>
+</html>
