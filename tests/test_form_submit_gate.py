@@ -166,10 +166,9 @@ def chromium_port(tmp_path_factory: pytest.TempPathFactory) -> Any:
             proc.kill()
 
 
-def _snapshot_html(port: int, html_name: str) -> dict[str, Any]:
+def _snapshot_url(port: int, page_url: str) -> dict[str, Any]:
     node = shutil.which("node")
     assert node
-    page_url = (WEB / html_name).resolve().as_uri()
     result = subprocess.run(
         [node, "-e", _NODE_RUNNER, str(port), page_url, str(SNAPSHOT_JS)],
         capture_output=True,
@@ -181,6 +180,10 @@ def _snapshot_html(port: int, html_name: str) -> dict[str, Any]:
     payload = json.loads(result.stdout)
     assert isinstance(payload, dict)
     return payload
+
+
+def _snapshot_html(port: int, html_name: str) -> dict[str, Any]:
+    return _snapshot_url(port, (WEB / html_name).resolve().as_uri())
 
 
 def _click(action_id: str, confidence: float = 0.95, target_confidence: float = 0.95) -> dict[str, Any]:
@@ -429,3 +432,46 @@ def test_qa_survey_and_hidden_choices_do_not_submit_empty(chromium_port: int) ->
     assert "Plan yapmadan" in hidden_session.escalations[0]["reason"]
     assert survey_session.history == []
     assert hidden_session.history == []
+
+
+_FORM_OWNER_HTML = """<!doctype html>
+<meta charset="utf-8">
+<title>form owner</title>
+<style>button,input,label{font:16px sans-serif;min-height:32px;min-width:88px}</style>
+<button>Bare button</button>
+<button role="link">Link button</button>
+<form id="owned">
+  <button type="submit">Send inside</button>
+</form>
+<button type="submit" form="owned">Send linked</button>
+<input type="radio" name="looseq">
+<label>Loose option</label>
+"""
+
+
+def _action_named(actions: list[dict[str, Any]], accessible_name: str) -> dict[str, Any]:
+    matches = [action for action in actions if action.get("accessible_name") == accessible_name]
+    assert len(matches) == 1, matches
+    return matches[0]
+
+
+def test_native_submit_requires_owning_form(chromium_port: int, tmp_path: Path) -> None:
+    page = tmp_path / "form_owner.html"
+    page.write_text(_FORM_OWNER_HTML, encoding="utf-8")
+    snapshot = _snapshot_url(chromium_port, page.resolve().as_uri())
+    actions = snapshot["actions"]
+
+    bare = _action_named(actions, "Bare button")
+    link = _action_named(actions, "Link button")
+    inside = _action_named(actions, "Send inside")
+    linked = _action_named(actions, "Send linked")
+
+    assert bare["kind"] == "click"
+    assert link["role"] == "link"
+    assert not bare.get("submits_form")
+    assert not link.get("submits_form")
+    assert inside.get("submits_form") is True
+    assert linked.get("submits_form") is True
+    assert inside["form_key"] == linked["form_key"]
+    assert inside["form_key"] != "loose"
+    assert linked["form_key"] != "loose"

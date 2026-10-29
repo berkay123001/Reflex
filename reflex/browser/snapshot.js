@@ -76,15 +76,13 @@
     clipRectCache.set(el,res);
     return res;
   };
+  // Native submit only. el.form is null for a formless control, including one whose
+  // default type is submit, and for a role=link button. form="id" still sets el.form.
   const isFormSubmitter=el=>{
-    if (!el) return false;
-    if ((el.tagName==='BUTTON' || el.tagName==='INPUT') && el.type==='submit') return true;
-    if (el.tagName==='BUTTON' && (!el.type || el.type==='submit') && el.closest('form')) return true;
-    if (el.tagName==='INPUT' && el.type==='image' && el.closest('form')) return true;
-    if (el.getAttribute('role')==='button' && (el.getAttribute('type')==='submit' || el.closest('form'))) {
-      if (el.getAttribute('type')!=='button' && el.getAttribute('type')!=='reset') return true;
-    }
-    return false;
+    if (!el || el.form==null) return false;
+    if (el.getAttribute('role')==='link') return false;
+    if (el.tagName==='BUTTON') return el.type!=='button' && el.type!=='reset';
+    return el.tagName==='INPUT' && (el.type==='submit' || el.type==='image');
   };
   const owningForm=el=>el && (el.form || el.closest('form'));
   const hasClickHandler=el=>!!el && (el.hasAttribute('onclick') || /(^|;)\s*click:/.test(el.getAttribute('jsaction')||''));
@@ -94,10 +92,11 @@
     const groupName=r.getAttribute('name') || (r.closest('[role="radiogroup"]') ? 'rg'+identity(r.closest('[role="radiogroup"]')) : '');
     if (groupName) looseRadioNames.add(groupName);
   }
-  // A button-like control outside any <form> commits the document's loose radio groups
-  // (custom quiz/survey finish controls). Native submitters keep submits_form via isFormSubmitter.
+  // A non-button control outside any <form> commits the document's loose radio groups
+  // (custom quiz/survey finish controls). A formless <button>, including role=link, never does.
+  // Native submitters keep submits_form via isFormSubmitter.
   const isCommitControl=el=>{
-    if (!el) return false;
+    if (!el || el.tagName==='BUTTON') return false;
     if (isFormSubmitter(el)) return true;
     const rname=role(el);
     if (['radio','checkbox','textbox','searchbox','combobox','option','spinbutton','link','tab','menuitem','menuitemradio'].includes(rname)) return false;
