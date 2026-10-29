@@ -135,6 +135,8 @@ class ReflexSession:
         self.pending_escalation_reason: tuple[str, str] | None = None  # (trigger_type, reason)
         self._noop_escalation_counts: dict[str, int] = {}
         self._done_rejected_url: tuple[str, int] | None = None
+        self._ineffective_url: str = ""
+        self._ineffective_fp: str = ""
         self.last_error: str | None = None
         self.s1_errors: int = 0
 
@@ -185,6 +187,80 @@ class ReflexSession:
     def elapsed(self) -> int:
         self.elapsed_ms = round((time.perf_counter() - self.started_at) * 1000)
         return self.elapsed_ms
+
+    @property
+    def ineffective_clicks(self) -> list[tuple[str, str, str]]:
+        return self.ctx.ineffective_clicks
+
+    def _clear_ineffective_clicks(self) -> None:
+        """Clear recorded ineffective click targets when URL or page state changes."""
+        self.ctx.ineffective_clicks.clear()
+        self._ineffective_url = ""
+        self._ineffective_fp = ""
+
+    def _sync_ineffective_clicks(self, current_url: str = "", page: dict[str, Any] | None = None) -> None:
+        """Clear ineffective clicks if canonical URL or meaningful page fingerprint changed."""
+        if not self.ctx.ineffective_clicks:
+            return
+        page_dict = page if isinstance(page, dict) else (self.page if isinstance(getattr(self, "page", None), dict) else {})
+        raw_url = current_url or str(page_dict.get("url", "") or "")
+        cur_norm = canonical_url(raw_url) if raw_url else ""
+        cur_fp = str(page_dict.get("fingerprint", "") or "")
+
+        last_url = getattr(self, "_ineffective_url", "")
+        last_fp = getattr(self, "_ineffective_fp", "")
+
+        if cur_norm and last_url and cur_norm != last_url:
+            self._clear_ineffective_clicks()
+            return
+        if cur_fp and last_fp and cur_fp != last_fp:
+            self._clear_ineffective_clicks()
+            return
+        if cur_norm and all(canonical_url(u) != cur_norm for u, _, _ in self.ctx.ineffective_clicks):
+            self._clear_ineffective_clicks()
+
+    def _record_ineffective_click(self, action: dict[str, Any], current_url: str, page_fp: str = "") -> None:
+        """Record `(canonical_url, label, role)` for a click that produced no progress or triggered a loop/oscillation."""
+        if action.get("kind") != "click":
+            return
+        cur_norm = canonical_url(current_url or "")
+        lbl = str(action.get("label", "") or "").strip()
+        role = str(action.get("role", "") or "button").strip().lower() or "button"
+        if not cur_norm or not lbl:
+            return
+        self._sync_ineffective_clicks(current_url=cur_norm)
+        entry = (cur_norm, lbl, role)
+        if not any(
+            canonical_url(u) == cur_norm and l.strip().lower() == lbl.lower() and r.strip().lower() == role
+            for u, l, r in self.ctx.ineffective_clicks
+        ):
+            self.ctx.ineffective_clicks.append(entry)
+        self._ineffective_url = cur_norm
+        if page_fp:
+            self._ineffective_fp = str(page_fp)
+        elif isinstance(getattr(self, "page", None), dict) and self.page.get("fingerprint"):
+            self._ineffective_fp = str(self.page.get("fingerprint", ""))
+
+    def _is_ineffective_click(self, action: dict[str, Any], current_url: str) -> bool:
+        """Return True if `action` matches a previously ineffective click `(canonical_url, label, role)` on the current page."""
+        if action.get("kind") != "click":
+            return False
+        self._sync_ineffective_clicks(current_url=current_url)
+        if not self.ctx.ineffective_clicks:
+            return False
+        cur_norm = canonical_url(current_url or "")
+        lbl = str(action.get("label", "") or "").strip().lower()
+        role = str(action.get("role", "") or "button").strip().lower() or "button"
+        if not cur_norm or not lbl:
+            return False
+        for u, rec_lbl, rec_role in self.ctx.ineffective_clicks:
+            if (
+                canonical_url(u) == cur_norm
+                and rec_lbl.strip().lower() == lbl
+                and (not rec_role or rec_role.strip().lower() == role)
+            ):
+                return True
+        return False
 
     def snapshot(self) -> dict[str, Any]:
         """Return complete UI/telemetry state for the session."""
@@ -318,6 +394,8 @@ class ReflexSession:
             obs_t0 = time.perf_counter()
             self.page = self.browser.observe(screenshot=self.config.screenshots)
             pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
+
+        self._sync_ineffective_clicks(current_url=str(self.page.get("url", "")), page=self.page)
 
         # 1. Check if post-step verification from the previous action scheduled an escalation
         if self.pending_escalation_reason is not None:
@@ -464,6 +542,19 @@ class ReflexSession:
             return self._handle_escalation(
                 trigger_type="missing_action",
                 reason=f"Selected action ID {selected_id} not found on page",
+                s1_decision=s1_decision,
+                gate_eval=gate_eval,
+                step_t0=step_t0,
+                s1_ms=s1_ms,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        if s1_decision["operation"] == "CLICK" and self._is_ineffective_click(action, self.page.get("url", "")):
+            lbl = str(action.get("label", "")).strip()
+            role = str(action.get("role", "button")).strip().lower() or "button"
+            return self._handle_escalation(
+                trigger_type="no_effect_repeat",
+                reason=f"Target '{lbl}' ({role}) had no effect on this page — bu buton işe yaramadı",
                 s1_decision=s1_decision,
                 gate_eval=gate_eval,
                 step_t0=step_t0,
@@ -778,12 +869,17 @@ class ReflexSession:
         if op in targets and target:
             cand = targets[op].get(target)
             if cand:
-                if op == "CLICK" and self._is_rejected_target(cand, cur_url):
+                if op == "CLICK" and (
+                    self._is_rejected_target(cand, cur_url)
+                    or self._is_ineffective_click(cand, cur_url)
+                ):
                     if "SCROLL_DOWN" in controls:
                         sup.operation = "SCROLL_DOWN"
                         sup.target = None
                         sup.reasoning = f"[Anti-Loop: skipped already-visited link '{cand.get('label', '')}' -> scrolling down] {sup.reasoning}"
                         return controls["SCROLL_DOWN"]
+                    if self._is_ineffective_click(cand, cur_url):
+                        return None
                 return cand
             if op == "SELECT":
                 options = [(k, v) for k, v in targets["SELECT"].items() if k.startswith(f"{target}:")]
@@ -802,7 +898,10 @@ class ReflexSession:
                 group = targets.get(cand_op, {})
                 if target in group:
                     cand = group[target]
-                    if cand_op == "CLICK" and self._is_rejected_target(cand, cur_url):
+                    if cand_op == "CLICK" and (
+                        self._is_rejected_target(cand, cur_url)
+                        or self._is_ineffective_click(cand, cur_url)
+                    ):
                         if "SCROLL_DOWN" in controls:
                             sup.operation = "SCROLL_DOWN"
                             sup.target = None
@@ -1037,6 +1136,34 @@ class ReflexSession:
         if verification.effective_progress and actor == "S1":
             self.ctx.tactical_hint = ""
 
+        if verification.url_changed:
+            self._clear_ineffective_clicks()
+        elif (
+            action.get("kind") != "scroll"
+            and verification.effective_progress
+            and verification.page_changed
+            and not verification.loop_detected
+            and not verification.oscillation_detected
+        ):
+            self._clear_ineffective_clicks()
+        elif (
+            action.get("kind") == "scroll"
+            and self.ctx.ineffective_clicks
+            and before_page.get("text", "") == after_page.get("text", "")
+        ):
+            self._ineffective_fp = str(after_page.get("fingerprint", "") or "")
+
+        if action.get("kind") == "click" and not verification.url_changed and (
+            not verification.effective_progress
+            or verification.loop_detected
+            or verification.oscillation_detected
+        ):
+            self._record_ineffective_click(
+                action,
+                after_url or str(before_page.get("url", "")),
+                str(after_page.get("fingerprint", "") or ""),
+            )
+
         action_label = str(action.get("label", ""))
         if act_res.get("auto_submitted"):
             action_label = f"{action_label} (submitted search)"
@@ -1168,6 +1295,7 @@ class ReflexSession:
             self.ctx.tactical_hint = interp.tactical_hint or ""
             self.ctx.working_memory = ""
             self.ctx.rejected_links.clear()
+            self._clear_ineffective_clicks()
             self.ctx.approved_actions.clear()
             self.ctx.constraints = list(interp.constraints)
             self._done_rejected_url = None

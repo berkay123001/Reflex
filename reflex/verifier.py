@@ -154,10 +154,7 @@ def verify_step(
         # Scrolling is only a loop when scroll.y stops moving (not effective_progress)
         repeated_without_progress = not effective_progress
     else:
-        repeated_without_progress = (
-            (same_action_count >= 2 and not url_changed)
-            or (same_action_count >= 1 and not effective_progress)
-        )
+        repeated_without_progress = same_action_count >= 1 and not effective_progress
 
     loop_detected = repeated_without_progress or (no_progress_streak >= max_no_progress_steps)
 
@@ -209,7 +206,7 @@ def verify_step(
         else:
             reason = "State oscillation (multi-page navigation cycle) detected"
     elif loop_detected:
-        if same_action_count >= 2:
+        if same_action_count >= 1:
             reason = f"Repeated action ({action.get('kind')}: {action.get('label')}) without progress"
         else:
             reason = f"{no_progress_streak} consecutive steps with no element or page progress"

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Quiz Sonraki Testi</title>
+</head>
+<body>
+  <main id="quiz-box">
+    <h2 id="question-title">Soru 1: Başlangıç sorusu</h2>
+    <p id="question-body">Bu birinci sorunun metnidir.</p>
+    <button id="next-btn" type="button" onclick="
+      window.__quiz_step = (window.__quiz_step || 1) + 1;
+      document.getElementById('question-title').textContent = 'Soru ' + window.__quiz_step + ': Güncel soru başlığı ' + window.__quiz_step;
+      document.getElementById('question-body').textContent = 'Bu ' + window.__quiz_step + '. sorunun değişen metnidir.';
+    ">Sonraki</button>
+  </main>
+</body>
+</html>

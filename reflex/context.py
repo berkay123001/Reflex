@@ -48,6 +48,7 @@ class DualTierContext(BaseModel):
     completed_subgoals: list[str] = Field(default_factory=list)
     visited_urls: list[str] = Field(default_factory=list)
     rejected_links: list[str] = Field(default_factory=list)
+    ineffective_clicks: list[tuple[str, str, str]] = Field(default_factory=list)
 
     # Strictly separated knowledge stores
     user_facts: dict[str, str] = Field(default_factory=dict)
@@ -142,6 +143,14 @@ class DualTierContext(BaseModel):
             lines.append(f"Cumulative Working Memory: {self.working_memory}")
         if self.rejected_links:
             lines.append(f"Already Visited & Rejected Links (DO NOT CLICK THESE AGAIN): {self.rejected_links[-10:]}")
+        if self.ineffective_clicks:
+            ineff_items = [
+                f"{lbl} ({role})" if role else lbl
+                for _, lbl, role in self.ineffective_clicks[-10:]
+            ]
+            lines.append(
+                f"Ineffective Clicks on Current Page — bu buton işe yaramadı (DO NOT CLICK THESE AGAIN): {ineff_items}"
+            )
         if self.subgoal_queue:
             lines.append(f"Remaining Subgoals: {self.subgoal_queue}")
         if self.completed_subgoals:
@@ -195,6 +204,7 @@ class DualTierContext(BaseModel):
             "working_memory": self.working_memory,
             "visited_urls": self.visited_urls[-15:],
             "rejected_links": self.rejected_links[-15:],
+            "ineffective_clicks": [list(item) for item in self.ineffective_clicks[-15:]],
             "subgoal_queue": self.subgoal_queue,
             "completed_subgoals": self.completed_subgoals,
             "user_facts": self.user_facts,
