@@ -159,6 +159,7 @@ class ReflexSession:
         self._s1_steps_since_s2: int = 0
         self._stuck_counter: int = 0
         self._plan_done_rejections: int = 0
+        self.unsettled_count: int = 0
 
         initial_page_stub: dict[str, Any] = {
             "url": self.url,
@@ -424,47 +425,25 @@ class ReflexSession:
             },
         }
 
-    @property
-    def unattended_questions(self) -> list[str]:
-        return getattr(self.ctx, "unattended_questions", [])
-
-    @property
-    def _unattended_questions(self) -> list[str]:
-        return getattr(self.ctx, "unattended_questions", [])
-
-    def _observe_settled(self, deadline_s: float = 8.0) -> dict[str, Any] | None:
+    def _observe_settled(self, deadline_s: float | None = None) -> dict[str, Any] | None:
         """Observe page with retries until DOM settles or deadline expires.
 
-        Catches StalePage ("Document is navigating", etc.). Polls document.readyState
-        and document.body until page is interactive/complete.
+        Catches StalePage ("Document is navigating", etc.).
         If deadline expires, does not raise; records 'page_unsettled' note,
         sets status='ready', and returns None so the step finishes cleanly.
         """
-        if deadline_s == 8.0:
-            cfg_deadline = getattr(getattr(self, "config", None), "observe_deadline_s", None)
-            if cfg_deadline is not None:
-                deadline_s = float(cfg_deadline)
-            elif hasattr(self, "_observe_deadline_s"):
-                deadline_s = float(self._observe_deadline_s)
-
+        effective_deadline = (
+            self.config.observe_deadline_s if deadline_s is None else float(deadline_s)
+        )
         start = time.monotonic()
         screenshots = bool(getattr(getattr(self, "config", None), "screenshots", False))
         while True:
             try:
-                try:
-                    return self.browser.observe(screenshot=screenshots)
-                except TypeError:
-                    return self.browser.observe()
+                return self.browser.observe(screenshot=screenshots)
             except StalePage:
                 elapsed = time.monotonic() - start
-                if elapsed >= deadline_s:
+                if elapsed >= effective_deadline:
                     break
-                try:
-                    self.browser.evaluate(
-                        "Boolean(document.readyState && (document.readyState === 'complete' || document.readyState === 'interactive') && document.body)"
-                    )
-                except Exception:
-                    pass
                 time.sleep(0.06)
 
         # Deadline reached without settling
@@ -487,16 +466,94 @@ class ReflexSession:
         step_t0 = time.perf_counter()
         pre_obs_ms = 0
         try:
-            needs_obs = not self.browser.fresh(self.page)
+            needs_obs = (not self.page) or not self.browser.fresh(self.page)
         except StalePage:
             needs_obs = True
+
+        prior_pending_escalation = self.pending_escalation_reason
 
         if needs_obs:
             obs_t0 = time.perf_counter()
             settled_page = self._observe_settled()
             pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
             if settled_page is None:
+                self.unsettled_count += 1
+                wall_step_ms = round((time.perf_counter() - step_t0) * 1000)
+                step_record = {
+                    "step": len(self.history) + 1,
+                    "actor": "system",
+                    "action": "observe",
+                    "kind": "observe",
+                    "node": None,
+                    "choice": "",
+                    "operation": "OBSERVE",
+                    "target": None,
+                    "rect": None,
+                    "href": None,
+                    "confidence": 0.0,
+                    "target_confidence": None,
+                    "joint_confidence": 0.0,
+                    "target_margin": None,
+                    "latency_ms": pre_obs_ms,
+                    "s1_ms": 0,
+                    "s2_ms": 0,
+                    "act_ms": 0,
+                    "observe_ms": pre_obs_ms,
+                    "step_ms": wall_step_ms,
+                    "model": "",
+                    "text": "",
+                    "text_helper": None,
+                    "text_latency_ms": 0,
+                    "page_changed": False,
+                    "url_changed": False,
+                    "element_state_changed": False,
+                    "effective_progress": False,
+                    "verification": {
+                        "effective_progress": False,
+                        "page_changed": False,
+                        "url_changed": False,
+                        "element_state_changed": False,
+                        "loop_detected": False,
+                        "oscillation_detected": False,
+                        "reason": "page_unsettled",
+                        "note": "page_unsettled",
+                        "status": "bilinmiyor",
+                    },
+                    "note": "page_unsettled",
+                    "escalation_note": "page_unsettled",
+                    "before_url": str(self.page.get("url", "")) if isinstance(self.page, dict) else "",
+                    "url": str(self.page.get("url", "")) if isinstance(self.page, dict) else "",
+                    "after_fingerprint": "",
+                    "usage": {},
+                    "elapsed_ms": self.elapsed(),
+                }
+                self.history.append(step_record)
+                if len(self.history) >= self.config.max_steps:
+                    self.status = "blocked"
+                    self.last_error = f"Reached max steps limit ({self.config.max_steps})"
+                    self.ctx.add_agent_message(self.last_error, kind="escalation_note")
+                    return self.snapshot()
+                if prior_pending_escalation is not None and prior_pending_escalation[0] == "page_unsettled":
+                    trig, reason = prior_pending_escalation
+                    self.pending_escalation_reason = None
+                    self.unsettled_count = 0
+                    return self._handle_escalation(
+                        trigger_type=trig,
+                        reason=reason,
+                        s1_decision=None,
+                        step_t0=step_t0,
+                        s1_ms=0,
+                        pre_obs_ms=pre_obs_ms,
+                    )
+                if self.unsettled_count >= 3:
+                    self.pending_escalation_reason = (
+                        "page_unsettled",
+                        f"Page remained unsettled for {self.unsettled_count} consecutive steps",
+                    )
                 return self.snapshot()
+            self.unsettled_count = 0
+            if self.pending_escalation_reason is not None and self.pending_escalation_reason[0] == "page_unsettled":
+                self.pending_escalation_reason = None
             self.page = settled_page
 
         self._sync_ineffective_clicks(current_url=str(self.page.get("url", "")), page=self.page)
@@ -926,6 +983,8 @@ class ReflexSession:
         pre_obs_ms: int = 0,
     ) -> dict[str, Any]:
         """Run System 2 Supervisor (`qwen/qwen3.8-omni-flash`) to resolve an escalation."""
+        if trigger_type == "page_unsettled":
+            self.unsettled_count = 0
         if step_t0 is None:
             step_t0 = time.perf_counter()
         if len(self.escalations) >= self.config.max_escalations:
@@ -1179,7 +1238,7 @@ class ReflexSession:
             # If System 1 was BLOCKED and Supervisor suggested navigating to a new URL in hint/url, execute GOTO_URL!
             nav_url = _extract_candidate_url(sup, self.page.get("url", "")) if trigger_type in {"blocked", "s1_blocked"} else None
             if nav_url is None:
-                if trigger_type != "progress_milestone":
+                if trigger_type not in {"progress_milestone", "page_unsettled"}:
                     self._noop_escalation_counts[current_fp] = self._noop_escalation_counts.get(current_fp, 0) + 1
                     if self._noop_escalation_counts[current_fp] >= 2:
                         self.status = "waiting_user"
@@ -1198,9 +1257,9 @@ class ReflexSession:
         # Case 4: Supervisor overrides/forces a specific action (or recovery primitive)
         action_dict = self._resolve_supervisor_action(sup, targets, controls)
         if action_dict is None:
-            if trigger_type == "progress_milestone":
+            if trigger_type in {"progress_milestone", "page_unsettled"}:
                 self.ctx.add_agent_message(
-                    f"Progress milestone verified: {sup.reasoning}",
+                    f"Page unsettled: {sup.reasoning}" if trigger_type == "page_unsettled" else f"Progress milestone verified: {sup.reasoning}",
                     kind="escalation_note",
                 )
                 self.status = "ready"
@@ -1531,7 +1590,73 @@ class ReflexSession:
         after_page = self._observe_settled()
         observe_ms = pre_obs_ms + stale_obs_ms + round((time.perf_counter() - obs_after_t0) * 1000)
         if after_page is None:
+            self.unsettled_count += 1
+            action_label = str(action.get("label", ""))
+            if act_res.get("auto_submitted"):
+                action_label = f"{action_label} (submitted search)"
+            wall_step_ms = round((time.perf_counter() - step_t0) * 1000)
+            step_ms = max(wall_step_ms, s1_ms + s2_ms + act_ms + observe_ms)
+            step_record = {
+                "step": len(self.history) + 1,
+                "actor": actor,
+                "action": action_label,
+                "kind": action.get("kind", ""),
+                "node": action.get("node"),
+                "choice": action.get("id", ""),
+                "operation": operation,
+                "target": target,
+                "rect": act_res.get("rect") or action.get("rect"),
+                "href": action.get("href"),
+                "confidence": confidence,
+                "target_confidence": target_confidence,
+                "joint_confidence": joint_confidence,
+                "target_margin": target_margin,
+                "latency_ms": latency_ms,
+                "s1_ms": s1_ms,
+                "s2_ms": s2_ms,
+                "act_ms": act_ms,
+                "observe_ms": observe_ms,
+                "step_ms": step_ms,
+                "model": model_name,
+                "text": typed_text,
+                "text_helper": text_helper_model,
+                "text_latency_ms": text_latency_ms,
+                "page_changed": False,
+                "url_changed": False,
+                "element_state_changed": False,
+                "effective_progress": False,
+                "verification": {
+                    "effective_progress": False,
+                    "page_changed": False,
+                    "url_changed": False,
+                    "element_state_changed": False,
+                    "loop_detected": False,
+                    "oscillation_detected": False,
+                    "reason": "page_unsettled",
+                    "note": "page_unsettled",
+                    "status": "bilinmiyor",
+                },
+                "note": "page_unsettled",
+                "escalation_note": "page_unsettled",
+                "before_url": str(before_page.get("url", "")),
+                "url": str(before_page.get("url", "")),
+                "after_fingerprint": "",
+                "usage": usage,
+                "elapsed_ms": self.elapsed(),
+            }
+            self.history.append(step_record)
+            self.page = {}  # force subsequent step to re-observe without reusing stale page
+            if self.unsettled_count >= 3:
+                self.pending_escalation_reason = (
+                    "page_unsettled",
+                    f"Page remained unsettled for {self.unsettled_count} consecutive steps",
+                )
+            if len(self.history) >= self.config.max_steps:
+                self.status = "blocked"
+                self.last_error = f"Reached max steps limit ({self.config.max_steps})"
+                self.ctx.add_agent_message(self.last_error, kind="escalation_note")
             return self.snapshot()
+        self.unsettled_count = 0
         self.page = after_page
         after_url = str(after_page.get("url", ""))
         if after_url and after_url not in self.ctx.visited_urls:
@@ -1868,28 +1993,4 @@ class ReflexSession:
 
 
 ReflexAgent = ReflexSession
-
-
-def _observe_settled(target: Any, deadline_s: float = 8.0) -> dict[str, Any] | None:
-    """Module-level helper for _observe_settled."""
-    if isinstance(target, ReflexSession):
-        return target._observe_settled(deadline_s=deadline_s)
-    fn = getattr(type(target), "_observe_settled", None)
-    if callable(fn):
-        return fn(target, deadline_s=deadline_s)
-    start = time.monotonic()
-    while True:
-        try:
-            return target.observe()
-        except StalePage:
-            if time.monotonic() - start >= deadline_s:
-                break
-            try:
-                target.evaluate(
-                    "Boolean(document.readyState && (document.readyState === 'complete' || document.readyState === 'interactive') && document.body)"
-                )
-            except Exception:
-                pass
-            time.sleep(0.06)
-    return None
 

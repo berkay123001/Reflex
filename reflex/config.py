@@ -246,6 +246,7 @@ class ReflexConfig(BaseModel):
     s1_strict: bool = False  # System 1 only for confident clicks/typing; scrolling and arbitrary choices go to System 2
     max_steps: int = 80
     max_escalations: int = 40
+    observe_deadline_s: float = 8.0
     require_confirmation_for_destructive: bool = True
     verify_done_with_supervisor: bool = True
     enable_site_memory: bool = False

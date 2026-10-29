@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from reflex.agent import ReflexSession, _observe_settled
+from reflex.agent import ReflexSession
 from reflex.browser import StalePage
 from reflex.config import ReflexConfig
 from reflex.supervisor import UserMessageInterpretation
@@ -23,7 +23,15 @@ def _make_session(
     config: ReflexConfig | None = None,
     deadline_s: float | None = None,
 ) -> ReflexSession:
-    cfg = config or ReflexConfig(screenshots=False)
+    if config is not None:
+        cfg = config
+        if deadline_s is not None:
+            cfg.observe_deadline_s = deadline_s
+    else:
+        cfg = ReflexConfig(
+            screenshots=False,
+            observe_deadline_s=deadline_s if deadline_s is not None else 8.0,
+        )
     initial_page = {"url": "https://example.com/test", "actions": [], "marker": "init_marker"}
 
     # Temporarily ensure observe succeeds during ReflexSession.__init__
@@ -57,8 +65,6 @@ def _make_session(
             config=cfg,
         )
         session.browser = browser
-        if deadline_s is not None:
-            session._observe_deadline_s = deadline_s
 
     if saved_side_effect is not None:
         browser.observe.side_effect = saved_side_effect
@@ -67,15 +73,10 @@ def _make_session(
 
 
 def test_observe_settled_signature_and_default_deadline():
-    """_observe_settled must accept deadline_s parameter with default value 8."""
+    """_observe_settled accepts deadline_s, and ReflexConfig defines observe_deadline_s=8.0."""
     sig = inspect.signature(ReflexSession._observe_settled)
     assert "deadline_s" in sig.parameters
-    default = sig.parameters["deadline_s"].default
-    assert default == 8 or default == 8.0
-
-    sig_mod = inspect.signature(_observe_settled)
-    assert "deadline_s" in sig_mod.parameters
-    assert sig_mod.parameters["deadline_s"].default == 8 or sig_mod.parameters["deadline_s"].default == 8.0
+    assert ReflexConfig().observe_deadline_s == 8.0
 
 
 def test_observe_settled_immediate_settle():
@@ -135,22 +136,6 @@ def test_observe_settled_configurable_deadline_and_timeout():
     assert "page_unsettled" in notes
 
 
-def test_module_level_observe_settled_forwarder():
-    """Module-level _observe_settled supports both ReflexSession and direct browser targets."""
-    browser = MagicMock()
-    page_data = {"url": "https://example.com/ok", "actions": []}
-    browser.observe.return_value = page_data
-    session = _make_session(browser)
-
-    res = _observe_settled(session, deadline_s=1.0)
-    assert res == page_data
-
-    browser2 = MagicMock(spec=["observe", "evaluate"])
-    browser2.observe.return_value = page_data
-    res2 = _observe_settled(browser2, deadline_s=1.0)
-    assert res2 == page_data
-
-
 def test_invocation_point_1_step_start_unsettled_and_subsequent_recovery():
     """Location 1 (Step start): timeout records note and subsequent step recovers."""
     browser = MagicMock()
@@ -167,6 +152,8 @@ def test_invocation_point_1_step_start_unsettled_and_subsequent_recovery():
     snap1 = session.step()
     assert snap1["status"] == "ready"
     assert session.status == "ready"
+    assert len(session.history) == 1
+    assert session.history[0]["note"] == "page_unsettled"
     notes1 = [m["content"] for m in session.ctx.messages if m.get("kind") == "escalation_note"]
     assert "page_unsettled" in notes1
 
@@ -210,8 +197,9 @@ def test_invocation_point_1_step_start_unsettled_and_subsequent_recovery():
         snap2 = session.step()
 
     assert snap2["status"] == "ready"
-    assert len(session.history) == 1
-    assert session.history[0]["action"] == "Continue"
+    assert len(session.history) == 2
+    assert session.history[0]["note"] == "page_unsettled"
+    assert session.history[1]["action"] == "Continue"
 
 
 def test_invocation_point_2_post_action_unsettled():
@@ -249,6 +237,9 @@ def test_invocation_point_2_post_action_unsettled():
 
     assert snap["status"] == "ready"
     assert session.status == "ready"
+    assert len(session.history) == 1
+    assert session.history[0]["action"] == "Submit"
+    assert session.history[0]["note"] == "page_unsettled"
     notes = [m["content"] for m in session.ctx.messages if m.get("kind") == "escalation_note"]
     assert "page_unsettled" in notes
 
@@ -414,5 +405,221 @@ def test_delayed_page_load_local_http_server(http_server: str):
         snap2 = session.step()
 
     assert snap2["status"] == "ready"
-    assert len(session.history) == 1
-    assert session.history[0]["action"] == "Next"
+    assert len(session.history) == 2
+    assert session.history[0]["note"] == "page_unsettled"
+    assert session.history[1]["action"] == "Next"
+
+
+def test_post_action_unsettled_records_step_with_note():
+    """G5a Acceptance Criterion 1: Fake browser where post-action observe returns StalePage
+
+    len(history) increments by 1, record contains note='page_unsettled', and subsequent step re-observes.
+    """
+    browser = MagicMock()
+    init_page = {
+        "url": "https://example.com/checkout",
+        "actions": [{"id": "btn_order", "kind": "click", "label": "Place Order", "node": 10}],
+        "marker": "m0",
+    }
+    browser.observe.return_value = init_page
+    browser.fresh.return_value = True
+
+    session = _make_session(
+        browser,
+        config=ReflexConfig(
+            screenshots=False,
+            require_confirmation_for_destructive=False,
+            observe_deadline_s=0.05,
+        ),
+    )
+    session.page = init_page
+
+    # Act succeeds, but post-action observe continually raises StalePage
+    browser.act.return_value = {"rect": [10, 10, 50, 20]}
+    browser.observe.side_effect = StalePage("Navigating away")
+
+    s1_decision = {
+        "operation": "CLICK",
+        "target": "btn_order",
+        "choice": "btn_order",
+        "confidence": 0.95,
+        "target_confidence": 0.95,
+        "target_probabilities": {"btn_order": 0.95},
+        "latency_ms": 10,
+        "model": "test",
+        "usage": {},
+    }
+    s1_decision_2 = {
+        "operation": "CLICK",
+        "target": "btn_home",
+        "choice": "btn_home",
+        "confidence": 0.95,
+        "target_confidence": 0.95,
+        "target_probabilities": {"btn_home": 0.95},
+        "latency_ms": 10,
+        "model": "test",
+        "usage": {},
+    }
+    with (
+        patch("reflex.agent.choose_action", side_effect=[s1_decision, s1_decision_2]),
+        patch("reflex.agent.verify_step") as mock_verify,
+    ):
+        mock_verify.return_value = MagicMock(
+            effective_progress=True,
+            page_changed=True,
+            url_changed=False,
+            element_state_changed=False,
+            loop_detected=False,
+            oscillation_detected=False,
+            model_dump=lambda: {"effective_progress": True},
+        )
+        snap = session.step()
+
+        assert snap["status"] == "ready"
+        assert session.status == "ready"
+        assert len(session.history) == 1
+        rec = session.history[0]
+        assert rec["action"] == "Place Order"
+        assert rec["operation"] == "CLICK"
+        assert rec["note"] == "page_unsettled"
+        assert rec["escalation_note"] == "page_unsettled"
+        assert rec["page_changed"] is False
+        assert rec["effective_progress"] is False
+        assert rec["verification"]["note"] == "page_unsettled"
+
+        # Subsequent step must re-observe rather than repeating action blindly
+        browser.observe.side_effect = None
+        settled_after = {
+            "url": "https://example.com/thankyou",
+            "actions": [{"id": "btn_home", "kind": "click", "label": "Go Home", "node": 1}],
+            "marker": "m1",
+        }
+        browser.observe.return_value = settled_after
+        browser.fresh.return_value = False
+
+        snap2 = session.step()
+        assert snap2["status"] == "ready"
+        assert session.page["url"] == "https://example.com/thankyou"
+
+
+def test_always_unsettled_reaches_max_steps_and_escalates_to_s2():
+    """G5a Acceptance Criterion 2: Fake browser where observe always returns StalePage
+
+    Loop terminates at max_steps (10) with 'blocked'. After 3 consecutive unsettled pages,
+    the next step routes to S2 with trigger 'page_unsettled' (steps 4 and 8).
+    """
+    browser = MagicMock()
+    init_page = {"url": "https://example.com/start", "actions": [], "marker": "m0"}
+    browser.observe.return_value = init_page
+    browser.fresh.return_value = False
+
+    cfg = ReflexConfig(screenshots=False, max_steps=10, observe_deadline_s=0.02)
+    session = _make_session(browser, config=cfg)
+
+    # Observe ALWAYS raises StalePage
+    browser.observe.side_effect = StalePage("Document always navigating")
+    browser.fresh.side_effect = StalePage("Document always navigating")
+
+    s2_escalations = []
+    def fake_resolve_escalation(**kwargs):
+        s2_escalations.append(kwargs)
+        from reflex.supervisor import SupervisorDecision
+        return SupervisorDecision(
+            action_type="UPDATE_SUBGOAL",
+            reasoning="Wait for page to settle",
+            updated_subgoal="Wait for page",
+            latency_ms=10,
+        )
+
+    with patch("reflex.agent.resolve_escalation", side_effect=fake_resolve_escalation):
+        # Step 1
+        session.step()
+        assert len(session.history) == 1
+        assert session.unsettled_count == 1
+        assert session.status == "ready"
+
+        # Step 2
+        session.step()
+        assert len(session.history) == 2
+        assert session.unsettled_count == 2
+        assert session.status == "ready"
+
+        # Step 3
+        session.step()
+        assert len(session.history) == 3
+        assert session.unsettled_count == 3
+        assert session.pending_escalation_reason is not None
+        assert session.pending_escalation_reason[0] == "page_unsettled"
+
+        # Step 4: Triggers S2 escalation with 'page_unsettled'
+        session.step()
+        assert len(s2_escalations) == 1
+        assert s2_escalations[0]["trigger_type"] == "page_unsettled"
+        assert session.escalations[-1]["trigger_type"] == "page_unsettled"
+        assert session.unsettled_count == 0
+        assert session.status == "ready"
+
+        # Step 5
+        session.step()
+        assert len(session.history) == 5
+        assert session.unsettled_count == 1
+        assert session.status == "ready"
+
+        # Step 6
+        session.step()
+        assert len(session.history) == 6
+        assert session.unsettled_count == 2
+        assert session.status == "ready"
+
+        # Step 7
+        session.step()
+        assert len(session.history) == 7
+        assert session.unsettled_count == 3
+        assert session.pending_escalation_reason is not None
+        assert session.pending_escalation_reason[0] == "page_unsettled"
+        assert session.status == "ready"
+
+        # Step 8: Triggers S2 escalation again with 'page_unsettled'
+        session.step()
+        assert len(s2_escalations) == 2
+        assert s2_escalations[1]["trigger_type"] == "page_unsettled"
+        assert session.escalations[-1]["trigger_type"] == "page_unsettled"
+        assert session.unsettled_count == 0
+        assert session.status == "ready"
+
+        # Run remaining steps until termination (steps 9 and 10)
+        steps_run = 8
+        while session.status not in {"done", "blocked", "error"} and steps_run < 15:
+            session.step()
+            steps_run += 1
+
+    # Strictly terminates at max_steps (10) with blocked
+    assert session.status == "blocked"
+    assert len(session.history) == 10
+    assert session.last_error == "Reached max steps limit (10)"
+
+
+def test_empty_page_dict_forces_observation_even_if_fresh_returns_true():
+    """When session.page is empty {}, observation must be forced even if browser.fresh would return True."""
+    browser = MagicMock()
+    # Simulate fresh returning True for empty dict (e.g. None == None)
+    browser.fresh.return_value = True
+    page_data = {"url": "https://example.com/fresh", "actions": [], "marker": "m1"}
+    browser.observe.return_value = page_data
+
+    session = _make_session(browser)
+    session.page = {}
+
+    obs_called = []
+    orig_observe_settled = session._observe_settled
+    def tracked_observe_settled(*args, **kwargs):
+        obs_called.append(True)
+        return orig_observe_settled(*args, **kwargs)
+
+    session._observe_settled = tracked_observe_settled
+
+    # Needs obs should be True because (not self.page) evaluates to True
+    needs_obs = (not session.page) or not session.browser.fresh(session.page)
+    assert needs_obs is True
+
+

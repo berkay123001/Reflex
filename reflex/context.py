@@ -91,11 +91,6 @@ class DualTierContext(BaseModel):
             for m in self.chat_log
         ]
 
-    @property
-    def asked_questions(self) -> list[str]:
-        """Alias for session-level unattended questions."""
-        return self.unattended_questions
-
     def add_user_message(self, content: str, kind: str = "chat", fact_key: str | None = None) -> None:
         """Record a user message and store structured facts in `user_facts` when `fact_key` is provided."""
         text = content.strip()

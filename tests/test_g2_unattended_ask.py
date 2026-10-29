@@ -106,8 +106,6 @@ def test_unattended_first_ask_converts_to_default_and_continues_with_override() 
         assert session.last_asked_question is None
         assert session.pending_fact_key is None
         assert session.ctx.unattended_questions == [question_text]
-        assert session.unattended_questions == [question_text]
-        assert session._unattended_questions == [question_text]
 
         # Verify escalation note message logged
         esc_notes = [m.content for m in session.ctx.chat_log if m.kind == "escalation_note"]
