@@ -13,11 +13,19 @@ Each session runs inside its own dedicated background thread and its own isolate
 Chromium instance (never port 9333). Only the session's background thread touches
 the `ReflexSession` instance; `reflex_reply`, `reflex_confirm`, and `reflex_stop`
 enqueue commands to that thread.
+
+Elicitation (M3):
+When the MCP client advertises elicitation support (e.g., Claude Code >= 2.1.76),
+`reflex_wait` directly elicits user input for `waiting_user` and action approval
+for `waiting_confirmation` via `ctx.elicit(...)`. Approval is never granted
+automatically on the server; declined, cancelled, or unanswered confirmation
+elicitations always resolve to `approved=False`.
 """
 
 from __future__ import annotations
 
 from concurrent.futures import Future
+import inspect
 import logging
 import os
 import queue
@@ -27,7 +35,10 @@ import uuid
 from typing import Any
 from urllib.parse import urlsplit
 
-from mcp.server.fastmcp import FastMCP
+import anyio
+from mcp import types as mcp_types
+from mcp.server.fastmcp import Context, FastMCP
+from pydantic import BaseModel, Field
 
 from reflex.agent import ReflexSession
 from reflex.browser.isolated import (
@@ -40,6 +51,75 @@ from reflex.config import ReflexConfig
 logger = logging.getLogger("reflex.mcp_server")
 
 MAX_WAIT_TIMEOUT_S = 50.0
+
+
+class UserReplyElicitationSchema(BaseModel):
+    """Schema for `waiting_user` elicitation via `ctx.elicit`."""
+
+    text: str = Field(
+        default="",
+        description="Your answer or instruction for the browser agent",
+    )
+
+
+class ActionConfirmElicitationSchema(BaseModel):
+    """Schema for `waiting_confirmation` elicitation via `ctx.elicit`."""
+
+    approved: bool = Field(
+        default=False,
+        description="Set true to approve executing this action, or false to reject it",
+    )
+    alternative_instruction: str = Field(
+        default="",
+        description="Optional alternative instruction if rejecting the action",
+    )
+
+
+def _client_supports_elicitation(ctx: Context[Any, Any, Any] | Any | None) -> bool:
+    """Return True if `ctx` represents an MCP client session that supports elicitation."""
+    if ctx is None:
+        return False
+    elicit_fn = getattr(ctx, "elicit", None)
+    if not callable(elicit_fn):
+        return False
+
+    explicit_flag = getattr(ctx, "supports_elicitation", None)
+    if isinstance(explicit_flag, bool):
+        return explicit_flag
+
+    try:
+        req_ctx = ctx.request_context
+    except Exception:
+        # If `ctx` is a lightweight test stub providing `.elicit` without `request_context`,
+        # allow elicitation unless explicitly disabled.
+        return "_request_context" not in getattr(ctx, "__dict__", {})
+
+    if req_ctx is None:
+        return False
+
+    session = getattr(req_ctx, "session", None)
+    if session is None:
+        return False
+
+    check_cap = getattr(session, "check_client_capability", None)
+    if callable(check_cap):
+        try:
+            return bool(
+                check_cap(
+                    mcp_types.ClientCapabilities(
+                        elicitation=mcp_types.ElicitationCapability(),
+                    )
+                )
+            )
+        except Exception:
+            pass
+
+    client_params = getattr(session, "_client_params", None)
+    if client_params is not None:
+        caps = getattr(client_params, "capabilities", None)
+        return getattr(caps, "elicitation", None) is not None
+
+    return False
 
 
 def _extract_final_answer(session: Any, snap: dict[str, Any]) -> str | None:
@@ -245,8 +325,10 @@ class _SessionWorker:
         self._thread.start()
         self._init_event.wait(timeout=init_timeout_s)
         with self._cond:
-            status_out = self._initial_status if self.status == "starting" else (
-                "running" if self.status in {"starting", "ready"} else self._initial_status
+            status_out = (
+                self._initial_status
+                if self.status == "starting"
+                else ("running" if self.status in {"starting", "ready"} else self._initial_status)
             )
             return {"session_id": self.session_id, "status": status_out}
 
@@ -344,10 +426,21 @@ class _SessionWorker:
             if cmd == "reply":
                 session.reply_user(str(kwargs.get("text") or ""))
             elif cmd == "confirm":
-                session.confirm_action(
-                    bool(kwargs.get("approved", False)),
-                    str(kwargs.get("alternative_instruction") or ""),
-                )
+                try:
+                    sig = inspect.signature(session.confirm_action)
+                    accepts_alt = len(sig.parameters) >= 2 or any(
+                        p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+                        for p in sig.parameters.values()
+                    )
+                except Exception:
+                    accepts_alt = True
+                if accepts_alt:
+                    session.confirm_action(
+                        bool(kwargs.get("approved", False)),
+                        str(kwargs.get("alternative_instruction") or ""),
+                    )
+                else:
+                    session.confirm_action(bool(kwargs.get("approved", False)))
             with self._cond:
                 is_ready = str(getattr(session, "status", "ready")) == "ready"
                 self._sync_from_session_locked(session, actively_running=is_ready)
@@ -357,7 +450,6 @@ class _SessionWorker:
         except Exception as exc:
             with self._cond:
                 self._set_error_locked(str(exc))
-                res = dict(self._payload)
             if not fut.done():
                 fut.set_exception(exc)
         return False
@@ -532,6 +624,78 @@ def _get_worker(session_id: str) -> _SessionWorker:
     return worker
 
 
+async def _handle_elicitation_if_supported(
+    worker: _SessionWorker,
+    payload: dict[str, Any],
+    ctx: Context[Any, Any, Any] | Any | None,
+    remaining_timeout_s: float,
+) -> dict[str, Any]:
+    """If client supports elicitation, handle `waiting_user` / `waiting_confirmation` via `ctx.elicit`."""
+    while _client_supports_elicitation(ctx) and payload.get("status") in {"waiting_user", "waiting_confirmation"}:
+        status = payload.get("status")
+        if status == "waiting_user":
+            question = str(payload.get("question") or "Additional information is needed to continue:")
+            try:
+                elicit_res = await ctx.elicit(message=question, schema=UserReplyElicitationSchema)
+            except Exception as exc:
+                logger.debug("Elicitation for waiting_user failed or unsupported: %s", exc)
+                return payload
+
+            action = getattr(elicit_res, "action", None)
+            data = getattr(elicit_res, "data", None)
+            reply_text = ""
+            if action == "accept" and data is not None:
+                if isinstance(data, dict):
+                    reply_text = str(data.get("text") or data.get("reply") or "").strip()
+                elif isinstance(data, str):
+                    reply_text = data.strip()
+                else:
+                    reply_text = str(getattr(data, "text", None) or getattr(data, "reply", None) or "").strip()
+
+            if not reply_text:
+                # Declined, cancelled, or empty reply -> return waiting_user state without auto-answering
+                return payload
+
+            await anyio.to_thread.run_sync(worker.enqueue_reply, reply_text)
+            wait_budget = max(0.5, min(remaining_timeout_s, MAX_WAIT_TIMEOUT_S))
+            payload = await anyio.to_thread.run_sync(worker.wait_for_state_change, wait_budget)
+
+        elif status == "waiting_confirmation":
+            pending = payload.get("pending_action") or {}
+            if isinstance(pending, dict):
+                summary = str(pending.get("summary") or pending.get("action_label") or "irreversible action")
+                reason = str(pending.get("reason") or "")
+                prompt_msg = f"Confirmation required for {summary}" + (f" ({reason})" if reason else "")
+            else:
+                prompt_msg = f"Confirmation required: {pending}"
+
+            approved = False
+            alt_instruction = ""
+            try:
+                elicit_res = await ctx.elicit(message=prompt_msg, schema=ActionConfirmElicitationSchema)
+                action = getattr(elicit_res, "action", None)
+                data = getattr(elicit_res, "data", None)
+                # Approval is NEVER automatic: only explicit accept + approved=True is True.
+                # Declined, cancelled, or unanswered elicitation -> approved=False.
+                if action == "accept" and data is not None:
+                    if isinstance(data, dict):
+                        approved = bool(data.get("approved", False))
+                        alt_instruction = str(data.get("alternative_instruction") or "")
+                    else:
+                        approved = bool(getattr(data, "approved", False))
+                        alt_instruction = str(getattr(data, "alternative_instruction", "") or "")
+            except Exception as exc:
+                logger.debug("Elicitation for waiting_confirmation failed; defaulting to approved=False: %s", exc)
+                approved = False
+                alt_instruction = ""
+
+            await anyio.to_thread.run_sync(worker.enqueue_confirm, approved, alt_instruction)
+            wait_budget = max(0.5, min(remaining_timeout_s, MAX_WAIT_TIMEOUT_S))
+            payload = await anyio.to_thread.run_sync(worker.wait_for_state_change, wait_budget)
+
+    return payload
+
+
 mcp = FastMCP("reflex")
 
 
@@ -559,13 +723,23 @@ def reflex_start(
 
 
 @mcp.tool()
-def reflex_wait(
+async def reflex_wait(
     session_id: str,
     timeout_s: float = 50.0,
+    ctx: Context[Any, Any, Any] | None = None,
 ) -> dict[str, Any]:
-    """Wait until the session status changes (paused/done/blocked/error) or timeout_s (<=50s) expires."""
+    """Wait until the session status changes (paused/done/blocked/error) or timeout_s (<=50s) expires.
+
+    If the client supports MCP elicitation (`ctx.elicit`), `waiting_user` and
+    `waiting_confirmation` states are prompted directly inside `reflex_wait`.
+    """
     worker = _get_worker(session_id)
-    return worker.wait_for_state_change(timeout_s=timeout_s)
+    clamped = min(max(float(timeout_s), 0.0), MAX_WAIT_TIMEOUT_S)
+    t0 = time.monotonic()
+    payload = await anyio.to_thread.run_sync(worker.wait_for_state_change, clamped)
+    elapsed = time.monotonic() - t0
+    remaining = max(0.5, clamped - elapsed)
+    return await _handle_elicitation_if_supported(worker, payload, ctx, remaining)
 
 
 @mcp.tool()
