@@ -28,6 +28,12 @@ from typing import Any
 from urllib.parse import urlparse, urlsplit
 
 from reflex.agent import ReflexSession
+from reflex.browser.isolated import (
+    _restore_harness_daemon_name,
+    _set_harness_daemon_name,
+    is_port_open,
+    managed_isolated_browser,
+)
 from reflex.config import ReflexConfig
 
 logger = logging.getLogger("reflex.eval")
@@ -902,177 +908,6 @@ def run_eval(
         print("\n" + format_summary_report(summary), flush=True)
 
     return task_results, summary
-
-
-def is_port_open(host: str, port: int, timeout: float = 0.4) -> bool:
-    """Check if a TCP port is currently open and accepting connections."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.settimeout(timeout)
-        return sock.connect_ex((host, port)) == 0
-
-
-@contextlib.contextmanager
-def managed_isolated_browser(
-    port: int = 9444,
-    headless: bool = True,
-) -> Generator[str, None, None]:
-    """Provide an isolated Chromium browser instance and environment lifecycle for evaluation.
-
-    Guarantees:
-    - Rejects port 9333 with ValueError.
-    - Sets BU_CDP_URL to http://127.0.0.1:{port} and BU_NAME to eval_{port}.
-    - If no process is listening on {port}, launches an isolated Chromium subprocess
-      with a dedicated temporary --user-data-dir.
-    - Cleanly shuts down the subprocess and removes the temporary profile directory on exit.
-    - Restores previous environment variables and CDP hooks in finally:.
-    """
-    env_cdp = os.environ.get("BU_CDP_URL")
-    if env_cdp:
-        try:
-            parsed_port = urlsplit(env_cdp).port
-            if parsed_port == 9333:
-                raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
-            if parsed_port and int(port) == 9444:
-                port = parsed_port
-        except ValueError:
-            raise
-        except Exception:
-            pass
-
-    if int(port) == 9333:
-        raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
-
-    cdp_url = f"http://127.0.0.1:{port}"
-    old_cdp_url = os.environ.get("BU_CDP_URL")
-    old_bu_name = os.environ.get("BU_NAME")
-    os.environ["BU_CDP_URL"] = cdp_url
-    os.environ["BU_NAME"] = f"eval_{port}"
-    # browser_harness reads BU_NAME once at import; without this the client keeps talking to the
-    # "default" daemon (which may be attached to the shared 9333 browser) instead of eval_{port}.
-    harness_names = _set_harness_daemon_name(f"eval_{port}")
-
-    old_ensure = None
-    try:
-        import reflex.browser.cdp as r_cdp
-        old_ensure = r_cdp.ensure_chromium_cdp
-        r_cdp.ensure_chromium_cdp = lambda *args, **kwargs: None
-    except Exception:
-        pass
-
-    temp_dir_obj: tempfile.TemporaryDirectory[str] | None = None
-    proc: subprocess.Popen[Any] | None = None
-
-    try:
-        if not is_port_open("127.0.0.1", port):
-            binary = (
-                shutil.which("chromium")
-                or shutil.which("chromium-browser")
-                or shutil.which("google-chrome")
-            )
-            if binary:
-                temp_dir_obj = tempfile.TemporaryDirectory(prefix="reflex_eval_profile_")
-                user_data_dir = temp_dir_obj.name
-
-                cmd = [
-                    binary,
-                    f"--remote-debugging-port={port}",
-                    f"--user-data-dir={user_data_dir}",
-                    "--no-first-run",
-                    "--no-default-browser-check",
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-gpu",
-                    "--disk-cache-size=1048576",
-                    "--media-cache-size=1048576",
-                    "--window-size=1280,900",
-                    "--lang=tr-TR",
-                ]
-                if headless:
-                    cmd.insert(1, "--headless=new")
-
-                proc = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
-
-                deadline = time.monotonic() + 10.0
-                while time.monotonic() < deadline:
-                    if is_port_open("127.0.0.1", port):
-                        time.sleep(0.2)
-                        break
-                    if proc.poll() is not None:
-                        logger.warning("Chromium process exited prematurely with code %s", proc.returncode)
-                        break
-                    time.sleep(0.1)
-            else:
-                logger.warning("No Chromium executable found in PATH; running without spawned browser.")
-
-        yield cdp_url
-
-    finally:
-        if proc is not None:
-            try:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=3.0)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait(timeout=2.0)
-            except Exception as exc:
-                logger.warning("Error terminating Chromium subprocess: %s", exc)
-
-        if temp_dir_obj is not None:
-            try:
-                temp_dir_obj.cleanup()
-            except Exception as exc:
-                logger.warning("Error cleaning up temporary directory: %s", exc)
-
-        try:
-            from browser_harness import admin
-            if hasattr(admin, "stop_remote_daemon"):
-                admin.stop_remote_daemon(f"eval_{port}")
-        except Exception:
-            pass
-
-        if old_ensure is not None:
-            try:
-                import reflex.browser.cdp as r_cdp
-                r_cdp.ensure_chromium_cdp = old_ensure
-            except Exception:
-                pass
-
-        if old_cdp_url is not None:
-            os.environ["BU_CDP_URL"] = old_cdp_url
-        else:
-            os.environ.pop("BU_CDP_URL", None)
-
-        if old_bu_name is not None:
-            os.environ["BU_NAME"] = old_bu_name
-        else:
-            os.environ.pop("BU_NAME", None)
-        _restore_harness_daemon_name(harness_names)
-
-
-def _set_harness_daemon_name(name: str) -> dict[str, str]:
-    """Point browser_harness's import-time daemon NAME at `name`; return previous values for restore."""
-    previous: dict[str, str] = {}
-    for module_name in ("browser_harness.admin", "browser_harness.helpers"):
-        module = sys.modules.get(module_name)
-        if module is None:
-            with contextlib.suppress(ImportError):
-                module = __import__(module_name, fromlist=["NAME"])
-        if module is not None and hasattr(module, "NAME"):
-            previous[module_name] = module.NAME
-            module.NAME = name
-    return previous
-
-
-def _restore_harness_daemon_name(previous: dict[str, str]) -> None:
-    for module_name, name in previous.items():
-        module = sys.modules.get(module_name)
-        if module is not None:
-            module.NAME = name
 
 
 def main(argv: list[str] | None = None) -> int:
