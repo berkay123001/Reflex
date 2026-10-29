@@ -22,6 +22,7 @@ from tests.test_form_submit_gate import _click, _free_port, _snapshot_url, chrom
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 OVERLAY_FIXTURE = FIXTURES / "overlay_radios.html"
 ETIKET_RISK_FIXTURE = FIXTURES / "etiket_risk.html"
+KISA_KELIME_FIXTURE = FIXTURES / "kisa_kelime.html"
 
 
 @contextmanager
@@ -254,7 +255,8 @@ _CUSTOM_QUIZ_H5_HTML = """<!doctype html>
       border: 1px solid #ddd;
     }
     .circle-wrap { margin-right: 8px; }
-    .circle { display: inline-block; width: 20px; height: 20px; }
+    .circle { font-family: 'Material Symbols'; display: inline-block; width: 20px; height: 20px; }
+    .circle-lig { display: inline-block; width: 20px; height: 20px; letter-spacing: -0.35em; }
     .circle-dot { display: none; }
   </style>
 </head>
@@ -262,23 +264,23 @@ _CUSTOM_QUIZ_H5_HTML = """<!doctype html>
   <div class="quiz-q">
     <h2>1. İş görüşmesinde işler yolunda gitmedi, ne yaparsın?</h2>
     <h5 class="flex items-start">
-      <span class="circle-wrap"><img class="circle" alt="circle"><img class="circle-dot" alt="circle-dot"></span>
+      <span class="circle-wrap"><span class="circle">circle</span><span class="circle-dot">circle-dot</span></span>
       Hatamı kabul eder ve bu deneyimi gelişme fırsatına dönüştürmeye çalışırım.
     </h5>
     <h5 class="flex items-start">
-      <span class="circle-wrap"><span class="circle">circle</span><span class="circle-dot">circle-dot</span></span>
+      <span class="circle-wrap"><span class="circle-lig">circle</span><span class="circle-dot">circle-dot</span></span>
       Öfkeyi hızlı bir şekilde kontrol ederim ve pozitif bir bakış açısı geliştiririm.
     </h5>
     <h5 class="flex items-start">
-      <span class="circle-wrap"><i class="circle" title="circle"></i><i class="circle-dot" title="circle-dot"></i></span>
+      <span class="circle-wrap"><i class="circle">circle</i><i class="circle-dot">circle-dot</i></span>
       Değişikliklere hızlı bir şekilde uyum sağlarım ve yeni durumlara adapte olurum.
     </h5>
     <h5 class="flex items-start">
-      <span class="circle-wrap"><img class="circle" alt="circle"><img class="circle-dot" alt="circle-dot"></span>
+      <span class="circle-wrap"><span class="circle">circle</span><span class="circle-dot">circle-dot</span></span>
       Ekiple fikir alışverişi yapar ve herkesin karekterine uygun görevlendirmeyle başarıya ulaşırız.
     </h5>
   </div>
-  <a href="https://example.test/more">Daha Fazla Sana Özel İçerikler <img alt="arrow-right-white" style="display:inline-block;width:12px;height:12px"></a>
+  <a href="https://example.test/more">Daha Fazla Sana Özel İçerikler <span class="circle">arrow_forward</span></a>
 </body>
 </html>
 """
@@ -307,7 +309,7 @@ def test_f12_custom_h5_quiz_options_strip_icon_class_residue_and_are_listed(
     for lbl in labels:
         assert "circle" not in lbl
         assert "circle-dot" not in lbl
-        assert "arrow-right-white" not in lbl
+        assert "arrow_forward" not in lbl
 
     assert "Daha Fazla Sana Özel İçerikler" in labels
 
@@ -340,5 +342,21 @@ def test_f12b_material_symbols_icon_fixture_stripped(chromium_port: int, tmp_pat
     snap = _snapshot_url(chromium_port, html_file.resolve().as_uri())
     labels = [a["label"] for a in snap["actions"] if a.get("kind") == "click"]
     assert labels == ["Şık metni"]
+
+
+def test_f12c_kisa_kelime_fixture_preserves_short_words(chromium_port: int) -> None:
+    """F12c: tests/fixtures/kisa_kelime.html keeps short 3+ letter words while stripping ligature icons."""
+    snap = _snapshot_url(chromium_port, KISA_KELIME_FIXTURE.resolve().as_uri())
+    labels = [a["label"] for a in snap["actions"] if a.get("kind") == "click"]
+    assert labels == [
+        "Ara",
+        "Yeni Sezon",
+        "Sale Kulaklık",
+        "Tek yön",
+        "Gidiş Dönüş",
+        "Oyna",
+        "Evet Hayır",
+    ]
+
 
 

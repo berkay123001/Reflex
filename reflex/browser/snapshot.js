@@ -24,13 +24,14 @@
     return '';
   };
   let nameCache = new Map();
-  const isIconEl = (el, txt, hasOtherTxt) => {
+  const iconRange = document.createRange();
+  const isIconEl = (el, txt) => {
     if (el.children.length > 0 || txt.length < 3 || /\s/.test(txt) || !/[a-z]/i.test(txt)) return false;
-    if (hasOtherTxt || el.tagName === 'IMG' || txt.length >= 5) {
-      const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && r.width <= 1.5 * r.height) return true;
-    }
-    return /icon|symbol|material/i.test(getComputedStyle(el).fontFamily.split(',')[0]);
+    const st = getComputedStyle(el);
+    if (/icon|symbol|material/i.test(st.fontFamily.split(',')[0])) return true;
+    iconRange.selectNodeContents(el);
+    const w = iconRange.getBoundingClientRect().width;
+    return w > 0 && w <= 1.2 * (parseFloat(st.fontSize) || 16);
   };
   const name = (e,seen=new Set(),parentVis=null) => {
     if (!e || seen.has(e)) return '';
@@ -43,19 +44,12 @@
       [...(e.labels||[])].map(l=>name(l,seen)).filter(Boolean).join(' ') ||
       choiceFallbackLabel(e,seen) ||
       (['button','submit','reset'].includes(e.type) ? e.value : '') || e.getAttribute('alt') ||
-      (e.tagName==='INPUT' ? '' : (() => {
-        const parts=[];
-        for (const n of e.childNodes) {
-          if (n.nodeType===3) {
-            if (n.textContent.trim()) parts.push({el:null,txt:n.textContent});
-          } else if (n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' && (!(parentVis ??= visible(e)) || visible(n))) {
-            const sub=name(n,seen,parentVis);
-            if (sub) parts.push({el:n,txt:sub});
-          }
-        }
-        const multi=parts.length>1;
-        return parts.map(p=>p.el && isIconEl(p.el,p.txt,multi) ? '' : p.txt).join(' ').trim();
-      })()) ||
+      (e.tagName==='INPUT' ? '' : [...e.childNodes].map(n => {
+        if (n.nodeType===3) return n.textContent;
+        if (n.nodeType!==1 || ['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) || n.getAttribute('aria-hidden')==='true' || ((parentVis ??= visible(e)) && !visible(n))) return '';
+        const sub = name(n,seen,parentVis);
+        return sub && isIconEl(n, sub) ? '' : sub;
+      }).join(' ').trim()) ||
       e.getAttribute('title') || e.getAttribute('placeholder') || '';
     const res = raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
     if (top && nameCache) nameCache.set(e, res);
