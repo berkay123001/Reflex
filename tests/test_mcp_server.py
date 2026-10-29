@@ -644,6 +644,34 @@ def test_f5_main_sets_reflex_env_path_when_cwd_has_no_dotenv(tmp_path: Path, mon
     assert get_env_path() == expected
 
 
+def test_f6_extract_final_answer_ignores_s2_reasoning_and_elicitation_stub_cleanup() -> None:
+    """F6: _extract_final_answer must not fall back to S2 internal reasoning, and _client_supports_elicitation requires explicit flag or real request_context."""
+    from reflex.mcp_server import _client_supports_elicitation, _extract_final_answer
+
+    snap_only_reasoning = {
+        "context": {"chat_log": []},
+        "escalations": [{"reasoning": "Internal S2 chain-of-thought only", "summary_for_user": ""}],
+    }
+    assert _extract_final_answer(object(), snap_only_reasoning) is None
+
+    snap_with_summary = {
+        "context": {"chat_log": []},
+        "escalations": [{"reasoning": "Internal S2 thought", "summary_for_user": "Kullanıcıya özet yanıt"}],
+    }
+    assert _extract_final_answer(object(), snap_with_summary) == "Kullanıcıya özet yanıt"
+
+    class _BareStubWithElicitOnly:
+        async def elicit(self, **kwargs: Any) -> Any:
+            return None
+
+        @property
+        def request_context(self) -> Any:
+            raise ValueError("Context is not available outside of a request")
+
+    assert _client_supports_elicitation(_BareStubWithElicitOnly()) is False
+
+
+
 
 
 

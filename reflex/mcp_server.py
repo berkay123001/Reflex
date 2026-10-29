@@ -25,7 +25,6 @@ elicitations always resolve to `approved=False`.
 from __future__ import annotations
 
 from concurrent.futures import Future
-import inspect
 import logging
 import os
 from pathlib import Path
@@ -91,9 +90,7 @@ def _client_supports_elicitation(ctx: Context[Any, Any, Any] | Any | None) -> bo
     try:
         req_ctx = ctx.request_context
     except Exception:
-        # If `ctx` is a lightweight test stub providing `.elicit` without `request_context`,
-        # allow elicitation unless explicitly disabled.
-        return "_request_context" not in getattr(ctx, "__dict__", {})
+        return False
 
     if req_ctx is None:
         return False
@@ -125,34 +122,21 @@ def _client_supports_elicitation(ctx: Context[Any, Any, Any] | Any | None) -> bo
 
 def _extract_final_answer(session: Any, snap: dict[str, Any]) -> str | None:
     """Extract the final answer when a session finishes with `status == 'done'`."""
-    direct = snap.get("final_answer") or getattr(session, "final_answer", None)
-    if isinstance(direct, str) and direct.strip():
-        return direct.strip()
-
     ctx_dict = snap.get("context") or {}
     if isinstance(ctx_dict, dict):
         chat_log = ctx_dict.get("chat_log") or []
         if isinstance(chat_log, list):
             for msg in reversed(chat_log):
-                if not isinstance(msg, dict) or msg.get("role") not in {"assistant", "agent"}:
-                    continue
-                content = str(msg.get("content") or msg.get("text") or "").strip()
-                if content:
-                    return content
-        chat_msgs = ctx_dict.get("chat_messages") or []
-        if isinstance(chat_msgs, list):
-            for msg in reversed(chat_msgs):
-                if isinstance(msg, dict) and msg.get("role") in {"assistant", "agent"}:
-                    content = str(msg.get("text") or msg.get("content") or "").strip()
+                if isinstance(msg, dict) and msg.get("role") == "assistant":
+                    content = str(msg.get("content") or "").strip()
                     if content:
                         return content
 
     for esc in reversed(snap.get("escalations") or []):
         if isinstance(esc, dict):
-            for key in ("summary_for_user", "final_answer", "reasoning"):
-                val = esc.get(key)
-                if isinstance(val, str) and val.strip():
-                    return val.strip()
+            val = esc.get("summary_for_user")
+            if isinstance(val, str) and val.strip():
+                return val.strip()
     return None
 
 
@@ -160,30 +144,20 @@ def _extract_question(session: Any, snap: dict[str, Any]) -> str | None:
     """Extract the pending question when a session is in `status == 'waiting_user'`."""
     for candidate in (
         snap.get("asked_question"),
-        snap.get("question"),
         getattr(session, "last_asked_question", None),
     ):
         if isinstance(candidate, str) and candidate.strip():
             return candidate.strip()
 
-    pending_q = getattr(session, "pending_question", None)
-    if isinstance(pending_q, dict):
-        q_str = pending_q.get("question")
-        if isinstance(q_str, str) and q_str.strip():
-            return q_str.strip()
-    elif isinstance(pending_q, str) and pending_q.strip():
-        return pending_q.strip()
-
     ctx_dict = snap.get("context") or {}
     if isinstance(ctx_dict, dict):
-        for list_key in ("chat_log", "chat_messages"):
-            msgs = ctx_dict.get(list_key)
-            if isinstance(msgs, list):
-                for msg in reversed(msgs):
-                    if isinstance(msg, dict) and msg.get("role") in {"assistant", "agent"}:
-                        txt = msg.get("content") or msg.get("text") or msg.get("message")
-                        if isinstance(txt, str) and txt.strip():
-                            return txt.strip()
+        chat_log = ctx_dict.get("chat_log") or []
+        if isinstance(chat_log, list):
+            for msg in reversed(chat_log):
+                if isinstance(msg, dict) and msg.get("role") == "assistant":
+                    txt = msg.get("content")
+                    if isinstance(txt, str) and txt.strip():
+                        return txt.strip()
 
     for tc in reversed(snap.get("text_calls") or []):
         if isinstance(tc, dict) and isinstance(tc.get("ask_user"), str) and tc["ask_user"].strip():
@@ -191,21 +165,15 @@ def _extract_question(session: Any, snap: dict[str, Any]) -> str | None:
 
     for esc in reversed(snap.get("escalations") or []):
         if isinstance(esc, dict):
-            for key in ("question_for_user", "question"):
-                val = esc.get(key)
-                if isinstance(val, str) and val.strip():
-                    return val.strip()
+            val = esc.get("question_for_user")
+            if isinstance(val, str) and val.strip():
+                return val.strip()
     return None
 
 
 def _extract_pending_action(session: Any, snap: dict[str, Any]) -> dict[str, Any] | str | None:
     """Extract the pending irreversible action details when in `status == 'waiting_confirmation'`."""
-    raw = (
-        snap.get("pending_confirmation")
-        or snap.get("pending_action")
-        or getattr(session, "pending_confirmation", None)
-        or getattr(session, "pending_action", None)
-    )
+    raw = snap.get("pending_confirmation") or getattr(session, "pending_confirmation", None)
     if raw is None:
         return None
     if isinstance(raw, str):
@@ -333,7 +301,7 @@ class _SessionWorker:
             )
             return {"session_id": self.session_id, "status": status_out}
 
-    def _sync_from_session_locked(self, session: Any, *, actively_running: bool) -> None:
+    def _sync_from_session_locked(self, session: Any) -> None:
         try:
             snap = session.snapshot() if hasattr(session, "snapshot") else {}
         except Exception:
@@ -342,12 +310,7 @@ class _SessionWorker:
             snap = {}
 
         raw_status = str(getattr(session, "status", None) or snap.get("status") or "ready")
-        if raw_status == "ready" and actively_running:
-            effective_status = "running"
-        elif raw_status == "ready":
-            effective_status = "running"
-        else:
-            effective_status = raw_status
+        effective_status = "running" if raw_status == "ready" else raw_status
 
         history = snap.get("history")
         if not isinstance(history, list):
@@ -418,24 +381,12 @@ class _SessionWorker:
             if cmd == "reply":
                 session.reply_user(str(kwargs.get("text") or ""))
             elif cmd == "confirm":
-                try:
-                    sig = inspect.signature(session.confirm_action)
-                    accepts_alt = len(sig.parameters) >= 2 or any(
-                        p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-                        for p in sig.parameters.values()
-                    )
-                except Exception:
-                    accepts_alt = True
-                if accepts_alt:
-                    session.confirm_action(
-                        bool(kwargs.get("approved", False)),
-                        str(kwargs.get("alternative_instruction") or ""),
-                    )
-                else:
-                    session.confirm_action(bool(kwargs.get("approved", False)))
+                session.confirm_action(
+                    bool(kwargs.get("approved", False)),
+                    str(kwargs.get("alternative_instruction") or ""),
+                )
             with self._cond:
-                is_ready = str(getattr(session, "status", "ready")) == "ready"
-                self._sync_from_session_locked(session, actively_running=is_ready)
+                self._sync_from_session_locked(session)
                 res = dict(self._payload)
             if not fut.done():
                 fut.set_result(res)
@@ -463,8 +414,7 @@ class _SessionWorker:
                     return
 
                 with self._cond:
-                    is_ready = str(getattr(session, "status", "ready")) == "ready"
-                    self._sync_from_session_locked(session, actively_running=is_ready)
+                    self._sync_from_session_locked(session)
                     self._initial_status = self.status
                     self._init_event.set()
 
@@ -479,7 +429,7 @@ class _SessionWorker:
                             session.status = "blocked"
                             session.last_error = f"Max steps ({self.max_steps}) reached"
                             with self._cond:
-                                self._sync_from_session_locked(session, actively_running=False)
+                                self._sync_from_session_locked(session)
                             continue
 
                         try:
@@ -490,17 +440,12 @@ class _SessionWorker:
                                 if next_status == "ready" and len(next_hist) >= self.max_steps:
                                     session.status = "blocked"
                                     session.last_error = f"Max steps ({self.max_steps}) reached"
-                                    self._sync_from_session_locked(session, actively_running=False)
-                                else:
-                                    self._sync_from_session_locked(
-                                        session,
-                                        actively_running=(next_status == "ready"),
-                                    )
+                                self._sync_from_session_locked(session)
                         except Exception as exc:
                             session.status = "error"
                             session.last_error = str(exc)
                             with self._cond:
-                                self._sync_from_session_locked(session, actively_running=False)
+                                self._sync_from_session_locked(session)
                     else:
                         # Paused (waiting_user / waiting_confirmation) or terminal (done / blocked / error):
                         # Only the session thread drives session methods; wait for queued commands.
