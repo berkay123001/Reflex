@@ -52,8 +52,17 @@
 
     <div class="top-spacer"></div>
 
-    <!-- Live S1 & S2 Switchers -->
-    <div class="SysSwitch s1" title="System 1 Fast Reflex Model">
+    <!-- Live Mode, S1 & S2 Switchers -->
+    <div class="SysSwitch mode" title="Run mode: who decides each step">
+      <span class="tag">MOD</span>
+      <select id="top-mode-select">
+        <option value="s2_only" selected>Sadece S2 (önerilen)</option>
+        <option value="strict">Katı hibrit (S1 yalnız emin tıklama/yazma)</option>
+        <option value="hybrid">Hibrit</option>
+      </select>
+    </div>
+
+    <div class="SysSwitch s1" title="System 1 Fast Reflex Model (unused in S2-only mode)">
       <span class="tag">S1</span>
       <select id="top-s1-select">
         <option value="local_turnike">Turnike-4B · Web3 FP8 (:8794)</option>

@@ -34,7 +34,7 @@ from reflex.browser.isolated import (
     is_port_open,
     managed_isolated_browser,
 )
-from reflex.config import ReflexConfig
+from reflex.config import DEFAULT_RUN_MODE, RUN_MODES, ReflexConfig, run_mode_flags
 
 logger = logging.getLogger("reflex.eval")
 
@@ -916,6 +916,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tasks", dest="tasks_flag", help="Alternative flag for tasks file")
     parser.add_argument("-o", "--output", help="Path to write JSONL results")
     parser.add_argument("-s", "--summary", help="Path to write summary JSON")
+    parser.add_argument("--mode", choices=sorted(RUN_MODES), default=DEFAULT_RUN_MODE, help=f"Run mode (default: {DEFAULT_RUN_MODE})")
     parser.add_argument("--decision-backend", choices=["local_turnike", "openrouter_jev"], help="Override S1 decision backend")
     parser.add_argument("--supervisor-model", help="Override S2 supervisor model")
     parser.add_argument("--allow-model-fallback", action="store_true", help="Allow fallback models on error")
@@ -935,7 +936,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cdp_port == 9333:
         raise ValueError("Port 9333 is reserved for external monitoring; eval runner must not use port 9333.")
 
-    cfg = ReflexConfig()
+    cfg = ReflexConfig(**run_mode_flags(args.mode))
     if args.decision_backend:
         cfg.decision_backend = args.decision_backend
     if args.supervisor_model:

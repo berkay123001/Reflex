@@ -8,6 +8,10 @@ Reflex separates high-level reasoning and failure recovery (**System 2 Superviso
 - **Interactive Co-Pilot & `ASK_USER`:** Pauses cleanly when required form data is missing or choices are ambiguous, asking the human user in chat and resuming from the exact browser state.
 - **Irreversible Action Safety Guard (`CONFIRM_USER`) & Untrusted DOM Isolation:** Intercepts high-consequence actions (payments, deletions) for human approval and isolates webpage text inside `<untrusted_page_data>` boundaries.
 
+## Run Modes
+
+Studio, the MCP server and `scripts/eval.py` default to **`s2_only`**: the Muse supervisor decides every step. On 19 real-site tasks run twice (2026-10-29) it completed 36/38 with either `muse-spark-1.3` or `muse-spark-1.3-contributor`; the strict hybrid (System 1 only for confident clicks/typing) completed 33/38 and the original hybrid 14/19. The hybrid modes stay selectable: the `MOD` switch in Studio, `mode` in `reflex_start`, `--mode` in `scripts/eval.py`.
+
 ## Design Influences
 
 The task ledger (planning + memory) adapts ideas from these works; no third-party code is copied:

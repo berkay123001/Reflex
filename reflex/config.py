@@ -46,6 +46,29 @@ DECISION_PRESETS = [
     {"id": "openrouter_jev", "label": "OpenRouter · Jev (~typesafe/jev-latest)"},
 ]
 
+# Run modes offered by the entry points (Studio, MCP, eval CLI). The library default
+# (`ReflexConfig()`) stays hybrid; entry points apply DEFAULT_RUN_MODE explicitly.
+# 2026-10-29 ablation on 19 real-site tasks x2: s2_only 36/38, strict 33/38, hybrid 14/19.
+RUN_MODES: dict[str, dict[str, bool]] = {
+    "s2_only": {"s2_every_step": True, "s1_strict": False},
+    "strict": {"s2_every_step": False, "s1_strict": True},
+    "hybrid": {"s2_every_step": False, "s1_strict": False},
+}
+DEFAULT_RUN_MODE = "s2_only"
+
+
+def run_mode_flags(mode: str | None) -> dict[str, bool]:
+    """Return the ReflexConfig flags for a run mode; unknown or empty modes fall back to DEFAULT_RUN_MODE."""
+    key = (mode or "").strip().lower()
+    return dict(RUN_MODES.get(key, RUN_MODES[DEFAULT_RUN_MODE]))
+
+
+def run_mode_of(s2_every_step: bool, s1_strict: bool) -> str:
+    """Return the run-mode id matching the given flags (s2_every_step wins over s1_strict)."""
+    if s2_every_step:
+        return "s2_only"
+    return "strict" if s1_strict else "hybrid"
+
 # USD per 1M tokens (Source: https://dev.meta.ai/docs/pricing-rate-limits)
 MODEL_PRICING: dict[str, dict[str, float]] = {
     "muse-spark-1.3-contributor": {

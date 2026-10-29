@@ -46,7 +46,7 @@ from reflex.browser.isolated import (
     find_free_port,
     managed_isolated_browser,
 )
-from reflex.config import ReflexConfig
+from reflex.config import DEFAULT_RUN_MODE, RUN_MODES, ReflexConfig, run_mode_flags
 
 logger = logging.getLogger("reflex.mcp_server")
 
@@ -258,8 +258,10 @@ class _SessionWorker:
         max_steps: int,
         show_browser: bool,
         port: int | None = None,
+        mode: str = DEFAULT_RUN_MODE,
     ) -> None:
         self.session_id = session_id
+        self.mode = mode
         self.goal = goal
         self.url = url
         self.max_steps = max(1, int(max_steps))
@@ -401,7 +403,8 @@ class _SessionWorker:
         session: Any = None
         try:
             with managed_isolated_browser(port=self.port, headless=not self.show_browser):
-                cfg = ReflexConfig(interactive=True)  # the MCP client relays questions to its user
+                # the MCP client relays questions to its user
+                cfg = ReflexConfig(interactive=True, **run_mode_flags(self.mode))
                 cfg.max_steps = max(cfg.max_steps, self.max_steps)
 
                 try:
@@ -639,8 +642,12 @@ async def reflex_start(
     url: str = "https://www.google.com",
     max_steps: int = 40,
     show_browser: bool = True,
+    mode: str = DEFAULT_RUN_MODE,
 ) -> dict[str, Any]:
     """Start an autonomous Reflex browser session in its own isolated browser instance.
+
+    `mode`: "s2_only" (default, most reliable: the Muse supervisor decides every step),
+    "strict" (fast model only for confident clicks/typing) or "hybrid".
 
     Constraint (tek aktif oturum): Süreç başına yalnızca tek bir aktif oturum açılabilir
     (`done`, `blocked` veya `error` durumunda olup tarayıcısı hâlâ açık olan oturumlar dahil).
@@ -657,6 +664,8 @@ async def reflex_start(
     """
     if not goal or not goal.strip():
         raise ValueError("Supply a non-empty goal")
+    if mode not in RUN_MODES:
+        raise ValueError(f"Unknown mode {mode!r}; use one of {sorted(RUN_MODES)}")
     with _SESSIONS_LOCK:
         for existing_id, existing_worker in list(_SESSIONS.items()):
             if existing_worker.status == "stopped":
@@ -670,6 +679,7 @@ async def reflex_start(
             url=url.strip() or "https://www.google.com",
             max_steps=max_steps,
             show_browser=show_browser,
+            mode=mode,
         )
         _SESSIONS[session_id] = worker
     return await anyio.to_thread.run_sync(worker.start)

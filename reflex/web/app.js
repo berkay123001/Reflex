@@ -502,6 +502,12 @@ function renderState(state) {
   }
 
   if (state.config) {
+    if ($("top-mode-select") && state.config.mode) {
+      $("top-mode-select").value = state.config.mode;
+    }
+    if ($("top-s1-select")) {
+      $("top-s1-select").disabled = state.config.mode === "s2_only";
+    }
     if ($("top-s1-select") && state.config.decision_backend) {
       $("top-s1-select").value = state.config.decision_backend;
     }
@@ -585,6 +591,7 @@ async function startSessionAndRun() {
     const state = await apiPost("start", {
       url,
       goal,
+      mode: $("top-mode-select")?.value || "s2_only",
       decision_backend: $("top-s1-select").value,
       supervisor_model: $("top-s2-select").value,
       require_confirmation_for_destructive: $("chk-safety").checked,
@@ -625,7 +632,16 @@ function initUI() {
     });
   });
 
-  // Live S1 / S2 Switchers
+  // Live Mode / S1 / S2 Switchers
+  if ($("top-mode-select")) {
+    $("top-mode-select").addEventListener("change", async (e) => {
+      if ($("top-s1-select")) $("top-s1-select").disabled = e.target.value === "s2_only";
+      try {
+        const s = await apiPost("config", { mode: e.target.value });
+        renderState(s);
+      } catch (_) {}
+    });
+  }
   if ($("top-s1-select")) {
     $("top-s1-select").addEventListener("change", async (e) => {
       try {
@@ -744,6 +760,7 @@ function initUI() {
         const s = await apiPost("reply", {
           message: msg,
           url: $("input-url")?.value || "https://www.google.com",
+          mode: $("top-mode-select")?.value || "s2_only",
           decision_backend: $("top-s1-select")?.value || "openrouter_jev",
           supervisor_model: $("top-s2-select")?.value || "muse-spark-1.3-contributor",
         });

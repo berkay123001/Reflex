@@ -31,10 +31,14 @@ from .agent import ReflexSession
 from .browser.screencast import Screencast
 from .config import (
     DEFAULT_DECISION_BACKEND,
+    DEFAULT_RUN_MODE,
     DEFAULT_SUPERVISOR_MODEL,
+    RUN_MODES,
     ReflexConfig,
     get_meta_api_key,
     load_env,
+    run_mode_flags,
+    run_mode_of,
     save_env_key,
 )
 from .memory import SiteMemoryStore
@@ -99,7 +103,7 @@ def current_state() -> dict[str, Any]:
             "decisions": [],
             "escalations": [],
             "context": None,
-            "config": ReflexConfig().model_dump(),
+            "config": _config_dump(ReflexConfig(**run_mode_flags(DEFAULT_RUN_MODE))),
             "site_memory": mem_store.all_domains(),
             "keys": _key_status(),
             "metrics": {
@@ -112,9 +116,21 @@ def current_state() -> dict[str, Any]:
             },
         }
     snap = _SESSION.snapshot()
+    snap["config"] = _config_dump(_SESSION.config)
     snap["site_memory"] = mem_store.all_domains()
     snap["keys"] = _key_status()
     return snap
+
+
+def _config_dump(cfg: ReflexConfig) -> dict[str, Any]:
+    """Serialize a config for the UI, adding the derived run-mode id."""
+    return {**cfg.model_dump(), "mode": run_mode_of(cfg.s2_every_step, cfg.s1_strict)}
+
+
+def _requested_mode(body: dict[str, Any]) -> str:
+    """Use the posted run mode, or DEFAULT_RUN_MODE when it is omitted, blank or unknown."""
+    raw = str(body.get("mode") or "").strip().lower()
+    return raw if raw in RUN_MODES else DEFAULT_RUN_MODE
 
 
 def _requested_decision_backend(body: dict[str, Any]) -> str:
@@ -139,6 +155,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
             decision_backend=_requested_decision_backend(body),
             supervisor_model=str(body.get("supervisor_model", DEFAULT_SUPERVISOR_MODEL)),
             interactive=True,  # Studio user is watching and can answer questions
+            **run_mode_flags(_requested_mode(body)),
             require_confirmation_for_destructive=bool(body.get("require_confirmation_for_destructive", True)),
             verify_done_with_supervisor=bool(body.get("verify_done_with_supervisor", True)),
             enable_site_memory=bool(body.get("enable_site_memory", False)),
@@ -164,6 +181,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
                 decision_backend=_requested_decision_backend(body),
                 supervisor_model=str(body.get("supervisor_model", DEFAULT_SUPERVISOR_MODEL)),
                 interactive=True,
+                **run_mode_flags(_requested_mode(body)),
                 max_steps=60,
                 max_escalations=35,
             )
@@ -287,6 +305,10 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
                         _SESSION.config.decision_backend = backend
                     if sup_model:
                         _SESSION.config.supervisor_model = str(sup_model)
+                    if body.get("mode") in RUN_MODES:
+                        flags = run_mode_flags(body["mode"])
+                        _SESSION.config.s2_every_step = flags["s2_every_step"]
+                        _SESSION.config.s1_strict = flags["s1_strict"]
                     if "require_confirmation_for_destructive" in body:
                         _SESSION.config.require_confirmation_for_destructive = bool(body["require_confirmation_for_destructive"])
                     if "verify_done_with_supervisor" in body:

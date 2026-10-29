@@ -282,6 +282,8 @@ button, input, textarea, select {
   outline: none;
   cursor: pointer;
 }
+.SysSwitch.mode .tag { background: var(--line-strong); color: var(--ink); }
+.SysSwitch select:disabled { opacity: 0.45; cursor: not-allowed; }
 .SysSwitch select option {
   background: var(--panel-2);
   color: var(--ink);

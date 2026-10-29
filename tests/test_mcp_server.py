@@ -427,6 +427,7 @@ async def test_mcp_real_isolated_browser_smoke_on_local_fixture() -> None:
             url=f"{base_url}/qa/blog",
             max_steps=5,
             show_browser=False,
+            mode="hybrid",  # this smoke test drives the System 1 path (fake choose_action)
         )
         sid = start_res["session_id"]
         try:
