@@ -122,10 +122,52 @@ def test_masking_the_only_fill_removes_type_text_from_the_request() -> None:
         return httpx.Response(200, json=payload, request=httpx.Request("POST", "http://127.0.0.1/s1"))
 
     with patch("reflex.system1._HTTP_CLIENT.post", post):
-        choose_action(page, "Finish", [], ReflexConfig(decision_backend="local_turnike"), mask_fill_nodes={3})
+        decision = choose_action(
+            page, "Finish", [], ReflexConfig(decision_backend="local_turnike"), mask_fill_nodes={3}
+        )
     criteria = bodies[0]["questions"]["operation"]["criteria"]
     assert "TYPE_TEXT" not in criteria
     assert "type_text_target" not in bodies[0]["questions"]
+    assert decision["elements"][0]["node"] == 3
+    assert "TYPE_TEXT" not in decision["elements"][0]["operations"]
+    assert "node" not in bodies[0]["state"]["elements"][0]
+
+
+def test_choose_action_returns_masked_elements_and_keeps_other_operations() -> None:
+    page = {
+        "url": "https://example.test/form",
+        "title": "Form",
+        "text": "fields",
+        "actions": [
+            {"id": "email", "node": 3, "kind": "fill", "role": "textbox", "label": "Email", "value": _TYPED},
+            {"id": "email-click", "node": 3, "kind": "click", "role": "textbox", "label": "Email"},
+            {"id": "note", "node": 4, "kind": "fill", "role": "textbox", "label": "Note", "value": ""},
+        ],
+    }
+
+    def post(*_args: Any, **kwargs: Any) -> httpx.Response:
+        del kwargs
+        payload = {
+            "model": "jev-test",
+            "answers": {"operation": {"choice": "DONE", "probabilities": {"DONE": 0.9, "BLOCKED": 0.1}}},
+            "usage": {},
+        }
+        return httpx.Response(200, json=payload, request=httpx.Request("POST", "http://127.0.0.1/s1"))
+
+    with patch("reflex.system1._HTTP_CLIENT.post", post):
+        masked = choose_action(
+            page, "Finish", [], ReflexConfig(decision_backend="local_turnike"), mask_fill_nodes={3}
+        )
+        plain = choose_action(page, "Finish", [], ReflexConfig(decision_backend="local_turnike"))
+
+    masked_by_node = {element["node"]: element for element in masked["elements"]}
+    plain_by_node = {element["node"]: element for element in plain["elements"]}
+    assert masked_by_node[3]["node"] == 3
+    assert "TYPE_TEXT" not in masked_by_node[3]["operations"]
+    assert "CLICK" in masked_by_node[3]["operations"]
+    assert masked_by_node[4]["operations"] == ["TYPE_TEXT"]
+    assert "TYPE_TEXT" in plain_by_node[3]["operations"]
+    assert "CLICK" in plain_by_node[3]["operations"]
 
 
 def test_changed_value_is_not_masked_and_helper_runs() -> None:

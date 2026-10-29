@@ -140,12 +140,12 @@ CLICK_TEXT_ARM_S = 0.25
 CLICK_SETTLE_BUDGET_S = 0.18
 _PAGE_TEXT_LEN = "(document.body && (document.body.innerText || '').length) || 0"
 _TIME_TOKEN = re.compile(r"\b\d+\s*(?:s|sn|sec|ms)\b", re.IGNORECASE)
-# Read the live accessible name. The token keeps this evaluate distinct from the click script.
+# Live accessible name from the snapshot cache. Empty when the node or its guard is gone.
 _ACCESSIBLE_NAME = """(nodeId => {
-  const reflexAccessibleName = window.__jevFast;
-  const node = reflexAccessibleName?.nodes?.get(nodeId);
-  if (!node || !reflexAccessibleName.guard) return null;
-  const guard = reflexAccessibleName.guard(node);
+  const snapshot = window.__jevFast;
+  const node = snapshot?.nodes?.get(nodeId);
+  if (!node || !snapshot.guard) return null;
+  const guard = snapshot.guard(node);
   const name = guard && guard[2];
   return typeof name === 'string' ? name : null;
 })"""

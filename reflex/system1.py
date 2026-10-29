@@ -255,6 +255,8 @@ def choose_action(
         suppress_done=suppress_done,
         mask_fill_nodes=mask_fill_nodes,
     )
+    if mask_fill_nodes:
+        elements, _ = _mask_type_text(elements, targets, set(mask_fill_nodes))
     operations = dict(body["questions"]["operation"]["criteria"])
 
     started = time.perf_counter()
