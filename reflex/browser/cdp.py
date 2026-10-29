@@ -246,18 +246,20 @@ def fingerprint(state: dict[str, Any]) -> str:
 class Browser:
     """Single-tab CDP browser session with fresh-state verification and recovery actions."""
 
-    def __init__(self, url: str, *, width: int = 1120, height: int = 780):
-        cdp_port = DEFAULT_CDP_PORT
-        bu_cdp = os.environ.get("BU_CDP_URL")
-        if bu_cdp:
-            try:
-                p = urlsplit(bu_cdp).port
-                if p:
-                    cdp_port = p
-            except (ValueError, AttributeError):
-                pass
+    def __init__(self, url: str, *, width: int = 1120, height: int = 780, port: int | None = None):
+        cdp_port = port or DEFAULT_CDP_PORT
+        if port is None:
+            bu_cdp = os.environ.get("BU_CDP_URL")
+            if bu_cdp:
+                try:
+                    p = urlsplit(bu_cdp).port
+                    if p:
+                        cdp_port = p
+                except (ValueError, AttributeError):
+                    pass
         ensure_chromium_cdp(port=cdp_port)
         ensure_daemon()
+        self.cdp_port: int = cdp_port
         self._cdp_lock = threading.Lock()
         self.last_jpeg_bytes: bytes | None = None
         self.last_action_rect: dict[str, Any] | None = None

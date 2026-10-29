@@ -9,6 +9,7 @@ dependencies = [
     "browser-harness==0.1.13",
     "httpx[http2]>=0.28,<1",
     "pydantic>=2.9,<3",
+    "websockets>=13",
 ]
 
 [project.optional-dependencies]

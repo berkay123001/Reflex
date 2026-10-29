@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import atexit
-import hashlib
 import json
 import os
 import secrets
@@ -29,6 +28,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .agent import ReflexSession
+from .browser.screencast import Screencast
 from .config import (
     DEFAULT_DECISION_BACKEND,
     DEFAULT_SUPERVISOR_MODEL,
@@ -45,10 +45,29 @@ TOKEN = secrets.token_hex(16)
 ALLOW_REMOTE: bool = False
 _LOCK = threading.Lock()
 _SESSION: ReflexSession | None = None
+_SCREENCAST: Screencast | None = None
+
+
+def _start_screencast(session: ReflexSession) -> None:
+    global _SCREENCAST
+    try:
+        cdp_port = getattr(session.browser, "cdp_port", None)
+        if cdp_port:
+            target_id = getattr(session.browser, "target", None)
+            _SCREENCAST = Screencast(cdp_port=cdp_port, target_id=target_id)
+            _SCREENCAST.start()
+    except Exception:
+        _SCREENCAST = None
 
 
 def close_session() -> None:
-    global _SESSION
+    global _SESSION, _SCREENCAST
+    if _SCREENCAST is not None:
+        try:
+            _SCREENCAST.stop()
+        except Exception:
+            pass
+        _SCREENCAST = None
     if _SESSION is not None:
         try:
             _SESSION.close()
@@ -128,6 +147,7 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
         )
         close_session()
         _SESSION = ReflexSession(url, goal, cfg)
+        _start_screencast(_SESSION)
         return current_state()
 
     if action == "reset":
@@ -147,7 +167,9 @@ def handle_api_post(action: str, body: dict[str, Any]) -> dict[str, Any]:
                 max_steps=60,
                 max_escalations=35,
             )
+            close_session()
             _SESSION = ReflexSession(init_url, "Kullanıcı talimatı bekleniyor", cfg)
+            _start_screencast(_SESSION)
             _SESSION.status = "waiting_user"
             _SESSION.reply_user(msg)
             return current_state()
@@ -290,19 +312,42 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "close")
         self.end_headers()
         try:
+            after_seq = -1
             while _SESSION is not None and _SESSION.browser.target is not None:
-                jpeg = _SESSION.browser.capture_jpeg_bytes(quality=65)
-                if jpeg:
-                    header = (
-                        f"--reflexframe\r\n"
-                        f"Content-Type: image/jpeg\r\n"
-                        f"Content-Length: {len(jpeg)}\r\n\r\n"
-                    ).encode("ascii")
-                    self.wfile.write(header)
-                    self.wfile.write(jpeg)
-                    self.wfile.write(b"\r\n")
-                    self.wfile.flush()
-                time.sleep(0.09)
+                frame: bytes | None = None
+                sc = _SCREENCAST
+                if sc is not None and sc.is_running:
+                    try:
+                        seq, f = sc.wait_frame(after_seq=after_seq, timeout=0.1)
+                        if f is not None and seq > after_seq:
+                            after_seq = seq
+                            frame = f
+                        elif seq > 0:
+                            # Screencast is active and healthy; page is idle this tick
+                            continue
+                    except Exception:
+                        frame = None
+
+                # Fallback cleanly to capture_jpeg_bytes if screencast is inactive or failed
+                if frame is None:
+                    try:
+                        frame = _SESSION.browser.capture_jpeg_bytes(quality=65)
+                    except Exception:
+                        frame = None
+                    if not frame:
+                        time.sleep(0.09)
+                        continue
+                    time.sleep(0.09)
+
+                header = (
+                    f"--reflexframe\r\n"
+                    f"Content-Type: image/jpeg\r\n"
+                    f"Content-Length: {len(frame)}\r\n\r\n"
+                ).encode("ascii")
+                self.wfile.write(header)
+                self.wfile.write(frame)
+                self.wfile.write(b"\r\n")
+                self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
 
