@@ -133,6 +133,73 @@ def form_submit_is_committed(action: dict[str, Any] | None, page_actions: list[d
     return len(text_nodes) >= 2
 
 
+def _radio_group(action: dict[str, Any] | None) -> str | None:
+    if not action or action.get("role") != "radio":
+        return None
+    group = action.get("group")
+    if group is None or not str(group):
+        return None
+    return str(group)
+
+
+def _actions_by_id(page_actions: list[dict[str, Any]] | None) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for item in page_actions or []:
+        item_id = item.get("id")
+        if item_id is not None:
+            indexed.setdefault(str(item_id), item)
+    return indexed
+
+
+def _group_unanswered(group: str, page_actions: list[dict[str, Any]]) -> bool:
+    members = [
+        item for item in page_actions if item.get("role") == "radio" and str(item.get("group") or "") == group
+    ]
+    if not members:
+        return False
+    return not any(str(item.get("checked", "")).lower() == "true" for item in members)
+
+
+def _aggregate_unanswered_radio_group(
+    target_probs: dict[str, Any],
+    page_actions: list[dict[str, Any]] | None,
+    chosen_id: Any,
+) -> tuple[float, float, str | None] | None:
+    """Sum an unanswered radio group when the two leading targets belong to it.
+
+    Returns the grouped target confidence, the margin between groups, and the
+    second group's representative action id. Other splits stay option-level.
+    """
+    if not page_actions or len(target_probs) < 2:
+        return None
+    indexed = _actions_by_id(page_actions)
+    ranked = sorted(
+        ((str(key), float(prob)) for key, prob in target_probs.items()),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    leading = _radio_group(indexed.get(ranked[0][0]))
+    runner_up = _radio_group(indexed.get(ranked[1][0]))
+    if not leading or leading != runner_up or not _group_unanswered(leading, page_actions):
+        return None
+    chosen = indexed.get(str(chosen_id)) if chosen_id is not None else None
+    chosen_group = _radio_group(chosen)
+    if chosen_group and chosen_group != leading:
+        return None
+    grouped: dict[str, float] = {}
+    representative: dict[str, str] = {}
+    for key, prob in ranked:
+        group = _radio_group(indexed.get(key))
+        bucket = f"group:{group}" if group else f"id:{key}"
+        grouped[bucket] = grouped.get(bucket, 0.0) + prob
+        representative.setdefault(bucket, key)
+    bucket = f"group:{chosen_group or leading}"
+    confidence = round(grouped.get(bucket, 0.0), 4)
+    margin, second_bucket = compute_margin(grouped)
+    second = representative.get(second_bucket) if second_bucket else None
+    return confidence, margin, second
+
+
 def compute_margin(probabilities: dict[str, float]) -> tuple[float, str | None]:
     """Return (top1 - top2 probability margin, second_best_key)."""
     if not probabilities:
@@ -165,6 +232,14 @@ def evaluate_decision(
     target_conf = float(decision.get("target_confidence") if decision.get("target_confidence") is not None else 1.0)
     joint_conf = round(op_conf * target_conf, 4)
     target_margin, second_best = compute_margin(target_probs)
+    if allow_arbitrary_choices and isinstance(target_probs, dict):
+        chosen_id = decision.get("choice")
+        if chosen_id is None and action is not None:
+            chosen_id = action.get("id")
+        grouped = _aggregate_unanswered_radio_group(target_probs, page_actions, chosen_id)
+        if grouped is not None:
+            target_conf, target_margin, second_best = grouped
+            joint_conf = round(op_conf * target_conf, 4)
 
     # 0. Incomplete form: do not execute a submitting CLICK while a radio group in the
     # same form is unchecked or a required/aria-required field is empty.
