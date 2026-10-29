@@ -285,8 +285,15 @@ def evaluate_decision(
     constraints: list[str] | None = None,
     action: dict[str, Any] | None = None,
     page_actions: list[dict[str, Any]] | None = None,
+    strict: bool = False,
 ) -> GateEvaluation:
-    """Decide whether a System 1 prediction is safe to execute directly or should escalate to System 2."""
+    """Decide whether a System 1 prediction is safe to execute directly or should escalate to System 2.
+
+    `strict` keeps System 1 to confident clicks/typing: no relaxed thresholds for arbitrary choices and
+    no System 1 scrolling (scrolling to "read" is where System 1 loops; System 2 reads the full page text).
+    """
+    if strict:
+        allow_arbitrary_choices = allow_subjective = False
     arbitrary_allowed = allow_arbitrary_choices or allow_subjective
     operation = str(decision.get("operation", ""))
     op_conf = float(decision.get("confidence", 0.0) or 0.0)
@@ -402,6 +409,18 @@ def evaluate_decision(
             target_confidence=1.0,
             joint_confidence=op_conf,
             target_margin=1.0,
+        )
+
+    if strict and operation in {"SCROLL_DOWN", "SCROLL_UP"}:
+        return GateEvaluation(
+            should_escalate=True,
+            reason="strict gate: System 2 decides scrolling",
+            trigger_type="strict_scroll",
+            op_confidence=op_conf,
+            target_confidence=target_conf,
+            joint_confidence=joint_conf,
+            target_margin=target_margin,
+            second_best_target=second_best,
         )
 
     # 3. Operation-specific confidence threshold (never block exploratory SCROLL/WAIT on low_op_conf)

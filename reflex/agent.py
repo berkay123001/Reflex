@@ -569,6 +569,7 @@ class ReflexSession:
             constraints=self.ctx.constraints,
             action=selected_action,
             page_actions=self.page.get("actions") or [],
+            strict=self.config.s1_strict,
         )
 
         self.decisions.append(

@@ -220,6 +220,7 @@ class ReflexConfig(BaseModel):
     allow_model_fallback: bool = False
     interactive: bool = False
     s2_every_step: bool = False  # evaluation baseline: no System 1, System 2 decides every step
+    s1_strict: bool = False  # System 1 only for confident clicks/typing; scrolling and arbitrary choices go to System 2
     max_steps: int = 80
     max_escalations: int = 40
     require_confirmation_for_destructive: bool = True
