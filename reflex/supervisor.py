@@ -433,6 +433,18 @@ def _chat_completion(
                             retry_reason = "invalid_json"
                         continue
                     raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}") from exc
+                except httpx.TimeoutException as exc:
+                    last_err = exc
+                    break
+                except httpx.TransportError as exc:
+                    # Dropped connection (e.g. HTTP/2 ConnectionTerminated): one retry on a fresh connection.
+                    last_err = exc
+                    if attempt == 0:
+                        retries_used += 1
+                        retry_reason = "transport"
+                        time.sleep(HTTP_RETRY_DELAY_S)
+                        continue
+                    break
                 except Exception as exc:
                     last_err = exc
                     break

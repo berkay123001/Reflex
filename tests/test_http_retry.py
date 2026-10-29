@@ -281,3 +281,57 @@ def test_local_turnike_transport_error_is_not_retried() -> None:
     ):
         choose_action(_PAGE, "Open the page", [], config)
     assert calls == ["post"]
+
+
+def _meta_transport_script(errors: list[Exception]) -> tuple[list[str], Any]:
+    calls: list[str] = []
+
+    def post(*_args: Any, **_kwargs: Any) -> httpx.Response:
+        calls.append("post")
+        if len(calls) <= len(errors):
+            raise errors[len(calls) - 1]
+        return _response(200, _CHAT_OK)
+
+    return calls, post
+
+
+def _meta_call(post: Any, slept: list[float]) -> Any:
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=post),
+        patch("reflex.supervisor.time.sleep", side_effect=slept.append),
+    ):
+        return _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            allow_model_fallback=False,
+        )
+
+
+@pytest.mark.parametrize("exc_type", [httpx.RemoteProtocolError, httpx.ConnectError, httpx.ReadError])
+def test_meta_dropped_connection_is_retried_once(exc_type: type[Exception]) -> None:
+    slept: list[float] = []
+    calls, post = _meta_transport_script([exc_type("<ConnectionTerminated error_code:0>")])
+    parsed, _latency, _cost, _model = _meta_call(post, slept)
+    assert parsed["action_type"] == "ASK_USER"
+    assert parsed.retry_reason == "transport"
+    assert calls == ["post", "post"]
+    assert len(slept) == 1
+
+
+def test_meta_dropped_connection_twice_fails() -> None:
+    slept: list[float] = []
+    calls, post = _meta_transport_script([httpx.RemoteProtocolError("a"), httpx.RemoteProtocolError("b")])
+    with pytest.raises(RuntimeError):
+        _meta_call(post, slept)
+    assert calls == ["post", "post"]
+
+
+def test_meta_timeout_is_not_retried() -> None:
+    slept: list[float] = []
+    calls, post = _meta_transport_script([httpx.ReadTimeout("slow")])
+    with pytest.raises(RuntimeError):
+        _meta_call(post, slept)
+    assert calls == ["post"]
+    assert slept == []

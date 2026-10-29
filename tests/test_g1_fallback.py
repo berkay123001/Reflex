@@ -190,6 +190,7 @@ def test_supervisor_meta_model_disallows_fallback_by_default():
         patch("reflex.supervisor.get_meta_api_key", return_value="meta-token-123"),
         patch("reflex.supervisor.get_openrouter_api_key", return_value="or-key"),
         patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post),
+        patch("reflex.supervisor.time.sleep"),
         pytest.raises(RuntimeError) as exc_info,
     ):
         _chat_completion(
@@ -200,8 +201,9 @@ def test_supervisor_meta_model_disallows_fallback_by_default():
         )
 
     assert f"Supervisor ({meta_model}) call failed" in str(exc_info.value)
-    # Only the exact meta_model was tried; secondary "muse-wonder-1.0" was NOT tried
-    assert attempted_models == [meta_model]
+    # Only the exact meta_model was tried (a dropped connection is retried once on the same model);
+    # secondary "muse-wonder-1.0" was NOT tried
+    assert attempted_models == [meta_model, meta_model]
     # OpenRouter was NOT called
     assert OPENROUTER_DECISIONS_URL not in attempted_urls
 
@@ -230,6 +232,7 @@ def test_supervisor_meta_model_allows_fallback_when_enabled():
         patch("reflex.supervisor.get_meta_api_key", return_value="meta-token-123"),
         patch("reflex.supervisor.get_openrouter_api_key", return_value="or-key"),
         patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_post),
+        patch("reflex.supervisor.time.sleep"),
     ):
         parsed, _, _, model = _chat_completion(
             model=meta_model,
