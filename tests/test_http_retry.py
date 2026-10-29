@@ -168,6 +168,51 @@ def test_http_400_is_not_retried(caller: str) -> None:
     assert slept == []
 
 
+@pytest.mark.parametrize("exc_type", [httpx.ConnectError, httpx.ReadTimeout])
+def test_openrouter_transport_error_is_retried_once(exc_type: type[Exception]) -> None:
+    calls: list[str] = []
+    slept: list[float] = []
+
+    def post(*_args: Any, **_kwargs: Any) -> httpx.Response:
+        calls.append("post")
+        if len(calls) == 1:
+            raise exc_type("down")
+        return _response(200, _DECISION_OK)
+
+    config = ReflexConfig(decision_backend="openrouter_jev")
+    with (
+        patch("reflex.system1.get_openrouter_api_key", return_value="test-key"),
+        patch("reflex.system1._HTTP_CLIENT.post", side_effect=post),
+        patch("reflex.system1.time.sleep", side_effect=slept.append),
+    ):
+        result = choose_action(_PAGE, "Open the page", [], config)
+    assert result["operation"] == "CLICK"
+    assert result["retry_reason"] == "transport"
+    assert calls == ["post", "post"]
+    assert len(slept) == 1
+    assert 1 <= slept[0] <= 2
+
+
+def test_openrouter_transport_error_is_not_retried_twice() -> None:
+    calls: list[str] = []
+    slept: list[float] = []
+
+    def post(*_args: Any, **_kwargs: Any) -> httpx.Response:
+        calls.append("post")
+        raise httpx.ConnectError("still down")
+
+    config = ReflexConfig(decision_backend="openrouter_jev")
+    with (
+        patch("reflex.system1.get_openrouter_api_key", return_value="test-key"),
+        patch("reflex.system1._HTTP_CLIENT.post", side_effect=post),
+        patch("reflex.system1.time.sleep", side_effect=slept.append),
+        pytest.raises(RuntimeError, match="request failed"),
+    ):
+        choose_action(_PAGE, "Open the page", [], config)
+    assert calls == ["post", "post"]
+    assert len(slept) == 1
+
+
 def test_local_turnike_transport_error_is_not_retried() -> None:
     calls: list[str] = []
 

@@ -290,6 +290,11 @@ def choose_action(
                 raise RuntimeError(
                     f"System 1 ({config.decision_backend}) transport failed: {exc}"
                 ) from exc
+            transport_error = isinstance(exc, (httpx.TransportError, httpx.TimeoutException))
+            if config.decision_backend != "local_turnike" and transport_error and attempt == 0:
+                retry_reason = "transport"
+                time.sleep(HTTP_RETRY_DELAY_S)
+                continue
             break
     if not succeeded:
         raise RuntimeError(f"System 1 ({config.decision_backend}) request failed: {last_err}")

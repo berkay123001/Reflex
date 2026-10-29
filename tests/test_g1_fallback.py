@@ -375,7 +375,7 @@ def test_session_step_runtime_error_sets_status_error_and_does_not_escalate():
     session.step() sets status == 'error', populates last_error, and NEVER calls resolve_escalation.
     """
     fake_browser = _make_fake_browser()
-    cfg = ReflexConfig(allow_model_fallback=False)
+    cfg = ReflexConfig(allow_model_fallback=False, decision_backend="local_turnike")
 
     with patch("reflex.agent.Browser", return_value=fake_browser):
         session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
@@ -391,6 +391,33 @@ def test_session_step_runtime_error_sets_status_error_and_does_not_escalate():
     assert "Turnike server unreachable: ConnectError" in snap["last_error"]
     assert snap["metrics"]["s1_errors"] == 0
     mock_resolve_esc.assert_not_called()
+
+
+def test_openrouter_s1_runtime_error_escalates_instead_of_killing_the_session():
+    """An OpenRouter System 1 RuntimeError escalates as s1_error and leaves the session running."""
+    fake_browser = _make_fake_browser()
+    cfg = ReflexConfig(decision_backend="openrouter_jev")
+
+    with patch("reflex.agent.Browser", return_value=fake_browser):
+        session = ReflexSession(url="https://example.com", goal="Test goal", config=cfg)
+
+    fake_sup = SupervisorDecision(
+        action_type="ASK_USER",
+        question_for_user="Try again?",
+        reasoning="System 1 request failed",
+        model="supervisor-test",
+    )
+    with (
+        patch("reflex.agent.choose_action", side_effect=RuntimeError("System 1 (openrouter_jev) request failed: timed out")),
+        patch("reflex.agent.resolve_escalation", return_value=fake_sup) as mock_resolve_esc,
+    ):
+        snap = session.step()
+
+    mock_resolve_esc.assert_called_once()
+    assert mock_resolve_esc.call_args.kwargs["trigger_type"] == "s1_error"
+    assert session.status != "error"
+    assert snap["metrics"]["s1_errors"] == 1
+    assert session.s1_errors == 1
 
 
 def test_session_step_httpx_error_sets_status_error_and_does_not_escalate():

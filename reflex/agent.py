@@ -382,6 +382,21 @@ class ReflexSession:
                 s1_ms=s1_err_ms,
                 pre_obs_ms=pre_obs_ms,
             )
+        except RuntimeError as exc:
+            if self.config.decision_backend == "local_turnike":
+                self.status = "error"
+                self.last_error = str(exc)
+                return self.snapshot()
+            s1_err_ms = round((time.perf_counter() - s1_t0) * 1000)
+            self.s1_errors += 1
+            return self._handle_escalation(
+                trigger_type="s1_error",
+                reason=f"System 1 error: {exc}",
+                s1_decision=None,
+                step_t0=step_t0,
+                s1_ms=s1_err_ms,
+                pre_obs_ms=pre_obs_ms,
+            )
         except Exception as exc:
             self.status = "error"
             self.last_error = str(exc)
