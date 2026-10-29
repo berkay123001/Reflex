@@ -641,11 +641,12 @@ def resolve_escalation(
             ensure_ascii=False,
         )
 
+    focus = (ctx.active_subgoal or "").strip() or (ctx.primary_goal or "").strip()
     user_prompt = (
         f"{ctx.build_supervisor_context_block(history)}\n\n"
         f"Escalation Trigger: {trigger_type} — {escalation_reason}\n"
         f"System 1 Candidate Decision: {s1_summary}\n\n"
-        f"{wrap_untrusted_dom(page, elements)}"
+        f"{wrap_untrusted_dom(page, elements, focus=focus)}"
     )
 
     comp = _chat_completion(

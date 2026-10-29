@@ -225,15 +225,207 @@ def sanitize_untrusted_text(raw: str, max_chars: int = 4000) -> str:
     return cleaned[:max_chars]
 
 
-def wrap_untrusted_dom(page: dict[str, Any], elements: list[dict[str, Any]], max_text_chars: int = 3000) -> str:
+def _normalize_turkish_fold(s: str) -> str:
+    """Casefold string with Turkish dotted/dotless I normalization."""
+    return s.replace("I", "ı").replace("İ", "i").casefold().replace("\u0307", "")
+
+
+def _extract_focus_prefixes(focus: str) -> list[str]:
+    """Extract distinct prefix stems (first 5 letters, or 4 for 4-letter words) from focus string.
+
+    Tokens with length < 4 are ignored.
+    """
+    norm = _normalize_turkish_fold(focus)
+    tokens = re.findall(r"\w+", norm)
+    prefixes: list[str] = []
+    for t in tokens:
+        if len(t) >= 4:
+            prefixes.append(t[:5])
+    return list(dict.fromkeys(prefixes))
+
+
+def _chunk_paragraph_text(text: str, chunk_size: int = 600) -> list[str]:
+    """Split text into ~600 character paragraph chunks respecting natural boundaries."""
+    if not text:
+        return []
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    raw_paras = [p.strip() for p in normalized.split("\n\n") if p.strip()]
+    if not raw_paras:
+        raw_paras = [p.strip() for p in normalized.split("\n") if p.strip()]
+    if not raw_paras:
+        raw_paras = [normalized.strip()] if normalized.strip() else []
+
+    chunks: list[str] = []
+    curr: list[str] = []
+    curr_len = 0
+
+    def flush_curr() -> None:
+        nonlocal curr, curr_len
+        if curr:
+            chunks.append("\n\n".join(curr))
+            curr = []
+            curr_len = 0
+
+    for para in raw_paras:
+        if len(para) <= chunk_size:
+            if curr_len + len(para) + 2 <= chunk_size:
+                curr.append(para)
+                curr_len += len(para) + (2 if len(curr) > 1 else 0)
+            else:
+                flush_curr()
+                curr.append(para)
+                curr_len = len(para)
+        else:
+            flush_curr()
+            lines = [l.strip() for l in para.split("\n") if l.strip()]
+            for line in lines:
+                if len(line) <= chunk_size:
+                    if curr_len + len(line) + 1 <= chunk_size:
+                        curr.append(line)
+                        curr_len += len(line) + (1 if len(curr) > 1 else 0)
+                    else:
+                        flush_curr()
+                        curr.append(line)
+                        curr_len = len(line)
+                else:
+                    flush_curr()
+                    words = line.split(" ")
+                    w_curr: list[str] = []
+                    w_len = 0
+                    for w in words:
+                        if not w:
+                            continue
+                        if len(w) > chunk_size:
+                            if w_curr:
+                                chunks.append(" ".join(w_curr))
+                                w_curr = []
+                                w_len = 0
+                            for i in range(0, len(w), chunk_size):
+                                chunks.append(w[i : i + chunk_size])
+                        elif w_len + len(w) + 1 <= chunk_size:
+                            w_curr.append(w)
+                            w_len += len(w) + 1
+                        else:
+                            chunks.append(" ".join(w_curr))
+                            w_curr = [w]
+                            w_len = len(w)
+                    if w_curr:
+                        chunks.append(" ".join(w_curr))
+            flush_curr()
+    flush_curr()
+    return chunks
+
+
+def _score_chunk(chunk: str, prefixes: list[str]) -> int:
+    """Score chunk by count of matching words with focus prefixes."""
+    if not prefixes or not chunk:
+        return 0
+    norm_chunk = _normalize_turkish_fold(chunk)
+    words = re.findall(r"\w+", norm_chunk)
+    score = 0
+    for w in words:
+        if len(w) >= 4:
+            for p in prefixes:
+                if w.startswith(p) or (len(w) >= 4 and p.startswith(w)):
+                    score += 1
+    return score
+
+
+def extract_focused_full_text(raw_full: str, focus: str = "", max_chars: int = 7500) -> str:
+    """Extract focused middle paragraphs when full_text exceeds max_chars.
+
+    If focus is empty/whitespace or yields no valid terms, legacy truncation
+    (4200 head + 3000 tail) is used.
+    """
+    if len(raw_full) <= max_chars:
+        return raw_full
+
+    clean_focus = str(focus or "").strip()
+    if not clean_focus:
+        return raw_full[:4200] + "\n...[middle section omitted]...\n" + raw_full[-3000:]
+
+    prefixes = _extract_focus_prefixes(clean_focus)
+    if not prefixes:
+        return raw_full[:4200] + "\n...[middle section omitted]...\n" + raw_full[-3000:]
+
+    head = raw_full[:2000]
+    tail = raw_full[-1000:]
+    middle = raw_full[2000:-1000]
+
+    chunks = _chunk_paragraph_text(middle, chunk_size=600)
+    if not chunks:
+        return head + "\n[... omitted ...]\n" + tail
+
+    scored_chunks = [(idx, _score_chunk(c, prefixes), c) for idx, c in enumerate(chunks)]
+    ranked = sorted([(idx, sc, c) for idx, sc, c in scored_chunks if sc > 0], key=lambda x: (-x[1], x[0]))
+
+    if not ranked:
+        return head + "\n[... omitted ...]\n" + tail
+
+    selected_indices: set[int] = set()
+    total_len = 0
+    for idx, sc, c in ranked:
+        if total_len + len(c) <= 4000:
+            selected_indices.add(idx)
+            total_len += len(c)
+        elif not selected_indices:
+            max_c = max(100, max_chars - len(head) - len(tail) - 100)
+            c_trimmed = c[:max_c]
+            chunks[idx] = c_trimmed
+            selected_indices.add(idx)
+            total_len += len(c_trimmed)
+            break
+
+    if not selected_indices:
+        return head + "\n[... omitted ...]\n" + tail
+
+    sorted_idx = sorted(selected_indices)
+    parts: list[str] = [head]
+
+    if sorted_idx[0] > 0:
+        parts.append("\n[... omitted ...]\n")
+    else:
+        parts.append("\n\n")
+
+    for i, idx in enumerate(sorted_idx):
+        if i > 0:
+            prev_idx = sorted_idx[i - 1]
+            if idx > prev_idx + 1:
+                parts.append("\n[... omitted ...]\n")
+            else:
+                parts.append("\n\n")
+        parts.append(chunks[idx])
+
+    if sorted_idx[-1] < len(chunks) - 1:
+        parts.append("\n[... omitted ...]\n")
+    else:
+        parts.append("\n\n")
+
+    parts.append(tail)
+
+    result = "".join(parts)
+    if len(result) > max_chars:
+        result = result[:max_chars]
+    return result
+
+
+def wrap_untrusted_dom(
+    page: dict[str, Any],
+    elements: list[dict[str, Any]],
+    max_text_chars: int = 3000,
+    focus: str = "",
+) -> str:
     """Format observed DOM elements and page text inside explicit untrusted delimiters."""
     url = sanitize_untrusted_text(str(page.get("url", "")), 500)
     title = sanitize_untrusted_text(str(page.get("title", "")), 300)
     text = sanitize_untrusted_text(str(page.get("text", "")), max_text_chars)
     raw_full = str(page.get("full_text", "") or "")
     if len(raw_full) > 7500:
-        raw_full = raw_full[:4200] + "\n...[middle section omitted]...\n" + raw_full[-3000:]
-    full_text = sanitize_untrusted_text(raw_full, 7800)
+        if focus and focus.strip():
+            raw_full = extract_focused_full_text(raw_full, focus=focus, max_chars=7500)
+        else:
+            raw_full = raw_full[:4200] + "\n...[middle section omitted]...\n" + raw_full[-3000:]
+    full_text = sanitize_untrusted_text(raw_full, 7500 if (focus and focus.strip()) else 7800)
     raw_headings = page.get("headings") or []
     headings_str = " | ".join(sanitize_untrusted_text(str(h), 120) for h in raw_headings[:80]) if raw_headings else ""
 
