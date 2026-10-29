@@ -141,7 +141,7 @@ def test_second_5xx_is_not_retried_again(caller: str) -> None:
     assert 1 <= slept[0] <= 2
 
 
-@pytest.mark.parametrize("caller", ["meta", "openrouter", "system1"])
+@pytest.mark.parametrize("caller", ["openrouter", "system1"])
 def test_http_400_is_not_retried(caller: str) -> None:
     calls, post = _scripted_post([400, 200], _CHAT_OK if caller != "system1" else _DECISION_OK)
     slept: list[float] = []
@@ -211,6 +211,59 @@ def test_openrouter_transport_error_is_not_retried_twice() -> None:
         choose_action(_PAGE, "Open the page", [], config)
     assert calls == ["post", "post"]
     assert len(slept) == 1
+
+
+def test_meta_400_retries_once_without_reasoning_fields() -> None:
+    payloads: list[dict[str, Any]] = []
+
+    def post(*_args: Any, **kwargs: Any) -> httpx.Response:
+        payload = dict(kwargs["json"])
+        payloads.append(payload)
+        if len(payloads) == 1:
+            return _response(400)
+        return _response(200, _CHAT_OK)
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=post),
+        patch("reflex.supervisor.time.sleep", side_effect=AssertionError("meta 400 fallback must not sleep")),
+    ):
+        parsed, _latency, _cost, _model = _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            allow_model_fallback=False,
+        )
+    assert parsed["action_type"] == "ASK_USER"
+    assert payloads[0]["reasoning_effort"] == "low"
+    assert payloads[0]["response_format"] == {"type": "json_object"}
+    assert "reasoning_effort" not in payloads[1]
+    assert "response_format" not in payloads[1]
+    assert len(payloads) == 2
+
+
+def test_meta_400_plain_body_is_not_retried_again() -> None:
+    payloads: list[dict[str, Any]] = []
+
+    def post(*_args: Any, **kwargs: Any) -> httpx.Response:
+        payloads.append(dict(kwargs["json"]))
+        return _response(400)
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=post),
+        patch("reflex.supervisor.time.sleep", side_effect=AssertionError("meta 400 fallback must not sleep")),
+        pytest.raises(RuntimeError),
+    ):
+        _chat_completion(
+            model="muse-spark-1.3-contributor",
+            system_prompt="sys",
+            user_prompt="usr",
+            allow_model_fallback=False,
+        )
+    assert len(payloads) == 2
+    assert "reasoning_effort" not in payloads[1]
+    assert "response_format" not in payloads[1]
 
 
 def test_local_turnike_transport_error_is_not_retried() -> None:

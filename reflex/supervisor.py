@@ -354,6 +354,18 @@ def _chat_completion(
                 }
                 try:
                     resp = _HTTP_CLIENT.post(META_API_CHAT_URL, headers=meta_headers, json=payload, timeout=req_timeout)
+                    if resp.status_code == 400:
+                        plain_payload = {
+                            key: value
+                            for key, value in payload.items()
+                            if key not in {"reasoning_effort", "response_format"}
+                        }
+                        resp = _HTTP_CLIENT.post(
+                            META_API_CHAT_URL,
+                            headers=meta_headers,
+                            json=plain_payload,
+                            timeout=req_timeout,
+                        )
                     if _retryable_http_status(resp.status_code):
                         if attempt == 0:
                             retries_used += 1
