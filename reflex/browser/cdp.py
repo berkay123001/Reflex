@@ -134,6 +134,10 @@ def ensure_chromium_cdp(port: int | None = None) -> None:
 
 CLICK_TEXT_QUIET_S = 0.6
 CLICK_TEXT_CAP_S = 10.0
+# Growth after in-page settle arms the text poll only inside this window.
+CLICK_TEXT_ARM_S = 0.25
+# Quiet clicks stay under 200 ms. The trailing length read sits inside the margin.
+CLICK_SETTLE_BUDGET_S = 0.18
 _PAGE_TEXT_LEN = "(document.body && (document.body.innerText || '').length) || 0"
 _TIME_TOKEN = re.compile(r"\b\d+\s*(?:s|sn|sec|ms)\b", re.IGNORECASE)
 # Read the live accessible name. The token keeps this evaluate distinct from the click script.
@@ -410,11 +414,11 @@ class Browser:
         return int(self.evaluate(_PAGE_TEXT_LEN) or 0)
 
     def _wait_while_page_text_grows(self) -> None:
-        """After a click, poll until page text stops growing.
+        """Poll until page text stops growing.
 
-        Two equal reads do not end the wait: streaming text can start a moment
-        later. Waiting stops after 600 ms with no growth and never lasts past
-        10 seconds, so a stable page stays near the silence window.
+        Runs only after text grew inside the post-settle arm window. Two equal
+        reads do not end the wait. Waiting stops after 600 ms with no growth
+        and never lasts past 10 seconds.
         """
         try:
             last = self._page_text_length()
@@ -450,15 +454,47 @@ class Browser:
                 last = current
                 last_growth = time.monotonic()
 
+    def _arm_text_growth_wait(self, before_len: int | None, started: float) -> None:
+        """Arm the 600 ms text poll if text grows within 250 ms after settle.
+
+        A quiet page does not hold that window open past the post-click budget,
+        so the static wait stays under 200 ms.
+        """
+        try:
+            current = self._page_text_length()
+        except Exception:
+            return
+        if before_len is not None and current > before_len:
+            self._wait_while_page_text_grows()
+            return
+        deadline = min(time.monotonic() + CLICK_TEXT_ARM_S, started + CLICK_SETTLE_BUDGET_S)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 1e-9:
+                return
+            time.sleep(min(0.05, remaining))
+            try:
+                nxt = self._page_text_length()
+            except Exception:
+                return
+            if nxt > current:
+                self._wait_while_page_text_grows()
+                return
+            current = nxt
+
     def observe(self, screenshot: bool = True) -> dict[str, Any]:
         """Observe the current page state atomically via snapshot.js."""
         if self.after_input is not None:
             action, self.after_input = self.after_input, None
+            started = time.monotonic()
+            before_len: int | None = None
             if action.get("kind") == "click":
-                self._wait_while_page_text_grows()
-            else:
                 try:
-                    self.call(
+                    before_len = self._page_text_length()
+                except Exception:
+                    before_len = None
+            try:
+                self.call(
                     "Runtime.evaluate",
                     expression="""(action => new Promise(resolve => {
                       const field = window.__jevFast?.nodes.get(action.node);
@@ -528,8 +564,10 @@ class Browser:
                     awaitPromise=True,
                     returnByValue=True,
                 )
-                except Exception:
-                    pass
+            except Exception:
+                pass
+            if action.get("kind") == "click":
+                self._arm_text_growth_wait(before_len, started)
 
         stale_wait = float(os.environ.get("REFLEX_STALE_WAIT", "0.15") or 0.15)
         for attempt in range(10):
