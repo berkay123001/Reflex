@@ -626,6 +626,25 @@ def test_f4_tool_descriptions_include_client_instructions() -> None:
         assert "reflex_reply" in doc
 
 
+def test_f5_main_sets_reflex_env_path_when_cwd_has_no_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """F5: When REFLEX_ENV_PATH is unset and cwd/.env is missing, main() sets REFLEX_ENV_PATH to repo root .env."""
+    import os
+    import reflex.mcp_server as srv
+    from reflex.config import get_env_path
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("REFLEX_ENV_PATH", raising=False)
+    assert not (tmp_path / ".env").exists()
+
+    with patch.object(srv.mcp, "run", return_value=None):
+        srv.main()
+
+    expected = Path(srv.__file__).resolve().parents[1] / ".env"
+    assert os.environ.get("REFLEX_ENV_PATH") == str(expected)
+    assert get_env_path() == expected
+
+
+
 
 
 

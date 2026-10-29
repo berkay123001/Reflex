@@ -28,6 +28,7 @@ from concurrent.futures import Future
 import inspect
 import logging
 import os
+from pathlib import Path
 import queue
 import signal
 import threading
@@ -824,6 +825,9 @@ def _stop_all_sessions(timeout_s: float = 4.0) -> None:
 
 def main() -> None:
     """Entry point for `reflex-mcp` stdio server."""
+    if not os.environ.get("REFLEX_ENV_PATH") and not (Path.cwd() / ".env").exists():
+        os.environ["REFLEX_ENV_PATH"] = str(Path(__file__).resolve().parents[1] / ".env")
+
     def _raise_system_exit(signum: int, _frame: Any) -> None:
         raise SystemExit(128 + signum)
 

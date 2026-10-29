@@ -14,7 +14,7 @@ Install with the `mcp` extra and register the stdio server in Claude Code:
 
 ```bash
 pip install -e ".[mcp]"
-claude mcp add reflex -- reflex-mcp
+claude mcp add reflex -- /MUTLAK/YOL/.venv/bin/reflex-mcp
 ```
 
 Note: Each `reflex-mcp` process supports a single active browser session at a time. Always call `reflex_stop` before starting a new session with `reflex_start`.
