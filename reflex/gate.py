@@ -20,6 +20,7 @@ from .config import CalibrationThresholds
 # A committed form submit below this joint confidence escalates as low_conf_submit.
 SUBMIT_JOINT_MIN = 0.6
 _WS_RE = re.compile(r"\s+")
+_INTERNAL_GROUP_RE = re.compile(r"^rg\d+$")
 _CHOICE_ROLES = frozenset({"radio", "checkbox"})
 _TEXT_ROLES = frozenset({"textbox", "searchbox"})
 
@@ -80,11 +81,14 @@ def missing_form_labels(action: dict[str, Any] | None, page_actions: list[dict[s
         if any(str(member.get("checked", "")).lower() == "true" for member in members):
             continue
         label = next((_clean_label(member.get("group_label")) for member in members if _clean_label(member.get("group_label"))), "")
-        if not label:
+        if _INTERNAL_GROUP_RE.fullmatch(label):
+            label = ""
+        if not label and not _INTERNAL_GROUP_RE.fullmatch(name):
             label = name
-        if label not in seen:
-            seen.add(label)
-            labels.append(label)
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
     seen_nodes: set[Any] = set()
     for item in page_actions or []:
         if item.get("form_key") != form_key or not item.get("required") or item.get("role") == "radio":

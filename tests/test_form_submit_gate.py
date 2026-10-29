@@ -10,6 +10,7 @@ single search box do not.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import socket
 import subprocess
@@ -611,7 +612,7 @@ def test_fixture_pages_mark_real_submitters(chromium_port: int) -> None:
     assert send.get("submits_form") is True
     assert str(send.get("form_key", "")).startswith("f")
     assert send["form_key"] != "loose"
-    assert missing_form_labels(send, gforms["actions"])
+    assert missing_form_labels(send, gforms["actions"]) == ["Yaşınız?"]
     gforms_gate = evaluate_decision(
         _click(send["id"]),
         CalibrationThresholds(),
@@ -647,3 +648,31 @@ def test_fixture_pages_mark_real_submitters(chromium_port: int) -> None:
     )
     assert search_gate.trigger_type != "low_conf_submit"
     assert search_gate.should_escalate is False
+
+
+_UNLABELED_GROUP_HTML = """<!doctype html>
+<meta charset="utf-8">
+<form id="bare">
+  <div role="radiogroup">
+    <div role="radio" aria-checked="false" tabindex="0">A</div>
+    <div role="radio" aria-checked="false" tabindex="0">B</div>
+  </div>
+  <div role="button" tabindex="0">Send</div>
+</form>
+"""
+
+
+def test_internal_radio_group_name_is_not_a_label(chromium_port: int, tmp_path: Path) -> None:
+    page = tmp_path / "unlabeled_group.html"
+    page.write_text(_UNLABELED_GROUP_HTML, encoding="utf-8")
+    snapshot = _snapshot_url(chromium_port, page.resolve().as_uri())
+    radios = [action for action in snapshot["actions"] if action.get("role") == "radio"]
+    assert len(radios) >= 2
+    group_name = str(radios[0].get("group") or "")
+    assert re.fullmatch(r"rg\d+", group_name)
+    for action in snapshot["actions"]:
+        assert action.get("group_label") != group_name
+        assert action.get("label") != group_name
+        assert group_name not in str(action.get("label") or "")
+    submit = _action_named(snapshot["actions"], "Send")
+    assert group_name not in missing_form_labels(submit, snapshot["actions"])

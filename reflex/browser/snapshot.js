@@ -144,6 +144,27 @@
     }
     return '';
   };
+  const cleanQuestion=text=>(text||'').replace(/\s*\*\s*$/,'').replace(/\s+/g,' ').trim();
+  const internalGroupName=text=>/^rg\d+$/.test(cleanQuestion(text));
+  const headingText=container=>{
+    const head=container?.querySelector('[role="heading"],legend,h2,h3,h4');
+    const text=cleanQuestion(head?.innerText);
+    return internalGroupName(text) ? '' : text;
+  };
+  // A radiogroup often has no heading of its own. Climb to the list item, group, or
+  // fieldset that asks the question, then to the repeated-option question. Never use
+  // the synthetic group id (rg3) as the label.
+  const groupQuestion=el=>{
+    const radioGroup=el.closest('[role="radiogroup"]');
+    let text=headingText(radioGroup);
+    let cur=radioGroup ? radioGroup.parentElement : el.parentElement;
+    for (let i=0; !text && cur && cur!==document.body && i<8; i++, cur=cur.parentElement) {
+      const roleAttr=cur.getAttribute('role')||'';
+      if (roleAttr==='listitem' || roleAttr==='group' || cur.tagName==='FIELDSET') text=headingText(cur);
+    }
+    if (!text) text=cleanQuestion(choiceQuestion(el));
+    return internalGroupName(text) ? '' : text;
+  };
   const seenCardLinks=new Set();
   const actions=[];
   for (const e of document.querySelectorAll(selector)) {
@@ -170,15 +191,17 @@
       }
     }
     let groupLabel='';
-    if (['radio','checkbox','textbox'].includes(rname)) {
+    if (rname==='radio') {
+      groupLabel=groupQuestion(e);
+    } else if (['checkbox','textbox'].includes(rname)) {
       const qItem=e.closest('[role="listitem"],[role="group"],[role="radiogroup"],fieldset');
       const qHead=qItem?.querySelector('[role="heading"],legend,h2,h3,h4');
-      let qTxt=qHead?.innerText?.replace(/\s*\*\s*$/,'').replace(/\s+/g,' ').trim();
-      if (!qTxt && rname!=='textbox') qTxt=choiceQuestion(e);
-      groupLabel=(qTxt||'').replace(/\s*\*\s*$/,'').trim();
-      if (qTxt && !lbl.toLowerCase().includes(qTxt.slice(0,25).toLowerCase())) {
-        lbl=`${qTxt.slice(0,75)} → ${lbl.trim()}`;
-      }
+      let qTxt=cleanQuestion(qHead?.innerText);
+      if (!qTxt && rname!=='textbox') qTxt=cleanQuestion(choiceQuestion(e));
+      groupLabel=internalGroupName(qTxt) ? '' : qTxt;
+    }
+    if (groupLabel && !lbl.toLowerCase().includes(groupLabel.slice(0,25).toLowerCase())) {
+      lbl=`${groupLabel.slice(0,75)} → ${lbl.trim()}`;
     }
     const linkEl=e.tagName==='A'?e:e.closest('a[href]');
     const attrHref=linkEl?.getAttribute('href')?.trim() ?? '';
