@@ -234,3 +234,78 @@ def test_covered_opacity_zero_input_is_not_listed_and_rejected_by_act(
             with pytest.raises(TargetCoveredError):
                 browser.act(cb_action, page)
         assert browser.evaluate("document.getElementById('parent_short').checked") is False
+
+
+_CUSTOM_QUIZ_H5_HTML = """<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font: 16px sans-serif; margin: 24px; }
+    .quiz-q { margin-bottom: 24px; max-width: 720px; }
+    h5.flex.items-start {
+      display: flex;
+      align-items: flex-start;
+      cursor: pointer;
+      padding: 12px;
+      margin: 8px 0;
+      min-height: 48px;
+      border: 1px solid #ddd;
+    }
+    .circle-wrap { margin-right: 8px; }
+    .circle-dot { display: none; }
+  </style>
+</head>
+<body>
+  <div class="quiz-q">
+    <h2>1. İş görüşmesinde işler yolunda gitmedi, ne yaparsın?</h2>
+    <h5 class="flex items-start">
+      <span class="circle-wrap"><img class="circle" alt="circle"><img class="circle-dot" alt="circle-dot"></span>
+      Hatamı kabul eder ve bu deneyimi gelişme fırsatına dönüştürmeye çalışırım.
+    </h5>
+    <h5 class="flex items-start">
+      <span class="circle-wrap"><span class="circle">circle</span><span class="circle-dot">circle-dot</span></span>
+      Öfkeyi hızlı bir şekilde kontrol ederim ve pozitif bir bakış açısı geliştiririm.
+    </h5>
+    <h5 class="flex items-start">
+      <span class="circle-wrap"><i title="circle"></i><i title="circle-dot"></i></span>
+      Değişikliklere hızlı bir şekilde uyum sağlarım ve yeni durumlara adapte olurum.
+    </h5>
+    <h5 class="flex items-start">
+      <span class="circle-wrap"><img class="circle" alt="circle"><img class="circle-dot" alt="circle-dot"></span>
+      Ekiple fikir alışverişi yapar ve herkesin karekterine uygun görevlendirmeyle başarıya ulaşırız.
+    </h5>
+  </div>
+  <a href="https://example.test/more">Daha Fazla Sana Özel İçerikler <img alt="arrow-right-white"></a>
+</body>
+</html>
+"""
+
+
+def test_f12_custom_h5_quiz_options_strip_icon_class_residue_and_are_listed(
+    chromium_port: int, tmp_path: Path
+) -> None:
+    """F12: h5 (cursor:pointer) quiz options with 'circle circle-dot' icons are listed with clean labels."""
+    html_file = tmp_path / "custom_quiz_h5.html"
+    html_file.write_text(_CUSTOM_QUIZ_H5_HTML, encoding="utf-8")
+
+    snap = _snapshot_url(chromium_port, html_file.resolve().as_uri())
+    actions = [a for a in snap["actions"] if a.get("kind") == "click"]
+    labels = [a["label"] for a in actions]
+
+    expected_options = [
+        "Hatamı kabul eder ve bu deneyimi gelişme fırsatına dönüştürmeye çalışırım.",
+        "Öfkeyi hızlı bir şekilde kontrol ederim ve pozitif bir bakış açısı geliştiririm.",
+        "Değişikliklere hızlı bir şekilde uyum sağlarım ve yeni durumlara adapte olurum.",
+        "Ekiple fikir alışverişi yapar ve herkesin karekterine uygun görevlendirmeyle başarıya ulaşırız.",
+    ]
+    for opt in expected_options:
+        assert opt in labels, f"Missing option {opt!r} in {labels}"
+
+    for lbl in labels:
+        assert "circle" not in lbl
+        assert "circle-dot" not in lbl
+        assert "arrow-right-white" not in lbl
+
+    assert "Daha Fazla Sana Özel İçerikler" in labels
+

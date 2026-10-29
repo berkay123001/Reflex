@@ -23,19 +23,38 @@
     }
     return '';
   };
+  const isIconSlug = s => /^[a-z0-9]+(?:[-_/][a-z0-9]+)+$/.test(s) ||
+    /^(?:circle|dot|bullet|icon|arrow|chevron|caret)(?:[-_][a-z0-9]+)*$/.test(s);
+  const cleanClassTokens = (e, text) => {
+    if (!text) return '';
+    const classes = new Set();
+    if (e.classList) for (const c of e.classList) classes.add(c);
+    if (e.querySelectorAll) {
+      for (const ch of e.querySelectorAll('[class]')) {
+        for (const c of ch.classList) classes.add(c);
+      }
+    }
+    const tokens = text.split(/\s+/);
+    let start = 0, end = tokens.length;
+    while (start < end && (isIconSlug(tokens[start]) || classes.has(tokens[start]))) start++;
+    while (end > start && (isIconSlug(tokens[end - 1]) || classes.has(tokens[end - 1]))) end--;
+    return start < end ? tokens.slice(start, end).join(' ') : text;
+  };
   const name = (e,seen=new Set()) => {
     if (!e || seen.has(e)) return '';
     seen.add(e);
     const referenced=(e.getAttribute('aria-labelledby')||'').split(/\s+/)
       .map(id=>name(document.getElementById(id),seen)).filter(Boolean).join(' ');
+    const parentVis = visible(e);
     const raw = referenced || e.getAttribute('aria-label') ||
       [...(e.labels||[])].map(l=>name(l,seen)).filter(Boolean).join(' ') ||
       choiceFallbackLabel(e,seen) ||
       (['button','submit','reset'].includes(e.type) ? e.value : '') || e.getAttribute('alt') ||
       (e.tagName==='INPUT' ? '' : [...e.childNodes].map(n=>n.nodeType===3 ? n.textContent :
-        n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' ? name(n,seen) : '').join(' ').trim()) ||
+        n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' && (!parentVis || visible(n)) ? name(n,seen) : '').join(' ').trim()) ||
       e.getAttribute('title') || e.getAttribute('placeholder') || '';
-    return raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+    const norm = raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+    return cleanClassTokens(e, norm);
   };
   const roles=['button','link','checkbox','radio','switch','tab','menuitem','menuitemradio',
     'option','gridcell','combobox','textbox','searchbox','spinbutton'];
@@ -317,7 +336,8 @@
     const visH=Math.min(clip.bottom,r.bottom)-Math.max(clip.top,r.top);
     if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
     const lbl=name(e);
-    if (!lbl || lbl.length>80) continue;
+    const maxLblLen=lbl.includes('\n') ? 80 : 120;
+    if (!lbl || lbl.length>maxLblLen) continue;
     const customAction={node:identity(e),role:'button',label:lbl,accessible_name:lbl,custom:true,kind:'click',value:'',
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
     if (isCommitControl(e)) {
