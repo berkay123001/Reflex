@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
-from reflex.config import CalibrationThresholds
+import httpx
+
+from reflex.config import CalibrationThresholds, ReflexConfig
 from reflex.gate import evaluate_decision
+from reflex.system1 import choose_action
 
 
 def _radios(group: str, *ids: str, checked: str = "false") -> list[dict[str, Any]]:
@@ -91,6 +95,72 @@ def test_different_groups_and_answered_groups_still_escalate() -> None:
     assert different.trigger_type == "ambiguous_target"
     assert settled.should_escalate is True
     assert settled.trigger_type == "ambiguous_target"
+
+
+def _loose_question(option_count: int = 5) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"e{index}",
+            "node": index,
+            "kind": "click",
+            "role": "radio",
+            "label": f"Seçenek {index}",
+            "group": "q1",
+            "group_label": "Soru",
+            "form_key": "loose",
+            "checked": "false",
+        }
+        for index in range(1, option_count + 1)
+    ]
+
+
+def _choose(actions: list[dict[str, Any]], indexes: dict[str, float]) -> dict[str, Any]:
+    """Return the decision choose_action builds from an index-keyed S1 answer."""
+    payload = {
+        "model": "jev-test",
+        "answers": {
+            "operation": {
+                "choice": "CLICK",
+                "probabilities": {"CLICK": 0.9, "DONE": 0.05, "BLOCKED": 0.05},
+            },
+            "click_target": {"choice": "1", "probabilities": indexes},
+        },
+        "usage": {},
+    }
+
+    def post(*_args: Any, **_kwargs: Any) -> httpx.Response:
+        return httpx.Response(200, json=payload, request=httpx.Request("POST", "http://127.0.0.1/s1"))
+
+    page = {"url": "https://example.test/quiz", "title": "Quiz", "text": "Soru", "actions": actions}
+    with patch("reflex.system1._HTTP_CLIENT.post", post):
+        return choose_action(page, "Rastgele çöz", [], ReflexConfig(decision_backend="local_turnike"))
+
+
+def test_real_s1_indexes_pool_one_loose_question() -> None:
+    actions = _loose_question(5)
+    decision = _choose(actions, {str(index): 0.2 for index in range(1, 6)})
+    assert set(decision["target_probabilities"]) == {"1", "2", "3", "4", "5"}
+    assert set(decision["probabilities"]) == {"e1", "e2", "e3", "e4", "e5"}
+    chosen = next(action for action in actions if action["id"] == decision["choice"])
+    pooled = evaluate_decision(
+        decision,
+        CalibrationThresholds(),
+        allow_arbitrary_choices=True,
+        action=chosen,
+        page_actions=actions,
+    )
+    strict = evaluate_decision(
+        decision,
+        CalibrationThresholds(),
+        allow_arbitrary_choices=False,
+        action=chosen,
+        page_actions=actions,
+    )
+    assert pooled.should_escalate is False
+    assert pooled.trigger_type not in {"low_target_conf", "ambiguous_target"}
+    assert pooled.target_confidence == 1.0
+    assert strict.should_escalate is True
+    assert strict.trigger_type == "low_target_conf"
 
 
 def test_arbitrary_flag_off_does_not_pool_the_group() -> None:

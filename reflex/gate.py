@@ -160,6 +160,68 @@ def _group_unanswered(group: str, page_actions: list[dict[str, Any]]) -> bool:
     return not any(str(item.get("checked", "")).lower() == "true" for item in members)
 
 
+def _mass_on_page(probabilities: dict[str, Any], indexed: dict[str, dict[str, Any]]) -> dict[str, float]:
+    """Keep probability entries whose keys are snapshot action ids."""
+    kept: dict[str, float] = {}
+    for key, prob in probabilities.items():
+        action_id = str(key)
+        if action_id in indexed:
+            kept[action_id] = float(prob)
+    return kept
+
+
+def _mass_from_target_index(
+    decision: dict[str, Any],
+    target_probs: dict[str, Any],
+    indexed: dict[str, dict[str, Any]],
+) -> dict[str, float]:
+    """Translate S1 target indexes (``1``, ``3:2``) through the action catalog."""
+    catalog = decision.get("targets")
+    if not isinstance(catalog, dict):
+        return {}
+    options = catalog.get(str(decision.get("operation") or ""))
+    if not isinstance(options, dict):
+        return {}
+    translated: dict[str, float] = {}
+    for index, prob in target_probs.items():
+        option = options.get(str(index))
+        if not isinstance(option, dict):
+            continue
+        raw_id = option.get("id")
+        if raw_id is None:
+            continue
+        action_id = str(raw_id)
+        if action_id in indexed:
+            translated[action_id] = float(prob)
+    return translated
+
+
+def _probability_by_action_id(
+    decision: dict[str, Any],
+    page_actions: list[dict[str, Any]] | None,
+) -> dict[str, float]:
+    """Target probability mass keyed by snapshot action id.
+
+    ``probabilities`` is already action-id keyed. ``target_probabilities`` uses
+    the element index, which ``targets[operation][index]["id"]`` translates.
+    Entries that already use an action id are kept when the catalog is absent.
+    """
+    indexed = _actions_by_id(page_actions)
+    by_id = decision.get("probabilities")
+    if isinstance(by_id, dict):
+        matched = _mass_on_page(by_id, indexed)
+        if len(matched) >= 2:
+            return matched
+    target_probs = decision.get("target_probabilities") or {}
+    if not isinstance(target_probs, dict):
+        return {}
+    translated = _mass_from_target_index(decision, target_probs, indexed)
+    if len(translated) >= 2:
+        return translated
+    matched = _mass_on_page(target_probs, indexed)
+    return matched if len(matched) >= 2 else {}
+
+
 def _aggregate_unanswered_radio_group(
     target_probs: dict[str, Any],
     page_actions: list[dict[str, Any]] | None,
@@ -232,11 +294,15 @@ def evaluate_decision(
     target_conf = float(decision.get("target_confidence") if decision.get("target_confidence") is not None else 1.0)
     joint_conf = round(op_conf * target_conf, 4)
     target_margin, second_best = compute_margin(target_probs)
-    if allow_arbitrary_choices and isinstance(target_probs, dict):
+    if allow_arbitrary_choices:
         chosen_id = decision.get("choice")
         if chosen_id is None and action is not None:
             chosen_id = action.get("id")
-        grouped = _aggregate_unanswered_radio_group(target_probs, page_actions, chosen_id)
+        grouped = _aggregate_unanswered_radio_group(
+            _probability_by_action_id(decision, page_actions),
+            page_actions,
+            chosen_id,
+        )
         if grouped is not None:
             target_conf, target_margin, second_best = grouped
             joint_conf = round(op_conf * target_conf, 4)
