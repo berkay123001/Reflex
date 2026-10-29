@@ -21,6 +21,7 @@ from tests.test_form_submit_gate import _click, _free_port, _snapshot_url, chrom
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 OVERLAY_FIXTURE = FIXTURES / "overlay_radios.html"
+ETIKET_RISK_FIXTURE = FIXTURES / "etiket_risk.html"
 
 
 @contextmanager
@@ -253,6 +254,7 @@ _CUSTOM_QUIZ_H5_HTML = """<!doctype html>
       border: 1px solid #ddd;
     }
     .circle-wrap { margin-right: 8px; }
+    .circle { display: inline-block; width: 20px; height: 20px; }
     .circle-dot { display: none; }
   </style>
 </head>
@@ -268,7 +270,7 @@ _CUSTOM_QUIZ_H5_HTML = """<!doctype html>
       Öfkeyi hızlı bir şekilde kontrol ederim ve pozitif bir bakış açısı geliştiririm.
     </h5>
     <h5 class="flex items-start">
-      <span class="circle-wrap"><i title="circle"></i><i title="circle-dot"></i></span>
+      <span class="circle-wrap"><i class="circle" title="circle"></i><i class="circle-dot" title="circle-dot"></i></span>
       Değişikliklere hızlı bir şekilde uyum sağlarım ve yeni durumlara adapte olurum.
     </h5>
     <h5 class="flex items-start">
@@ -276,7 +278,7 @@ _CUSTOM_QUIZ_H5_HTML = """<!doctype html>
       Ekiple fikir alışverişi yapar ve herkesin karekterine uygun görevlendirmeyle başarıya ulaşırız.
     </h5>
   </div>
-  <a href="https://example.test/more">Daha Fazla Sana Özel İçerikler <img alt="arrow-right-white"></a>
+  <a href="https://example.test/more">Daha Fazla Sana Özel İçerikler <img alt="arrow-right-white" style="display:inline-block;width:12px;height:12px"></a>
 </body>
 </html>
 """
@@ -308,4 +310,35 @@ def test_f12_custom_h5_quiz_options_strip_icon_class_residue_and_are_listed(
         assert "arrow-right-white" not in lbl
 
     assert "Daha Fazla Sana Özel İçerikler" in labels
+
+
+def test_f12b_etiket_risk_fixture_preserves_all_labels(chromium_port: int) -> None:
+    """F12b: tests/fixtures/etiket_risk.html keeps real words matching class names or years/hyphens."""
+    snap = _snapshot_url(chromium_port, ETIKET_RISK_FIXTURE.resolve().as_uri())
+    labels = [a["label"] for a in snap["actions"] if a.get("kind") == "click"]
+    assert labels == [
+        "Add to cart",
+        "Fiyat 1.250 TL price",
+        "2025-2026 ücretleri",
+        "ücretler 2025-2026",
+        "e-posta ile giriş",
+        "covid-19 testi",
+        "Haberler title",
+    ]
+
+
+def test_f12b_material_symbols_icon_fixture_stripped(chromium_port: int, tmp_path: Path) -> None:
+    """F12b: <h5 style='cursor:pointer'><span style='font-family:Material Symbols;...'>circle</span> Şık metni</h5> -> 'Şık metni'."""
+    html_file = tmp_path / "icon_fixture.html"
+    html_file.write_text(
+        '<!doctype html><html><body>'
+        '<h5 style="cursor:pointer"><span style="font-family:\'Material Symbols\';'
+        'display:inline-block;width:24px;height:24px">circle</span> Şık metni</h5>'
+        '</body></html>',
+        encoding="utf-8",
+    )
+    snap = _snapshot_url(chromium_port, html_file.resolve().as_uri())
+    labels = [a["label"] for a in snap["actions"] if a.get("kind") == "click"]
+    assert labels == ["Şık metni"]
+
 

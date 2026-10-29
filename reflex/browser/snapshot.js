@@ -23,38 +23,43 @@
     }
     return '';
   };
-  const isIconSlug = s => /^[a-z0-9]+(?:[-_/][a-z0-9]+)+$/.test(s) ||
-    /^(?:circle|dot|bullet|icon|arrow|chevron|caret)(?:[-_][a-z0-9]+)*$/.test(s);
-  const cleanClassTokens = (e, text) => {
-    if (!text) return '';
-    const classes = new Set();
-    if (e.classList) for (const c of e.classList) classes.add(c);
-    if (e.querySelectorAll) {
-      for (const ch of e.querySelectorAll('[class]')) {
-        for (const c of ch.classList) classes.add(c);
-      }
+  let nameCache = new Map();
+  const isIconEl = (el, txt, hasOtherTxt) => {
+    if (el.children.length > 0 || txt.length < 3 || /\s/.test(txt) || !/[a-z]/i.test(txt)) return false;
+    if (hasOtherTxt || el.tagName === 'IMG' || txt.length >= 5) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && r.width <= 1.5 * r.height) return true;
     }
-    const tokens = text.split(/\s+/);
-    let start = 0, end = tokens.length;
-    while (start < end && (isIconSlug(tokens[start]) || classes.has(tokens[start]))) start++;
-    while (end > start && (isIconSlug(tokens[end - 1]) || classes.has(tokens[end - 1]))) end--;
-    return start < end ? tokens.slice(start, end).join(' ') : text;
+    return /icon|symbol|material/i.test(getComputedStyle(el).fontFamily.split(',')[0]);
   };
-  const name = (e,seen=new Set()) => {
+  const name = (e,seen=new Set(),parentVis=null) => {
     if (!e || seen.has(e)) return '';
+    const top = seen.size === 0;
+    if (top && nameCache?.has(e)) return nameCache.get(e);
     seen.add(e);
     const referenced=(e.getAttribute('aria-labelledby')||'').split(/\s+/)
       .map(id=>name(document.getElementById(id),seen)).filter(Boolean).join(' ');
-    const parentVis = visible(e);
     const raw = referenced || e.getAttribute('aria-label') ||
       [...(e.labels||[])].map(l=>name(l,seen)).filter(Boolean).join(' ') ||
       choiceFallbackLabel(e,seen) ||
       (['button','submit','reset'].includes(e.type) ? e.value : '') || e.getAttribute('alt') ||
-      (e.tagName==='INPUT' ? '' : [...e.childNodes].map(n=>n.nodeType===3 ? n.textContent :
-        n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' && (!parentVis || visible(n)) ? name(n,seen) : '').join(' ').trim()) ||
+      (e.tagName==='INPUT' ? '' : (() => {
+        const parts=[];
+        for (const n of e.childNodes) {
+          if (n.nodeType===3) {
+            if (n.textContent.trim()) parts.push({el:null,txt:n.textContent});
+          } else if (n.nodeType===1 && !['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) && n.getAttribute('aria-hidden')!=='true' && (!(parentVis ??= visible(e)) || visible(n))) {
+            const sub=name(n,seen,parentVis);
+            if (sub) parts.push({el:n,txt:sub});
+          }
+        }
+        const multi=parts.length>1;
+        return parts.map(p=>p.el && isIconEl(p.el,p.txt,multi) ? '' : p.txt).join(' ').trim();
+      })()) ||
       e.getAttribute('title') || e.getAttribute('placeholder') || '';
-    const norm = raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
-    return cleanClassTokens(e, norm);
+    const res = raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+    if (top && nameCache) nameCache.set(e, res);
+    return res;
   };
   const roles=['button','link','checkbox','radio','switch','tab','menuitem','menuitemradio',
     'option','gridcell','combobox','textbox','searchbox','spinbutton'];
@@ -336,8 +341,7 @@
     const visH=Math.min(clip.bottom,r.bottom)-Math.max(clip.top,r.top);
     if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
     const lbl=name(e);
-    const maxLblLen=lbl.includes('\n') ? 80 : 120;
-    if (!lbl || lbl.length>maxLblLen) continue;
+    if (!lbl || lbl.length>120) continue;
     const customAction={node:identity(e),role:'button',label:lbl,accessible_name:lbl,custom:true,kind:'click',value:'',
       rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
     if (isCommitControl(e)) {
@@ -430,6 +434,7 @@
   const text=words.join('\n').slice(0,6000), full_text=fullWords.join('\n').slice(0,30000), height=document.documentElement.scrollHeight;
   const page_key=cache.pageKey(), guards={};
   for (const a of actions) if (!(a.node in guards)) guards[a.node]=cache.guard(cache.nodes.get(a.node));
+  nameCache=null;
   const semantics=actions.map(({rect,...action})=>action);
   const marker=[performance.timeOrigin,location.href,scrollX,scrollY,innerWidth,innerHeight,
     document.title,text,semantics,page_key[6]];
