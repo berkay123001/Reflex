@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+import sys
 import threading
+import time
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 from mcp.server.elicitation import AcceptedElicitation, CancelledElicitation, DeclinedElicitation
 
-from reflex.browser.isolated import FORBIDDEN_SHARED_PORT
+from reflex.browser.isolated import FORBIDDEN_SHARED_PORT, is_port_open
 from reflex.mcp_server import (
     ActionConfirmElicitationSchema,
     UserReplyElicitationSchema,
@@ -482,4 +488,110 @@ async def test_f1_single_active_session_rejects_second_start_until_stopped() -> 
         sid2 = start2["session_id"]
         assert sid2 != sid1
         reflex_stop(session_id=sid2)
+
+
+@pytest.mark.anyio
+async def test_f2_stdio_disconnect_without_stop_cleans_up_chromium_and_profile() -> None:
+    """F2: Real stdio_client + patched LLMs; closing connection without calling reflex_stop
+    terminates the isolated Chromium process and deletes /tmp/reflex_eval_profile_* within 5s.
+    """
+    server_script = """
+import json
+import subprocess
+from unittest.mock import patch
+import reflex.agent
+import reflex.browser.isolated as iso
+from reflex.supervisor import SupervisorDecision, UserMessageInterpretation
+import reflex.mcp_server as srv
+
+spawn_info = {}
+orig_popen = subprocess.Popen
+
+def tracking_popen(cmd, *args, **kwargs):
+    for arg in cmd:
+        if isinstance(arg, str) and arg.startswith("--remote-debugging-port="):
+            spawn_info["port"] = int(arg.split("=", 1)[1])
+        elif isinstance(arg, str) and arg.startswith("--user-data-dir="):
+            spawn_info["profile_dir"] = arg.split("=", 1)[1]
+    return orig_popen(cmd, *args, **kwargs)
+
+def fake_choose_action(page, goal, history, config, **kwargs):
+    return {
+        "operation": "DONE",
+        "target": None,
+        "choice": None,
+        "confidence": 0.99,
+        "target_confidence": 0.99,
+        "target_margin": 0.95,
+        "latency_ms": 10,
+        "model": "f2-mock-s1",
+        "usage": {"cost": 0.0},
+    }
+
+def fake_resolve_escalation(**kwargs):
+    return SupervisorDecision(
+        action_type="COMPLETE_TASK",
+        summary_for_user=json.dumps(spawn_info),
+        reasoning="Done",
+        model="f2-mock-s2",
+        latency_ms=10,
+    )
+
+with (
+    patch.object(iso.subprocess, "Popen", side_effect=tracking_popen),
+    patch.object(reflex.agent, "interpret_user_message", return_value=UserMessageInterpretation()),
+    patch.object(reflex.agent, "choose_action", side_effect=fake_choose_action),
+    patch.object(reflex.agent, "resolve_escalation", side_effect=fake_resolve_escalation),
+):
+    srv.main()
+"""
+
+    port: int | None = None
+    profile_dir: Path | None = None
+
+    with managed_web_server() as base_url:
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-c", server_script],
+        )
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                r_start = await session.call_tool(
+                    "reflex_start",
+                    {
+                        "goal": "F2 yetim Chromium temizlik testi",
+                        "url": f"{base_url}/qa/blog",
+                        "max_steps": 3,
+                        "show_browser": False,
+                    },
+                )
+                start_data = json.loads(r_start.content[0].text)
+                sid = start_data["session_id"]
+
+                r_wait = await session.call_tool(
+                    "reflex_wait",
+                    {"session_id": sid, "timeout_s": 25},
+                )
+                wait_data = json.loads(r_wait.content[0].text)
+                assert wait_data["status"] == "done"
+                info = json.loads(wait_data["final_answer"])
+                port = int(info["port"])
+                profile_dir = Path(info["profile_dir"])
+
+                # Before disconnecting (without calling reflex_stop), both Chromium and profile exist
+                assert is_port_open("127.0.0.1", port) is True
+                assert profile_dir.exists() is True
+                # Intentionally do NOT call reflex_stop!
+
+    assert port is not None and profile_dir is not None
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        if not is_port_open("127.0.0.1", port, timeout=0.15) and not profile_dir.exists():
+            break
+        time.sleep(0.1)
+
+    assert is_port_open("127.0.0.1", port, timeout=0.2) is False
+    assert profile_dir.exists() is False
+
 

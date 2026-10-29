@@ -29,6 +29,7 @@ import inspect
 import logging
 import os
 import queue
+import signal
 import threading
 import time
 import uuid
@@ -775,9 +776,37 @@ def reflex_stop(
     return worker.stop()
 
 
+def _stop_all_sessions(timeout_s: float = 4.0) -> None:
+    """Stop all active session workers and clean up their isolated browsers."""
+    with _SESSIONS_LOCK:
+        workers = list(_SESSIONS.values())
+        _SESSIONS.clear()
+    for worker in workers:
+        try:
+            worker.stop(timeout_s=timeout_s)
+        except Exception as exc:
+            logger.debug("Error stopping session %s during shutdown: %s", worker.session_id, exc)
+
+
 def main() -> None:
     """Entry point for `reflex-mcp` stdio server."""
-    mcp.run(transport="stdio")
+    def _raise_system_exit(signum: int, _frame: Any) -> None:
+        raise SystemExit(128 + signum)
+
+    prev_sigterm = signal.getsignal(signal.SIGTERM)
+    prev_sigint = signal.getsignal(signal.SIGINT)
+    signal.signal(signal.SIGTERM, _raise_system_exit)
+    signal.signal(signal.SIGINT, _raise_system_exit)
+    try:
+        mcp.run(transport="stdio")
+    finally:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            _stop_all_sessions(timeout_s=4.0)
+        finally:
+            signal.signal(signal.SIGTERM, prev_sigterm)
+            signal.signal(signal.SIGINT, prev_sigint)
 
 
 if __name__ == "__main__":
