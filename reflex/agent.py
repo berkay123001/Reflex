@@ -41,7 +41,7 @@ from .supervisor import (
     interpret_user_message,
     resolve_escalation,
 )
-from .system1 import action_space, choose_action
+from .system1 import MAX_SUPERVISOR_ELEMENTS, action_space, choose_action
 from .verifier import VerificationResult, verify_step
 
 
@@ -994,7 +994,10 @@ class ReflexSession:
             self.ctx.add_agent_message(self.last_error, kind="escalation_note")
             return self.snapshot()
 
-        elements, targets, controls = action_space(self.page.get("actions", []))
+        elements, targets, controls = action_space(
+            self.page.get("actions", []),
+            max_elements=MAX_SUPERVISOR_ELEMENTS,
+        )
         s2_t0 = time.perf_counter()
         try:
             sup: SupervisorDecision = resolve_escalation(

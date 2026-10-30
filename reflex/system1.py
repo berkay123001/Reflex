@@ -39,6 +39,7 @@ a field that already contains the requested value. Choose only an offered elemen
 
 _HTTP_CLIENT = httpx.Client(http2=True, timeout=30.0)
 MAX_SYSTEM1_ELEMENTS = 60
+MAX_SUPERVISOR_ELEMENTS = 150
 HTTP_RETRY_DELAY_S = 1.5
 
 

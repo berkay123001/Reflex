@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel
 
+from .config import MAX_SUPERVISOR_ELEMENTS
+
 
 def extract_origin(url: str | None) -> str:
     """Extract scheme + netloc (e.g. 'https://example.com' or 'http://localhost:3000') from a URL.
@@ -456,6 +458,8 @@ def wrap_untrusted_dom(
     elements: list[dict[str, Any]],
     max_text_chars: int = 3000,
     focus: str = "",
+    max_elements: int = MAX_SUPERVISOR_ELEMENTS,
+    total_elements: int | None = None,
 ) -> str:
     """Format observed DOM elements and page text inside explicit untrusted delimiters."""
     url = sanitize_untrusted_text(str(page.get("url", "")), 500)
@@ -480,7 +484,7 @@ def wrap_untrusted_dom(
     scroll_line = f"y={scroll_y}px / total_height={scroll_h}px (at_top={at_top}, at_bottom={at_bottom})"
 
     elem_lines: list[str] = []
-    for el in elements[:60]:
+    for el in elements[:max_elements]:
         idx = el.get("index")
         role = el.get("role", "")
         lbl = sanitize_untrusted_text(str(el.get("label", "")), 140)
@@ -495,6 +499,21 @@ def wrap_untrusted_dom(
         for opt in el.get("options", [])[:15]:
             opt_lbl = sanitize_untrusted_text(str(opt.get("label", "")), 100)
             elem_lines.append(f"    option [{opt.get('index')}] {opt_lbl}")
+
+    raw_actions = [
+        a
+        for a in (page.get("actions") or [])
+        if isinstance(a, dict) and a.get("kind") in {"click", "fill", "select"}
+    ]
+    interactive_nodes = {a["node"] for a in raw_actions if a.get("node") is not None}
+    action_element_count = len(interactive_nodes) if interactive_nodes else len(raw_actions)
+
+    total_candidates = [len(elements), action_element_count]
+    if total_elements is not None:
+        total_candidates.append(total_elements)
+    omitted = max(0, max(total_candidates) - max_elements)
+    if omitted > 0:
+        elem_lines.append(f"+{omitted} more interactive elements omitted (scroll or use GOTO_URL)")
 
     elements_block = "\n".join(elem_lines) if elem_lines else "(no interactive elements observed)"
     extra_full_block = ""

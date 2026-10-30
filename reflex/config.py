@@ -21,6 +21,9 @@ def get_env_path() -> Path:
 
 ENV_PATH = get_env_path()
 
+MAX_SYSTEM1_ELEMENTS = 60
+MAX_SUPERVISOR_ELEMENTS = 150
+
 OPENROUTER_BASE_URL = "https://openrouter.ai"
 OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
