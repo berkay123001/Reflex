@@ -64,6 +64,19 @@ _STEALTH_INIT_SCRIPT = """(() => {
       }
       return window;
     };
+    window.__reflexDialogs = window.__reflexDialogs || [];
+    const recordDialog = (kind, msg) => {
+      try {
+        const m = String(msg ?? '').replace(/\\s+/g, ' ').trim();
+        if (m) {
+          window.__reflexDialogs.push('[' + kind + '] ' + m.slice(0, 400));
+          if (window.__reflexDialogs.length > 5) window.__reflexDialogs.shift();
+        }
+      } catch (_) {}
+    };
+    window.alert = function(msg) { recordDialog('Alert', msg); };
+    window.confirm = function(msg) { recordDialog('Confirm', msg); return false; };
+    window.prompt = function(msg) { recordDialog('Prompt', msg); return null; };
   } catch (_) {}
 })();"""
 
@@ -177,6 +190,10 @@ class StalePage(ValueError):
     """Raised when the page DOM mutated after observation before execution."""
 
 
+class EvaluationTimeout(StalePage):
+    """Raised when Runtime.evaluate times out even after dismissing any blocking JS dialog."""
+
+
 class TargetCoveredError(RuntimeError):
     """Raised when the target element is obscured by a modal/overlay at hit-test time."""
 
@@ -267,6 +284,11 @@ class Browser:
         self._owned_targets: set[str] = {self.target} if self.target else set()
         self.session: str = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
         self.after_input: dict[str, Any] | None = None
+        self._native_dialogs: list[str] = []
+        try:
+            self.call("Page.enable")
+        except Exception:
+            pass
         self.call("Page.bringToFront")
         self.call(
             "Emulation.setDeviceMetricsOverride",
@@ -282,6 +304,10 @@ class Browser:
         except Exception:
             pass
         try:
+            self.call("Page.addScriptToEvaluateOnNewDocument", source=_STEALTH_INIT_SCRIPT)
+        except Exception:
+            pass
+        try:
             raw_ua = str(self.evaluate("navigator.userAgent") or "")
             clean_ua = raw_ua.replace("HeadlessChrome/", "Chrome/")
             if clean_ua:
@@ -291,7 +317,6 @@ class Browser:
                     acceptLanguage="tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
                     platform="Linux x86_64",
                 )
-            self.call("Page.addScriptToEvaluateOnNewDocument", source=_STEALTH_INIT_SCRIPT)
         except Exception:
             pass
         self.navigate(url)
@@ -358,11 +383,54 @@ class Browser:
         self._wait_for_navigation_and_settle(prev_origin=prev_origin, max_wait=15.0)
         self.after_input = {"kind": "click"}
 
+    def _dismiss_js_dialog(self) -> str | None:
+        """Dismiss an active native JavaScript dialog (alert/confirm/prompt/beforeunload) if present."""
+        dlg_type = ""
+        dlg_msg = ""
+        try:
+            from browser_harness.helpers import _send as _bh_send
+
+            pending = _bh_send({"meta": "pending_dialog"}).get("dialog")
+            if isinstance(pending, dict):
+                dlg_type = str(pending.get("type") or "").strip().lower()
+                dlg_msg = str(pending.get("message") or "").strip()
+        except Exception:
+            pass
+
+        accept = dlg_type in {"alert", "beforeunload"}
+        try:
+            cdp(
+                "Page.handleJavaScriptDialog",
+                session_id=self.session,
+                _response_timeout=1.5,
+                accept=accept,
+            )
+        except Exception:
+            return None
+
+        label = (dlg_type or "dialog").capitalize()
+        summary = f"[{label}] {dlg_msg[:400]}".strip() if dlg_msg else f"[{label}] dismissed"
+        dialogs = getattr(self, "_native_dialogs", None)
+        if isinstance(dialogs, list):
+            dialogs.append(summary)
+            if len(dialogs) > 5:
+                del dialogs[:-5]
+        return summary
+
     def call(self, method: str, **params: Any) -> dict[str, Any]:
         with self._cdp_lock:
             try:
                 return cdp(method, session_id=self.session, **params)
             except StalePage:
+                raise
+            except TimeoutError:
+                if method != "Page.handleJavaScriptDialog" and self._dismiss_js_dialog() is not None:
+                    try:
+                        return cdp(method, session_id=self.session, **params)
+                    except Exception as retry_exc:
+                        if _is_navigation_cdp_error(retry_exc):
+                            raise StalePage(str(retry_exc)) from retry_exc
+                        raise
                 raise
             except Exception as exc:
                 if _is_navigation_cdp_error(exc):
@@ -404,6 +472,8 @@ class Browser:
             response = self.call("Runtime.evaluate", expression=expression, returnByValue=True)
         except StalePage:
             raise
+        except TimeoutError as exc:
+            raise EvaluationTimeout(str(exc)) from exc
         except Exception as exc:
             if _is_navigation_cdp_error(exc):
                 raise StalePage(str(exc)) from exc
@@ -580,6 +650,11 @@ class Browser:
                 if self._try_pierce_cloudflare(info):
                     time.sleep(1.2)
                     info = self.evaluate(READ_STATE) or info
+                native_dlgs = getattr(self, "_native_dialogs", None)
+                if isinstance(native_dlgs, list) and native_dlgs:
+                    prefix = "\n".join(native_dlgs) + "\n"
+                    info["text"] = (prefix + str(info.get("text") or ""))[:6000]
+                    info["full_text"] = (prefix + str(info.get("full_text") or ""))[:30000]
                 info["fingerprint"] = fingerprint(info)
                 info["last_action_rect"] = self.last_action_rect
                 if screenshot:
@@ -599,6 +674,8 @@ class Browser:
                     except Exception:
                         pass
                 return info
+            except EvaluationTimeout:
+                raise
             except StalePage:
                 if attempt == 9:
                     raise
@@ -692,6 +769,9 @@ class Browser:
     def act(self, action: dict[str, Any], page: dict[str, Any], text: str | None = None) -> dict[str, Any]:
         """Execute a low-level action on the observed page."""
         kind = action["kind"]
+        native_dlgs = getattr(self, "_native_dialogs", None)
+        if kind != "wait" and isinstance(native_dlgs, list):
+            native_dlgs.clear()
         if kind == "goto_url":
             target_url = str(action.get("url") or text or "").strip()
             if not target_url:
@@ -817,6 +897,7 @@ class Browser:
                 if (blockingModal && !e.closest(modalSel)) return null;
                 if (action.kind==='click') {
                   try {
+                    if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
                     if (document.activeElement && document.activeElement!==document.body) document.activeElement.blur();
                     const prevOrigin = performance.timeOrigin;
                     e.click();
@@ -827,6 +908,7 @@ class Browser:
                 }
                 return null;
               }
+              if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
               if (action.kind==='fill') {
                 try { e.focus(); } catch (_) {}
               }

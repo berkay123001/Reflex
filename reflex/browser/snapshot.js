@@ -425,7 +425,9 @@
   const h34=[...document.querySelectorAll('h3,h4')].filter(isUnclipped)
     .map(h=>`[${h.tagName.toLowerCase()}] `+h.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
   const headings=[...new Set([...h12,...h34])].slice(0,80);
-  const text=words.join('\n').slice(0,6000), full_text=fullWords.join('\n').slice(0,30000), height=document.documentElement.scrollHeight;
+  const dialogs=Array.isArray(window.__reflexDialogs)?window.__reflexDialogs.slice(0,5):[];
+  const dlgPrefix=dialogs.length?dialogs.join('\n')+'\n':'';
+  const text=(dlgPrefix+words.join('\n')).slice(0,6000), full_text=(dlgPrefix+fullWords.join('\n')).slice(0,30000), height=document.documentElement.scrollHeight;
   const page_key=cache.pageKey(), guards={};
   for (const a of actions) if (!(a.node in guards)) guards[a.node]=cache.guard(cache.nodes.get(a.node));
   nameCache=null;
