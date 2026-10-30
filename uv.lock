@@ -1406,6 +1406,7 @@ dependencies = [
     { name = "browser-harness" },
     { name = "httpx", extra = ["http2"] },
     { name = "pydantic" },
+    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
@@ -1435,6 +1436,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'turnike'", specifier = ">=2.11" },
     { name = "torchao", marker = "extra == 'turnike'", specifier = ">=0.18" },
     { name = "transformers", marker = "extra == 'turnike'", specifier = ">=5.17" },
+    { name = "websockets", specifier = ">=13" },
 ]
 provides-extras = ["turnike", "mcp"]
 

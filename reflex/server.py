@@ -335,23 +335,57 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
         self.end_headers()
         try:
             after_seq = -1
+            last_frame: bytes | None = None
+            now = time.monotonic()
+            last_sent_time = 0.0
+            last_new_frame_time = now
+            last_fallback_capture_time = 0.0
+
             while _SESSION is not None and _SESSION.browser.target is not None:
                 frame: bytes | None = None
                 sc = _SCREENCAST
+                now = time.monotonic()
+
                 if sc is not None and sc.is_running:
                     try:
                         seq, f = sc.wait_frame(after_seq=after_seq, timeout=0.1)
+                        now = time.monotonic()
                         if f is not None and seq > after_seq:
                             after_seq = seq
                             frame = f
-                        elif seq > 0:
-                            # Screencast is active and healthy; page is idle this tick
-                            continue
+                            last_frame = f
+                            last_new_frame_time = now
                     except Exception:
-                        frame = None
+                        pass
 
-                # Fallback cleanly to capture_jpeg_bytes if screencast is inactive or failed
-                if frame is None:
+                    # 3-second fallback: if screencast produces no new frames for 3s,
+                    # fetch a fresh snapshot via capture_jpeg_bytes (at most once every 3s).
+                    if frame is None and (now - last_new_frame_time >= 3.0):
+                        if now - last_fallback_capture_time >= 3.0:
+                            try:
+                                fallback = _SESSION.browser.capture_jpeg_bytes(quality=65)
+                                if fallback:
+                                    frame = fallback
+                                    last_frame = fallback
+                                    last_fallback_capture_time = now
+                            except Exception:
+                                pass
+
+                    # 1-second heartbeat: if no new frame arrives, resend last frame every ~1s.
+                    if frame is None:
+                        if last_frame is not None and (now - last_sent_time >= 1.0):
+                            frame = last_frame
+                        elif last_frame is None:
+                            # Immediate initial frame on connection if screencast hasn't produced frame 0
+                            try:
+                                init_frame = _SESSION.browser.capture_jpeg_bytes(quality=65)
+                                if init_frame:
+                                    frame = init_frame
+                                    last_frame = init_frame
+                            except Exception:
+                                pass
+                else:
+                    # Screencast inactive or failed: fallback to periodic capture_jpeg_bytes
                     try:
                         frame = _SESSION.browser.capture_jpeg_bytes(quality=65)
                     except Exception:
@@ -360,6 +394,9 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
                         time.sleep(0.09)
                         continue
                     time.sleep(0.09)
+
+                if frame is None:
+                    continue
 
                 header = (
                     f"--reflexframe\r\n"
@@ -370,6 +407,7 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
                 self.wfile.write(frame)
                 self.wfile.write(b"\r\n")
                 self.wfile.flush()
+                last_sent_time = time.monotonic()
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
 

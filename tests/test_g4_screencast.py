@@ -277,3 +277,145 @@ def test_real_isolated_browser_screencast_fluidity_under_lock() -> None:
             sc.stop()
         finally:
             browser.close()
+
+
+def test_screencast_idle_resends_frame_every_second() -> None:
+    """Requirement R3 (G5c): When screencast is idle (no new frames), resend the last frame every ~1s."""
+    mock_browser = MagicMock()
+    mock_browser.target = "mock_tab_idle"
+    mock_browser.capture_jpeg_bytes.return_value = b"fallback_jpeg_frame"
+    mock_session = MagicMock()
+    mock_session.browser = mock_browser
+
+    orig_session = server_module._SESSION
+    orig_screencast = server_module._SCREENCAST
+    server_module._SESSION = mock_session
+
+    class FakeIdleScreencast:
+        def __init__(self) -> None:
+            self.is_running = True
+            self.seq = 1
+            self.latest_frame = b"static_screencast_frame"
+
+        def wait_frame(self, after_seq: int = -1, timeout: float = 0.1) -> tuple[int, bytes | None]:
+            if after_seq < 1:
+                return 1, self.latest_frame
+            time.sleep(min(timeout, 0.05))
+            return 1, self.latest_frame
+
+    server_module._SCREENCAST = FakeIdleScreencast()
+
+    written_frames: list[tuple[float, bytes]] = []
+    t_start = time.monotonic()
+
+    handler = server_module.ReflexHTTPHandler.__new__(server_module.ReflexHTTPHandler)
+    mock_wfile = MagicMock()
+    handler.wfile = mock_wfile
+    handler.send_response = MagicMock()
+    handler.send_header = MagicMock()
+    handler.end_headers = MagicMock()
+
+    def fake_write(data: bytes) -> None:
+        if data.startswith(b"--reflexframe") or data == b"\r\n":
+            return
+        now_rel = time.monotonic() - t_start
+        written_frames.append((now_rel, data))
+        # After collecting 3 identical frames (~2s total stream), terminate
+        if len(written_frames) >= 3:
+            raise BrokenPipeError("Collected sufficient heartbeat frames")
+
+    mock_wfile.write.side_effect = fake_write
+
+    try:
+        handler._serve_mjpeg_stream()
+    finally:
+        server_module._SESSION = orig_session
+        server_module._SCREENCAST = orig_screencast
+
+    # Verify we got 3 frames of identical data
+    assert len(written_frames) == 3
+    assert all(f == b"static_screencast_frame" for _, f in written_frames)
+
+    # Verify ~1s intervals between consecutive frame transmissions
+    interval_1 = written_frames[1][0] - written_frames[0][0]
+    interval_2 = written_frames[2][0] - written_frames[1][0]
+
+    assert 0.85 <= interval_1 <= 1.35, f"Interval 1 was {interval_1:.2f}s, expected ~1.0s"
+    assert 0.85 <= interval_2 <= 1.35, f"Interval 2 was {interval_2:.2f}s, expected ~1.0s"
+
+    # capture_jpeg_bytes was NOT called because < 3s elapsed
+    mock_browser.capture_jpeg_bytes.assert_not_called()
+
+
+def test_screencast_3s_idle_invokes_capture_jpeg_bytes() -> None:
+    """Requirement R3 (G5c): If screencast produces no frames for 3s, invoke capture_jpeg_bytes."""
+    mock_browser = MagicMock()
+    mock_browser.target = "mock_tab_3s"
+    mock_browser.capture_jpeg_bytes.return_value = b"fresh_fallback_snapshot_3s"
+    mock_session = MagicMock()
+    mock_session.browser = mock_browser
+
+    orig_session = server_module._SESSION
+    orig_screencast = server_module._SCREENCAST
+    server_module._SESSION = mock_session
+
+    class FakeIdleScreencast3s:
+        def __init__(self) -> None:
+            self.is_running = True
+            self.seq = 1
+            self.latest_frame = b"old_screencast_frame"
+
+        def wait_frame(self, after_seq: int = -1, timeout: float = 0.1) -> tuple[int, bytes | None]:
+            if after_seq < 1:
+                return 1, self.latest_frame
+            time.sleep(min(timeout, 0.05))
+            return 1, self.latest_frame
+
+    server_module._SCREENCAST = FakeIdleScreencast3s()
+
+    written_frames: list[tuple[float, bytes]] = []
+    t_start = time.monotonic()
+
+    handler = server_module.ReflexHTTPHandler.__new__(server_module.ReflexHTTPHandler)
+    mock_wfile = MagicMock()
+    handler.wfile = mock_wfile
+    handler.send_response = MagicMock()
+    handler.send_header = MagicMock()
+    handler.end_headers = MagicMock()
+
+    def fake_write(data: bytes) -> None:
+        if data.startswith(b"--reflexframe") or data == b"\r\n":
+            return
+        now_rel = time.monotonic() - t_start
+        written_frames.append((now_rel, data))
+        # Once the fallback snapshot arrives (at >= 3.0s), terminate
+        if data == b"fresh_fallback_snapshot_3s":
+            raise BrokenPipeError("Fallback snapshot received; terminating stream test")
+
+    mock_wfile.write.side_effect = fake_write
+
+    t0 = time.monotonic()
+    try:
+        handler._serve_mjpeg_stream()
+    finally:
+        server_module._SESSION = orig_session
+        server_module._SCREENCAST = orig_screencast
+
+    elapsed = time.monotonic() - t0
+
+    # 1. capture_jpeg_bytes must have been called on mock_browser
+    assert mock_browser.capture_jpeg_bytes.call_count >= 1, (
+        f"Expected capture_jpeg_bytes to be called, but call_count={mock_browser.capture_jpeg_bytes.call_count}"
+    )
+
+    # 2. Verify fallback was not triggered prematurely (must be at least 3.0s, allow 2.9s margin)
+    assert elapsed >= 2.9, f"Fallback occurred too early: {elapsed:.2f}s"
+
+    # 3. Last frame sent must be the fresh snapshot from capture_jpeg_bytes
+    assert written_frames[-1][1] == b"fresh_fallback_snapshot_3s"
+
+    # 4. Frames sent before 3.0s must be the initial/heartbeat frames
+    pre_fallback_frames = [f for _, f in written_frames[:-1]]
+    assert len(pre_fallback_frames) >= 3  # initial (t=0), heartbeat 1 (t~1s), heartbeat 2 (t~2s)
+    assert all(f == b"old_screencast_frame" for f in pre_fallback_frames)
+
