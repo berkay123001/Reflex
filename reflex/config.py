@@ -31,6 +31,9 @@ DEFAULT_DECISION_BACKEND = "openrouter_jev"
 DEFAULT_JEV_MODEL = "~typesafe/jev-latest"
 DEFAULT_SUPERVISOR_MODEL = "muse-spark-1.3-contributor"
 DEFAULT_SUPERVISOR_TIMEOUT_S = 60.0
+# Meta API reasoning effort for System 2. 2026-10-30, 19 real-site tasks x2 (contributor):
+# "minimal" cut the median S2 call from 5.2 s to 3.4 s without lowering the completion rate.
+DEFAULT_SUPERVISOR_REASONING_EFFORT = "minimal"
 
 SUPERVISOR_PRESETS = [
     {"id": "muse-spark-1.3-contributor", "label": "Muse Spark 1.3 Contributor (Meta API)"},
@@ -240,6 +243,7 @@ class ReflexConfig(BaseModel):
     local_turnike_url: str = LOCAL_TURNIKE_URL
     supervisor_model: str = DEFAULT_SUPERVISOR_MODEL
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S
+    supervisor_reasoning_effort: str = DEFAULT_SUPERVISOR_REASONING_EFFORT  # Meta API: minimal | low | medium | high
     allow_model_fallback: bool = False
     interactive: bool = False
     s2_every_step: bool = False  # evaluation baseline: no System 1, System 2 decides every step

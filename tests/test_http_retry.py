@@ -8,7 +8,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from reflex.config import ReflexConfig
+from reflex.config import DEFAULT_SUPERVISOR_REASONING_EFFORT, ReflexConfig
 from reflex.supervisor import _chat_completion
 from reflex.system1 import choose_action
 
@@ -235,7 +235,7 @@ def test_meta_400_retries_once_without_reasoning_fields() -> None:
             allow_model_fallback=False,
         )
     assert parsed["action_type"] == "ASK_USER"
-    assert payloads[0]["reasoning_effort"] == "low"
+    assert payloads[0]["reasoning_effort"] == DEFAULT_SUPERVISOR_REASONING_EFFORT
     assert payloads[0]["response_format"] == {"type": "json_object"}
     assert "reasoning_effort" not in payloads[1]
     assert "response_format" not in payloads[1]
@@ -328,10 +328,35 @@ def test_meta_dropped_connection_twice_fails() -> None:
     assert calls == ["post", "post"]
 
 
-def test_meta_timeout_is_not_retried() -> None:
+def test_meta_hung_request_is_retried_once() -> None:
     slept: list[float] = []
-    calls, post = _meta_transport_script([httpx.ReadTimeout("slow")])
-    with pytest.raises(RuntimeError):
-        _meta_call(post, slept)
-    assert calls == ["post"]
-    assert slept == []
+    calls, post = _meta_transport_script([httpx.ReadTimeout("hung")])
+    parsed, _latency, _cost, _model = _meta_call(post, slept)
+    assert parsed.retry_reason == "timeout"
+    assert calls == ["post", "post"]
+    assert len(slept) == 1
+
+
+def test_meta_reasoning_effort_defaults_to_minimal_and_is_configurable() -> None:
+    assert DEFAULT_SUPERVISOR_REASONING_EFFORT == "minimal"
+    assert ReflexConfig().supervisor_reasoning_effort == "minimal"
+    efforts: list[str] = []
+
+    def post(*_args: Any, **kwargs: Any) -> httpx.Response:
+        efforts.append(kwargs["json"].get("reasoning_effort"))
+        return _response(200, _CHAT_OK)
+
+    with (
+        patch("reflex.supervisor.get_meta_api_key", return_value="meta-key"),
+        patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=post),
+    ):
+        for effort in (None, "low"):
+            kwargs = {} if effort is None else {"reasoning_effort": effort}
+            _chat_completion(
+                model="muse-spark-1.3-contributor",
+                system_prompt="sys",
+                user_prompt="usr",
+                allow_model_fallback=False,
+                **kwargs,
+            )
+    assert efforts == ["minimal", "low"]

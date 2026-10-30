@@ -12,6 +12,8 @@ Reflex separates high-level reasoning and failure recovery (**System 2 Superviso
 
 Studio, the MCP server and `scripts/eval.py` default to **`s2_only`**: the Muse supervisor decides every step. On 19 real-site tasks run twice (2026-10-29) it completed 36/38 with either `muse-spark-1.3` or `muse-spark-1.3-contributor`; the strict hybrid (System 1 only for confident clicks/typing) completed 33/38 and the original hybrid 14/19. The hybrid modes stay selectable: the `MOD` switch in Studio, `mode` in `reflex_start`, `--mode` in `scripts/eval.py`.
 
+The supervisor runs with `reasoning_effort: "minimal"` (`ReflexConfig.supervisor_reasoning_effort`). On the same 19 tasks run twice (2026-10-30, `muse-spark-1.3-contributor`), `minimal` completed 35/38 runs against 33/38 for `low`, with a median of 67 s per completed task instead of 91 s (the human demonstrations of these tasks took a median of 82 s). Most remaining failures were Muse API calls that did not answer within 60 s; such hung calls are now retried once.
+
 ## Design Influences
 
 The task ledger (planning + memory) adapts ideas from these works; no third-party code is copied:

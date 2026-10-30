@@ -878,8 +878,8 @@ def test_l2_max_tokens_and_retry_reasons():
     assert interp.intent == "CONTINUE_OR_STEER"
 
 
-def test_supervisor_timeout_config_and_no_retry_on_timeout():
-    """T1: supervisor_timeout_s defaults to 60s (connect=4s), is configurable via ReflexConfig, and does NOT retry on timeout."""
+def test_supervisor_timeout_config_and_single_retry_on_timeout():
+    """T1: supervisor_timeout_s defaults to 60s (connect=4s), is configurable via ReflexConfig; a hung Meta call is retried once."""
     import reflex.supervisor as sup_mod
 
     cfg_default = ReflexConfig()
@@ -887,7 +887,7 @@ def test_supervisor_timeout_config_and_no_retry_on_timeout():
     assert sup_mod._HTTP_CLIENT.timeout.read == 60.0
     assert sup_mod._HTTP_CLIENT.timeout.connect == 4.0
 
-    # Verify custom supervisor_timeout_s is passed to _HTTP_CLIENT.post and ReadTimeout is NOT retried
+    # Verify custom supervisor_timeout_s is passed to _HTTP_CLIENT.post and ReadTimeout is retried exactly once
     recorded_timeouts: list[httpx.Timeout] = []
 
     def fake_timeout_post(url, *args, **kwargs):
@@ -897,6 +897,7 @@ def test_supervisor_timeout_config_and_no_retry_on_timeout():
     with (
         patch("reflex.supervisor.get_meta_api_key", return_value="fake-meta-key"),
         patch("reflex.supervisor._HTTP_CLIENT.post", side_effect=fake_timeout_post),
+        patch("reflex.supervisor.time.sleep"),
         pytest.raises(RuntimeError),
     ):
         _chat_completion(
@@ -907,9 +908,8 @@ def test_supervisor_timeout_config_and_no_retry_on_timeout():
             supervisor_timeout_s=45.0,
         )
 
-    assert len(recorded_timeouts) == 1
-    assert recorded_timeouts[0].read == 45.0
-    assert recorded_timeouts[0].connect == 4.0
+    assert len(recorded_timeouts) == 2
+    assert all(t.read == 45.0 and t.connect == 4.0 for t in recorded_timeouts)
 
 
 

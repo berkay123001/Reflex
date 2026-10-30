@@ -17,6 +17,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from .config import (
+    DEFAULT_SUPERVISOR_REASONING_EFFORT,
     DEFAULT_SUPERVISOR_TIMEOUT_S,
     META_API_CHAT_URL,
     OPENROUTER_CHAT_URL,
@@ -332,6 +333,7 @@ def _chat_completion(
     max_tokens: int = 750,
     allow_model_fallback: bool = False,
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S,
+    reasoning_effort: str = DEFAULT_SUPERVISOR_REASONING_EFFORT,
 ) -> CompletionResult:
     """Call Official Meta Model API (`https://api.meta.ai/v1/chat/completions`) or OpenRouter."""
     last_err: Exception | None = None
@@ -363,7 +365,7 @@ def _chat_completion(
                     "model": meta_model_id,
                     "max_tokens": current_max_tokens,
                     "temperature": 0.1,
-                    "reasoning_effort": "low",
+                    "reasoning_effort": reasoning_effort,
                     "response_format": {"type": "json_object"},
                     "messages": [
                         {"role": "system", "content": system_prompt},
@@ -433,15 +435,13 @@ def _chat_completion(
                             retry_reason = "invalid_json"
                         continue
                     raise RuntimeError(f"Supervisor ({model}) call failed: {last_err}") from exc
-                except httpx.TimeoutException as exc:
-                    last_err = exc
-                    break
                 except httpx.TransportError as exc:
-                    # Dropped connection (e.g. HTTP/2 ConnectionTerminated): one retry on a fresh connection.
+                    # Hung request (read timeout) or dropped connection (e.g. HTTP/2 ConnectionTerminated):
+                    # one retry on a fresh connection.
                     last_err = exc
                     if attempt == 0:
                         retries_used += 1
-                        retry_reason = "transport"
+                        retry_reason = "timeout" if isinstance(exc, httpx.TimeoutException) else "transport"
                         time.sleep(HTTP_RETRY_DELAY_S)
                         continue
                     break
@@ -553,6 +553,7 @@ def generate_field_text(
     supervisor_model: str,
     allow_model_fallback: bool = False,
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S,
+    reasoning_effort: str = DEFAULT_SUPERVISOR_REASONING_EFFORT,
 ) -> FieldTextOutcome:
     """Generate the value to type into `action`, or return an `ask_user` prompt if missing."""
     field_info = {
@@ -585,6 +586,7 @@ def generate_field_text(
         max_tokens=2048,
         allow_model_fallback=allow_model_fallback,
         supervisor_timeout_s=supervisor_timeout_s,
+        reasoning_effort=reasoning_effort,
     )
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
@@ -638,6 +640,7 @@ def resolve_escalation(
     supervisor_model: str,
     allow_model_fallback: bool = False,
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S,
+    reasoning_effort: str = DEFAULT_SUPERVISOR_REASONING_EFFORT,
 ) -> SupervisorDecision:
     """Invoke System 2 (`qwen/qwen3.8-omni-flash` or selected Supervisor) to recover from an escalation."""
     s1_summary = "None"
@@ -668,6 +671,7 @@ def resolve_escalation(
         max_tokens=4096,
         allow_model_fallback=allow_model_fallback,
         supervisor_timeout_s=supervisor_timeout_s,
+        reasoning_effort=reasoning_effort,
     )
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
@@ -774,6 +778,7 @@ def interpret_user_message(
     supervisor_model: str,
     allow_model_fallback: bool = False,
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S,
+    reasoning_effort: str = DEFAULT_SUPERVISOR_REASONING_EFFORT,
 ) -> UserMessageInterpretation:
     """Classify a user chat message so conversational questions are answered directly without polluting System 1."""
     full_page_txt = str(page.get("full_text") or page.get("text") or "")
@@ -797,6 +802,7 @@ def interpret_user_message(
         max_tokens=2048,
         allow_model_fallback=allow_model_fallback,
         supervisor_timeout_s=supervisor_timeout_s,
+        reasoning_effort=reasoning_effort,
     )
     parsed, latency_ms, cost, used_model = comp
     retries = getattr(comp, "retries", getattr(parsed, "retries", 0))
