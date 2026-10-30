@@ -316,19 +316,48 @@ def _chunk_paragraph_text(text: str, chunk_size: int = 600) -> list[str]:
     return chunks
 
 
-def _score_chunk(chunk: str, prefixes: list[str]) -> int:
-    """Score chunk by count of matching words with focus prefixes."""
+def _score_chunk(chunk: str, prefixes: list[str]) -> tuple[int, int]:
+    """Score chunk returning (distinct_terms_count, total_matches_count).
+
+    distinct_terms_count: number of distinct focus prefixes matched in this chunk.
+    total_matches_count: total number of word-prefix matches in this chunk.
+    """
     if not prefixes or not chunk:
-        return 0
+        return (0, 0)
     norm_chunk = _normalize_turkish_fold(chunk)
-    words = re.findall(r"\w+", norm_chunk)
-    score = 0
+    words = [w for w in re.findall(r"\w+", norm_chunk) if len(w) >= 4]
+    if not words:
+        return (0, 0)
+    matched_prefixes: set[str] = set()
+    total_matches = 0
     for w in words:
-        if len(w) >= 4:
-            for p in prefixes:
-                if w.startswith(p) or (len(w) >= 4 and p.startswith(w)):
-                    score += 1
-    return score
+        for p in prefixes:
+            if w.startswith(p) or p.startswith(w):
+                matched_prefixes.add(p)
+                total_matches += 1
+    return (len(matched_prefixes), total_matches)
+
+
+def _filter_prefixes_by_df(chunks: list[str], prefixes: list[str]) -> list[str]:
+    """Filter out focus prefixes that appear in > 50% of candidate chunks (DF > len(chunks) / 2).
+
+    Language-agnostic dynamic document frequency filter (strictly no fixed stopwords).
+    If len(chunks) <= 1, no prefixes are excluded.
+    """
+    if not prefixes or len(chunks) <= 1:
+        return list(prefixes)
+
+    threshold = len(chunks) / 2
+    tokenized_chunks = [
+        [w for w in re.findall(r"\w+", _normalize_turkish_fold(c)) if len(w) >= 4]
+        for c in chunks
+    ]
+    active_prefixes: list[str] = []
+    for p in prefixes:
+        df = sum(1 for words in tokenized_chunks if any(w.startswith(p) or p.startswith(w) for w in words))
+        if df <= threshold:
+            active_prefixes.append(p)
+    return active_prefixes
 
 
 def extract_focused_full_text(raw_full: str, focus: str = "", max_chars: int = 7500) -> str:
@@ -356,15 +385,28 @@ def extract_focused_full_text(raw_full: str, focus: str = "", max_chars: int = 7
     if not chunks:
         return head + "\n[... omitted ...]\n" + tail
 
-    scored_chunks = [(idx, _score_chunk(c, prefixes), c) for idx, c in enumerate(chunks)]
-    ranked = sorted([(idx, sc, c) for idx, sc, c in scored_chunks if sc > 0], key=lambda x: (-x[1], x[0]))
+    active_prefixes = _filter_prefixes_by_df(chunks, prefixes)
+    if not active_prefixes:
+        return head + "\n[... omitted ...]\n" + tail
+
+    scored_chunks = []
+    for idx, c in enumerate(chunks):
+        distinct_cnt, total_cnt = _score_chunk(c, active_prefixes)
+        if distinct_cnt > 0:
+            scored_chunks.append((idx, distinct_cnt, total_cnt, c))
+
+    # Multi-tier ranking:
+    # 1. Primary: distinct matched terms count descending (-x[1])
+    # 2. Secondary: total match count descending (-x[2])
+    # 3. Tertiary: original chunk order ascending (x[0])
+    ranked = sorted(scored_chunks, key=lambda x: (-x[1], -x[2], x[0]))
 
     if not ranked:
         return head + "\n[... omitted ...]\n" + tail
 
     selected_indices: set[int] = set()
     total_len = 0
-    for idx, sc, c in ranked:
+    for idx, distinct_cnt, total_cnt, c in ranked:
         if total_len + len(c) <= 4000:
             selected_indices.add(idx)
             total_len += len(c)

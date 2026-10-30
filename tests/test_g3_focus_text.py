@@ -211,3 +211,113 @@ def test_extract_focused_full_text_direct_unit_tests():
     assert "[... omitted ...]" in out
     assert len(out) <= 7500
 
+
+def test_g5b_frequent_words_excluded_by_document_frequency():
+    """G5b AC: 20.000 karakterlik metin: her parçada 'from' ve 'with' geçiyor, bir parça 'from' kelimesini 50 kez tekrarlıyor,
+    ilgili paragraf (ör. 'Kadıköy şubesi çalışma saatleri 09:00-18:00') ortada.
+    Odak 'Find the opening hours of the Kadıköy branch' iken ilgili paragraf çıktıda yer alıyor ve 'from' tekrarlı parça ondan önce seçilmiyor.
+    """
+    filler = "Bu standart sayfa metni dolgusudur from with genel kurumsal bilgiler icerir. " * 7 + "\n\n"
+    spam = "from " * 50 + "Tekrarlanan sik kelime dolgusu with baska detaylar.\n\n"
+    target = "Kadıköy şubesi çalışma saatleri 09:00-18:00 saatleri arasındadır.\n\n"
+
+    pre = (filler * 25)[:9800]
+    post = (filler * 25)[:9800]
+    full_text = pre + spam + filler + target + post
+    assert len(full_text) >= 20000
+
+    page = {"url": "https://store.example", "title": "Hours", "text": "Viewport", "full_text": full_text}
+
+    # Case 1: Focus as verbatim in AC
+    out1 = wrap_untrusted_dom(page, [], focus="Find the opening hours of the Kadıköy branch")
+    assert "Kadıköy şubesi çalışma saatleri 09:00-18:00" in out1
+    assert ("from " * 10) not in out1
+
+    # Case 2: Focus explicitly containing common stopwords 'from' and 'with'
+    out2 = wrap_untrusted_dom(page, [], focus="Find the opening hours from the Kadıköy branch with schedule")
+    assert "Kadıköy şubesi çalışma saatleri 09:00-18:00" in out2
+    assert ("from " * 10) not in out2
+
+
+def test_g5b_multi_tier_ranking_distinct_over_total_count():
+    """G5b: Distinct matched focus terms rank ahead of high total occurrence repetitions."""
+    from reflex.safety import _score_chunk
+
+    chunk_spam = ("sipariş " * 50 + "\n\n")
+    chunk_relevant = "sipariş faturası teslimat adresi bilgileri mevcuttur.\n\n"
+
+    # Direct scoring contract verification: (distinct_cnt, total_cnt)
+    prefixes = ["sipar", "fatur", "tesli"]
+    sc_spam = _score_chunk(chunk_spam, prefixes)
+    sc_rel = _score_chunk(chunk_relevant, prefixes)
+    assert sc_spam == (1, 50)
+    assert sc_rel == (3, 3)
+    # Multi-tier ranking key puts higher distinct matches first (-distinct, -total, idx)
+    assert (-sc_rel[0], -sc_rel[1]) < (-sc_spam[0], -sc_spam[1])
+
+    # End-to-end extraction with tight budget: make spam chunk ~3960 chars so that if spam was
+    # ranked first, relevant chunk (which appears after it) would not fit within the 4000 char budget.
+    large_spam = ("sipariş " * 495 + "\n\n")
+    filler = ("Genel dolgu içerik bilgisi " * 20 + "\n\n") * 15
+
+    full_text = (
+        ("Giriş " * 200 + "\n\n")[:2500]
+        + filler[:3000]
+        + large_spam
+        + filler[:2000]
+        + chunk_relevant
+        + filler[:3000]
+        + ("Bitiş " * 200)[:1500]
+    )
+    page = {"url": "https://example.com", "title": "Store", "text": "Store", "full_text": full_text}
+
+    out = wrap_untrusted_dom(page, [], focus="sipariş faturası teslimat")
+    assert "teslimat adresi" in out
+
+
+def test_g5b_document_frequency_boundary_and_edge_cases():
+    """G5b: Document frequency threshold (> 50%) boundary conditions and edge cases."""
+    from reflex.safety import _filter_prefixes_by_df
+
+    # 4 chunks: threshold = 4 / 2 = 2.0
+    chunks_4 = [
+        "alfa beta ortak kelime",
+        "alfa gama ortak kelime",
+        "alfa delta ortak kelime",
+        "teta epsilon ozel kelime",
+    ]
+    # 'ortak' appears in 3 of 4 (75% > 50%) -> excluded
+    # 'alfa' appears in 3 of 4 (75% > 50%) -> excluded
+    # 'beta' appears in 1 of 4 (25% <= 50%) -> retained
+    active = _filter_prefixes_by_df(chunks_4, ["ortak", "alfa", "beta"])
+    assert "ortak" not in active
+    assert "alfa" not in active
+    assert "beta" in active
+
+    # Exactly 50% boundary: in 4 chunks, appearing in exactly 2 chunks (50% <= 50%) -> retained
+    chunks_4_boundary = [
+        "alfa beta tek kelime",
+        "alfa gama cift kelime",
+        "diger delta ucuncu kelime",
+        "teta epsilon dorduncu kelime",
+    ]
+    # 'alfa' appears in 2 of 4 (50% <= 50%) -> retained
+    active_boundary = _filter_prefixes_by_df(chunks_4_boundary, ["alfa"])
+    assert "alfa" in active_boundary
+
+    # len(chunks) == 2: threshold = 1.0
+    chunks_2 = ["birinci metin ortak", "ikinci metin ortak"]
+    active_2 = _filter_prefixes_by_df(chunks_2, ["ortak", "birin"])
+    assert "ortak" not in active_2
+    assert "birin" in active_2
+
+    # len(chunks) <= 1: no filtering
+    chunks_1 = ["tek parca metin"]
+    active_1 = _filter_prefixes_by_df(chunks_1, ["parca"])
+    assert "parca" in active_1
+
+    chunks_0 = []
+    active_0 = _filter_prefixes_by_df(chunks_0, ["parca"])
+    assert "parca" in active_0
+
+
