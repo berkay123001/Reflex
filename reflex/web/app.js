@@ -8,13 +8,6 @@ let showDomBoxes = true;
 let activeView = "launch";
 let streamConnected = false;
 
-// G6: Studio Dashboard State
-let activeStageTab = "live"; // "live" | "mapping"
-let mapZoom = 1.0;
-let selectedStepIndex = null;
-let consoleFilter = "all"; // "all" | "s1" | "s2" | "chat"
-let consoleCollapsed = false;
-
 const PRESETS = {
   ozal: {
     url: "https://www.google.com",
@@ -59,13 +52,6 @@ function escapeHtml(str) {
 }
 
 function switchView(viewName) {
-  if (viewName === "mapping") {
-    // Jump straight to live view and open the Execution Mapping tab
-    switchView("live");
-    switchStageTab("mapping");
-    return;
-  }
-
   activeView = viewName;
   document.querySelectorAll(".rail-btn[data-view]").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === viewName);
@@ -74,41 +60,7 @@ function switchView(viewName) {
     pane.classList.toggle("active", pane.id === `view-${viewName}`);
   });
   if (viewName === "live" && currentState) {
-    requestAnimationFrame(() => {
-      renderDomOverlay(currentState);
-      if (activeStageTab === "mapping") {
-        renderExecutionMapping(currentState);
-      }
-    });
-  }
-}
-
-function switchStageTab(tabName) {
-  activeStageTab = tabName;
-  const btnLive = $("btn-tab-live");
-  const btnMap = $("btn-tab-mapping");
-  const stageBrowser = $("stage-browser-view");
-  const stageMap = $("stage-mapping-view");
-
-  if (btnLive) btnLive.classList.toggle("active", tabName === "live");
-  if (btnMap) btnMap.classList.toggle("active", tabName === "mapping");
-
-  if (stageBrowser) {
-    stageBrowser.style.display = tabName === "live" ? "flex" : "none";
-  }
-  if (stageMap) {
-    stageMap.style.display = tabName === "mapping" ? "flex" : "none";
-  }
-
-  if (tabName === "live") {
-    if (currentState) {
-      ensureLiveStream(currentState);
-      requestAnimationFrame(() => renderDomOverlay(currentState));
-    }
-  } else if (tabName === "mapping") {
-    if (currentState) {
-      requestAnimationFrame(() => renderExecutionMapping(currentState));
-    }
+    requestAnimationFrame(() => renderDomOverlay(currentState));
   }
 }
 
@@ -175,7 +127,7 @@ function renderDomOverlay(state) {
   const pageW = state.page.w || 1120;
   const pageH = state.page.h || 780;
   const rect = img.getBoundingClientRect();
-  const parentRect = img.parentElement ? img.parentElement.getBoundingClientRect() : rect;
+  const parentRect = img.parentElement.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
   const natW = img.naturalWidth || pageW;
@@ -243,428 +195,6 @@ function renderDomOverlay(state) {
   }
 }
 
-// G6: Bento KPI Cards Renderer
-function renderBentoKPIs(state) {
-  if (!state) return;
-  const history = state.history || [];
-  const maxSteps = state.config?.max_steps || 60;
-  const m = state.metrics || {};
-
-  // Card 1: Step Budget
-  const stepCount = history.length;
-  const stepPct = Math.min(100, Math.round((stepCount / maxSteps) * 100));
-  if ($("kpi-steps-val")) $("kpi-steps-val").textContent = String(stepCount);
-  if ($("kpi-steps-max")) $("kpi-steps-max").textContent = `/ ${maxSteps}`;
-  if ($("kpi-steps-ratio")) $("kpi-steps-ratio").textContent = `${stepPct}%`;
-  if ($("kpi-steps-bar")) $("kpi-steps-bar").style.width = `${stepPct}%`;
-  if ($("kpi-steps-sub")) $("kpi-steps-sub").textContent = `Budget remaining: ${Math.max(0, maxSteps - stepCount)}`;
-
-  // Card 2: Dual-Engine Ratio
-  const s1Count = m.s1_steps ?? history.filter((h) => h.actor === "S1").length;
-  const s2Count = m.s2_escalations ?? history.filter((h) => h.actor === "S2").length;
-  const totalEngineSteps = s1Count + s2Count || 1;
-  const s1Pct = Math.round((s1Count / totalEngineSteps) * 100);
-  const s2Pct = 100 - s1Pct;
-
-  if ($("kpi-s1-count")) $("kpi-s1-count").textContent = String(s1Count);
-  if ($("kpi-s2-count")) $("kpi-s2-count").textContent = String(s2Count);
-  if ($("kpi-bar-s1")) $("kpi-bar-s1").style.width = `${s1Pct}%`;
-  if ($("kpi-bar-s2")) $("kpi-bar-s2").style.width = `${s2Pct}%`;
-  if ($("kpi-s1-pct")) $("kpi-s1-pct").textContent = `${s1Pct}%`;
-  if ($("kpi-s2-pct")) $("kpi-s2-pct").textContent = `${s2Pct}%`;
-  if ($("kpi-engine-mode")) {
-    $("kpi-engine-mode").textContent = (state.config?.mode || "s2_only").toUpperCase();
-  }
-
-  // Card 3: P50 Latency
-  const medStepMs = m.median_step_ms ?? m.median_decision_ms ?? 0;
-  if ($("kpi-lat-val")) $("kpi-lat-val").textContent = `${medStepMs} ms`;
-  const elapsedSec = ((m.elapsed_ms || 0) / 1000).toFixed(1);
-  if ($("kpi-elapsed-val")) $("kpi-elapsed-val").textContent = `Elapsed: ${elapsedSec}s`;
-
-  // Card 4: Estimated Cost & Tokens
-  const costFormatted =
-    m.total_cost_usd === "bilinmiyor"
-      ? "bilinmiyor"
-      : `$${Number(m.total_cost_usd ?? 0).toFixed(4)}`;
-  if ($("kpi-cost-val")) $("kpi-cost-val").textContent = costFormatted;
-  const usage = m.usage || {};
-  if ($("kpi-tokens-val")) {
-    $("kpi-tokens-val").textContent = `P:${usage.prompt_tokens ?? 0} · C:${usage.completion_tokens ?? 0} · Tot:${usage.total_tokens ?? 0}`;
-  }
-
-  // Card 5: Safety & Governance
-  const approvedList = state.context?.approved_actions || [];
-  const siteRulesCount = Object.keys(state.site_memory || {}).length;
-  if (state.status === "waiting_confirmation") {
-    if ($("kpi-guard-val")) $("kpi-guard-val").textContent = "HOLD ACTIVE";
-    if ($("kpi-guard-pill")) $("kpi-guard-pill").textContent = "HOLD";
-  } else if (approvedList.length > 0) {
-    if ($("kpi-guard-val")) $("kpi-guard-val").textContent = `${approvedList.length} APPROVED`;
-    if ($("kpi-guard-pill")) $("kpi-guard-pill").textContent = "VERIFIED";
-  } else {
-    if ($("kpi-guard-val")) $("kpi-guard-val").textContent = "GUARD ACTIVE";
-    if ($("kpi-guard-pill")) $("kpi-guard-pill").textContent = "PASSIVE";
-  }
-  if ($("kpi-guard-sub")) {
-    $("kpi-guard-sub").textContent = `${approvedList.length} approved · ${siteRulesCount} rules`;
-  }
-}
-
-// G6: Execution Mapping (Pure Vanilla HTML + SVG DAG Flow)
-function renderExecutionMapping(state) {
-  const container = $("mapping-nodes-layer");
-  const svg = $("mapping-svg-lines");
-  const wrap = $("mapping-transform-layer");
-  const countChip = $("map-step-count");
-  if (!container || !svg || !wrap) return;
-
-  container.innerHTML = "";
-  svg.innerHTML = "";
-
-  const history = (state && state.history) || [];
-  if (countChip) countChip.textContent = `${history.length + 1} nodes`;
-
-  const nodeWidth = 215;
-  const nodeHeight = 84;
-  const stepGapX = 245;
-
-  const nodePositions = [];
-
-  // 1. Root Goal Node
-  const rootX = 30;
-  const rootY = 110;
-  nodePositions.push({ x: rootX, y: rootY, type: "root", stepIndex: 0 });
-
-  const rootNode = document.createElement("div");
-  rootNode.className = "map-node root";
-  rootNode.style.left = `${rootX}px`;
-  rootNode.style.top = `${rootY}px`;
-  rootNode.innerHTML = `
-    <div class="map-node-head">
-      <span class="map-node-badge">🎯 ROOT GOAL</span>
-      <span class="map-node-lat">INITIAL</span>
-    </div>
-    <div class="map-node-act" title="${escapeHtml(state?.goal || "Ready")}">${escapeHtml(state?.goal || "Ready")}</div>
-    <div class="map-node-sub" title="${escapeHtml(state?.page?.url || state?.url || "about:blank")}">
-      🌐 ${escapeHtml(state?.page?.url || state?.url || "about:blank")}
-    </div>
-  `;
-  container.appendChild(rootNode);
-
-  // 2. Trajectory Step Nodes
-  history.forEach((step, idx) => {
-    const isS2 = step.actor === "S2";
-    const isUnsettled = step.note === "page_unsettled" || step.verification?.loop_detected;
-    const isGuard = step.operation === "CONFIRM" || step.action?.includes("Safety Guard");
-
-    const currX = 30 + (idx + 1) * stepGapX;
-    // Multi-lane layout: Lane 1 (top y=20 for S2), Lane 0 (middle y=110 for S1), Lane 2 (bottom y=200 for retry/warn)
-    let currY = 110;
-    if (isS2) {
-      currY = 20;
-    } else if (isUnsettled) {
-      currY = 200;
-    } else if (isGuard) {
-      currY = 200;
-    }
-
-    nodePositions.push({
-      x: currX,
-      y: currY,
-      type: isS2 ? "s2" : isGuard ? "guard" : isUnsettled ? "warn" : "s1",
-      stepIndex: step.step,
-    });
-
-    const nodeEl = document.createElement("div");
-    const nodeTypeClass = isS2 ? "s2" : isGuard ? "guard" : isUnsettled ? "warn" : "s1";
-    nodeEl.className = `map-node ${nodeTypeClass}` + (selectedStepIndex === step.step ? " active-selected" : "");
-    nodeEl.style.left = `${currX}px`;
-    nodeEl.style.top = `${currY}px`;
-
-    const icon = isS2 ? "🧠" : isGuard ? "🛡️" : isUnsettled ? "⚠️" : "⚡";
-    const label = isS2 ? "S2 AUDIT" : isGuard ? "SAFETY" : isUnsettled ? "UNSETTLED" : "S1 ACTION";
-    const dur = step.step_ms ?? step.latency_ms ?? 0;
-
-    let subTagHtml = "";
-    if (step.verification?.page_changed) subTagHtml += '<span class="v-chip ok">DOM Diff ✓</span>';
-    if (step.verification?.url_changed) subTagHtml += '<span class="v-chip ok">URL ✓</span>';
-    if (step.verification?.loop_detected) subTagHtml += '<span class="v-chip warn">Loop ⚠</span>';
-
-    nodeEl.innerHTML = `
-      <div class="map-node-head">
-        <span class="map-node-badge">${icon} #${step.step} ${label}</span>
-        <span class="map-node-lat">${dur} ms</span>
-      </div>
-      <div class="map-node-act" title="${escapeHtml(step.operation)}: ${escapeHtml(step.action)}">
-        ${escapeHtml(step.operation)} ${step.target ? `[${escapeHtml(step.target)}]` : ""}
-      </div>
-      <div class="map-node-sub" title="${escapeHtml(step.action || "-")}">
-        ${escapeHtml(step.action || "-")}
-      </div>
-      <div class="map-node-tags">${subTagHtml}</div>
-    `;
-
-    nodeEl.addEventListener("click", () => {
-      openStepInspector(step.step);
-    });
-
-    container.appendChild(nodeEl);
-  });
-
-  // 3. Terminal State Node (if done / blocked / error)
-  const isTerminal = ["done", "blocked", "error"].includes(state?.status);
-  if (isTerminal) {
-    const termX = 30 + (history.length + 1) * stepGapX;
-    const termY = 110;
-    nodePositions.push({ x: termX, y: termY, type: "done", stepIndex: -1 });
-
-    const termEl = document.createElement("div");
-    const isSuccess = state.status === "done";
-    termEl.className = `map-node ${isSuccess ? "done" : "warn"}`;
-    termEl.style.left = `${termX}px`;
-    termEl.style.top = `${termY}px`;
-    termEl.innerHTML = `
-      <div class="map-node-head">
-        <span class="map-node-badge">${isSuccess ? "🏁 COMPLETE" : "⛔ HALTED"}</span>
-      </div>
-      <div class="map-node-act">${isSuccess ? "Goal Achieved ✓" : escapeHtml(state.status.toUpperCase())}</div>
-      <div class="map-node-sub">${escapeHtml(state.last_error || "Terminal state")}</div>
-    `;
-    container.appendChild(termEl);
-  }
-
-  // 4. Draw Connecting Bezier Curves on SVG Canvas
-  let pathsSvg = "";
-  for (let i = 0; i < nodePositions.length - 1; i++) {
-    const from = nodePositions[i];
-    const to = nodePositions[i + 1];
-
-    const x1 = from.x + nodeWidth;
-    const y1 = from.y + nodeHeight / 2;
-    const x2 = to.x;
-    const y2 = to.y + nodeHeight / 2;
-
-    const midX = (x1 + x2) / 2;
-    const pathD = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-    const edgeCls = to.type || "s1";
-
-    pathsSvg += `<path class="map-edge ${edgeCls}" d="${pathD}" />`;
-  }
-  svg.innerHTML = pathsSvg;
-
-  // 5. Adjust Canvas Geometry & Scale
-  const totalNodesCount = nodePositions.length;
-  const totalWidth = Math.max(980, 60 + totalNodesCount * stepGapX + 100);
-  wrap.style.width = `${totalWidth}px`;
-  wrap.style.height = "320px";
-  svg.setAttribute("width", String(totalWidth));
-  svg.setAttribute("height", "320");
-  wrap.style.transform = `scale(${mapZoom})`;
-}
-
-// G6: Step Inspector Drawer
-function openStepInspector(stepIndex) {
-  selectedStepIndex = stepIndex;
-  const drawer = $("step-inspector-drawer");
-  if (!drawer || !currentState) return;
-
-  const history = currentState.history || [];
-  const step = history.find((h) => h.step === stepIndex);
-  if (!step) return;
-
-  const isS2 = step.actor === "S2";
-  const dur = step.step_ms ?? step.latency_ms ?? 0;
-
-  // Header
-  if ($("inspector-title")) {
-    $("inspector-title").textContent = `Step #${step.step} · ${isS2 ? "S2 SUPERVISOR" : "S1 REFLEX"}`;
-  }
-  if ($("inspector-badge")) {
-    $("inspector-badge").textContent = step.operation || "ACTION";
-    $("inspector-badge").className = `insp-pill ${isS2 ? "s2" : "s1"}`;
-  }
-  if ($("inspector-latency")) $("inspector-latency").textContent = `${dur} ms`;
-
-  // Timing Breakdown
-  if ($("insp-t-s1")) $("insp-t-s1").textContent = `${step.s1_ms ?? 0} ms`;
-  if ($("insp-t-s2")) $("insp-t-s2").textContent = `${step.s2_ms ?? 0} ms`;
-  if ($("insp-t-act")) $("insp-t-act").textContent = `${step.act_ms ?? 0} ms`;
-  if ($("insp-t-obs")) $("insp-t-obs").textContent = `${step.observe_ms ?? 0} ms`;
-
-  // Action Parameters & Target
-  if ($("insp-op")) $("insp-op").textContent = step.operation || "-";
-  if ($("insp-target")) {
-    $("insp-target").textContent = `${step.target ? `[Index ${step.target}] ` : ""}${step.action || "-"}`;
-  }
-  if ($("insp-text-row") && $("insp-text")) {
-    if (step.text) {
-      $("insp-text-row").style.display = "flex";
-      $("insp-text").textContent = step.text;
-    } else {
-      $("insp-text-row").style.display = "none";
-    }
-  }
-  if ($("insp-rect")) {
-    if (step.rect) {
-      $("insp-rect").textContent = `x:${step.rect.x}, y:${step.rect.y}, w:${step.rect.w}, h:${step.rect.h}`;
-    } else {
-      $("insp-rect").textContent = "none (viewport action)";
-    }
-  }
-
-  // Confidence & Calibration Distribution
-  const opPct = Math.round((step.confidence || 0) * 100);
-  const tgtPct = step.target_confidence != null ? Math.round(step.target_confidence * 100) : 100;
-  const jntPct = Math.round((step.joint_confidence || step.confidence || 0) * 100);
-  const marPct = Math.round((step.target_margin ?? 1) * 100);
-
-  if ($("insp-conf-op")) $("insp-conf-op").textContent = `${opPct}%`;
-  if ($("insp-bar-op")) $("insp-bar-op").style.width = `${opPct}%`;
-  if ($("insp-conf-tgt")) $("insp-conf-tgt").textContent = `${tgtPct}%`;
-  if ($("insp-bar-tgt")) $("insp-bar-tgt").style.width = `${tgtPct}%`;
-  if ($("insp-conf-jnt")) $("insp-conf-jnt").textContent = `${jntPct}%`;
-  if ($("insp-bar-jnt")) $("insp-bar-jnt").style.width = `${jntPct}%`;
-  if ($("insp-conf-mar")) $("insp-conf-mar").textContent = `${marPct}%`;
-  if ($("insp-bar-mar")) $("insp-bar-mar").style.width = `${marPct}%`;
-
-  // DOM Verification & State Change
-  if ($("insp-url-transition")) {
-    $("insp-url-transition").textContent = `${step.before_url || step.url || "-"} → ${step.url || "-"}`;
-  }
-  const v = step.verification || {};
-  if ($("insp-chip-diff")) {
-    $("insp-chip-diff").textContent = v.url_changed ? "URL Changed ✓" : v.page_changed ? "DOM Diff ✓" : "In-Place";
-    $("insp-chip-diff").className = `v-chip ${v.effective_progress || v.page_changed ? "ok" : ""}`;
-  }
-  if ($("insp-chip-loop")) {
-    $("insp-chip-loop").textContent = v.oscillation_detected ? "Oscillation ⚠" : v.loop_detected ? "Loop ⚠" : "Loop-Free ✓";
-    $("insp-chip-loop").className = `v-chip ${v.loop_detected || v.oscillation_detected ? "warn" : "ok"}`;
-  }
-  if ($("insp-ver-note")) {
-    $("insp-ver-note").textContent = step.note || v.reason || (v.page_changed ? "DOM mutated successfully" : "Execution verified");
-  }
-
-  // Supervisor Reasoning
-  const matchingEsc = isS2
-    ? (currentState.escalations || []).find((e) => e.step === step.step) || (currentState.escalations || []).slice(-1)[0]
-    : null;
-  const s2Sec = $("insp-s2-sec");
-  if (s2Sec) {
-    if (isS2 || matchingEsc) {
-      s2Sec.style.display = "flex";
-      if ($("insp-s2-trigger")) $("insp-s2-trigger").textContent = matchingEsc?.trigger_type || step.escalation_note || "-";
-      if ($("insp-s2-eval")) $("insp-s2-eval").textContent = matchingEsc?.evaluation_previous_goal || "-";
-      if ($("insp-s2-memory")) $("insp-s2-memory").textContent = matchingEsc?.memory || "-";
-      if ($("insp-s2-next")) $("insp-s2-next").textContent = matchingEsc?.next_goal || "-";
-    } else {
-      s2Sec.style.display = "none";
-    }
-  }
-
-  drawer.classList.add("open");
-
-  // Highlight selected node on Execution Map
-  document.querySelectorAll(".map-node").forEach((node, i) => {
-    node.classList.toggle("active-selected", i === stepIndex);
-  });
-}
-
-function closeStepInspector() {
-  selectedStepIndex = null;
-  const drawer = $("step-inspector-drawer");
-  if (drawer) drawer.classList.remove("open");
-  document.querySelectorAll(".map-node").forEach((node) => {
-    node.classList.remove("active-selected");
-  });
-}
-
-// G6: Collapsible Live Console
-function renderLiveConsole(state) {
-  const logScroll = $("console-log-scroll");
-  const countAll = $("cnt-log-all");
-  const countS1 = $("cnt-log-s1");
-  const countS2 = $("cnt-log-s2");
-  if (!logScroll || !state) return;
-
-  const history = state.history || [];
-  const escalations = state.escalations || [];
-
-  const allEvents = [];
-
-  history.forEach((h) => {
-    const isS2 = h.actor === "S2";
-    const dur = h.step_ms ?? h.latency_ms ?? 0;
-    allEvents.push({
-      time: `#${h.step}`,
-      type: isS2 ? "s2" : "s1",
-      badge: isS2 ? "🧠 S2" : "⚡ S1",
-      msg: `[${h.operation}] ${h.target ? `Target #${h.target} · ` : ""}${h.action || ""}${h.text ? ` (typed: "${h.text}")` : ""}`,
-      dur: `${dur}ms`,
-      stepIndex: h.step,
-    });
-  });
-
-  escalations.forEach((esc) => {
-    allEvents.push({
-      time: `#${esc.step || "ESC"}`,
-      type: "s2",
-      badge: "🧠 S2 ESC",
-      msg: `Supervisor Trigger: ${esc.trigger_type || "escalation"} · ${esc.next_goal || esc.decision || ""}`,
-      dur: "",
-      stepIndex: esc.step,
-    });
-  });
-
-  if (state.last_error) {
-    allEvents.push({
-      time: "ERR",
-      type: "warn",
-      badge: "⚠️ ERROR",
-      msg: state.last_error,
-      dur: "",
-    });
-  }
-
-  const s1Count = allEvents.filter((e) => e.type === "s1").length;
-  const s2Count = allEvents.filter((e) => e.type === "s2").length;
-  if (countAll) countAll.textContent = String(allEvents.length);
-  if (countS1) countS1.textContent = String(s1Count);
-  if (countS2) countS2.textContent = String(s2Count);
-
-  if (consoleFilter === "chat") {
-    logScroll.style.display = "none";
-    if ($("console-chat-wrapper")) $("console-chat-wrapper").style.display = "flex";
-    return;
-  }
-
-  logScroll.style.display = "flex";
-  if ($("console-chat-wrapper")) $("console-chat-wrapper").style.display = "none";
-
-  const filteredEvents = allEvents.filter((ev) => {
-    if (consoleFilter === "all") return true;
-    return ev.type === consoleFilter;
-  });
-
-  if (filteredEvents.length === 0) {
-    logScroll.innerHTML = `<div class="c-log-empty">No ${consoleFilter.toUpperCase()} events logged yet.</div>`;
-    return;
-  }
-
-  logScroll.innerHTML = filteredEvents
-    .map((ev) => `
-      <div class="c-log-row" ${ev.stepIndex ? `onclick="openStepInspector(${ev.stepIndex})"` : ""}>
-        <span class="c-log-time">${escapeHtml(ev.time)}</span>
-        <span class="c-log-badge ${ev.type}">${escapeHtml(ev.badge)}</span>
-        <span class="c-log-msg" title="${escapeHtml(ev.msg)}">${escapeHtml(ev.msg)}</span>
-        <span class="c-log-dur">${escapeHtml(ev.dur)}</span>
-      </div>
-    `)
-    .join("");
-
-  logScroll.scrollTop = logScroll.scrollHeight;
-}
-
 function renderDecisionStack(state) {
   const container = $("decision-stack");
   const countEl = $("dstack-count");
@@ -682,7 +212,7 @@ function renderDecisionStack(state) {
           <span class="actor-badge s1">READY</span>
           <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">3-Layer Verification</span>
         </div>
-        <div class="dcard-reason">Henüz adım çalıştırılmadı. Canlı akışı başlatmak için <b>▶ Run</b> veya <b>⏭ Step</b> tuşuna basın.</div>
+        <div class="dcard-reason">Oturum hazır. Canlı akışı başlatmak için <b>▶ Run</b> veya <b>⏭ Step</b> tuşuna basın.</div>
       </div>`;
     return;
   }
@@ -705,7 +235,7 @@ function renderDecisionStack(state) {
     const stepBreakdownTitle = `S1: ${lastStep.s1_ms ?? 0}ms | S2: ${lastStep.s2_ms ?? 0}ms | Act: ${lastStep.act_ms ?? 0}ms | Obs: ${lastStep.observe_ms ?? 0}ms`;
 
     html += `
-      <div class="dcard ${isS2 ? "s2" : "s1"}" onclick="openStepInspector(${lastStep.step})">
+      <div class="dcard ${isS2 ? "s2" : "s1"}">
         <div class="dcard-top">
           <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${lastStep.step} ${isS2 ? "🧠 S2 SUPERVISOR" : "⚡ S1 REFLEX"} · ${escapeHtml(lastStep.operation)}</span>
           <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)" title="${stepBreakdownTitle}">${stepDur} ms</span>
@@ -753,8 +283,8 @@ function renderDecisionStack(state) {
     prevSteps.forEach((ps) => {
       const psDur = ps.step_ms ?? ps.latency_ms ?? 0;
       html += `
-        <div class="dstack-prev" onclick="openStepInspector(${ps.step})">
-          <span>#${ps.step} <b style="color:${ps.actor === "S2" ? "var(--s2)" : "var(--s1)"}">${ps.actor}</b> ${escapeHtml(ps.operation)} · ${escapeHtml((ps.action || "").slice(0, 36))}</span>
+        <div class="dstack-prev">
+          <span>#${ps.step} <b style="color:${ps.actor === "S2" ? "var(--s2)" : "var(--s1)"}">${ps.actor}</b> ${escapeHtml(ps.operation)} · ${escapeHtml((ps.action || "").slice(0, 38))}</span>
           <span>${psDur}ms</span>
         </div>`;
     });
@@ -777,12 +307,14 @@ function renderScrubberAndActionSpace(state) {
       .map((h) => {
         const cls = h.verification?.loop_detected || h.verification?.oscillation_detected ? "warn" : h.actor === "S2" ? "s2" : "s1";
         const hDur = h.step_ms ?? h.latency_ms ?? 0;
-        return `<div class="scrub-tick ${cls}" onclick="openStepInspector(${h.step})" title="#${h.step} [${h.actor}] ${escapeHtml(h.operation)}: ${escapeHtml(h.action)} (${hDur}ms)"></div>`;
+        return `<div class="scrub-tick ${cls}" title="#${h.step} [${h.actor}] ${escapeHtml(h.operation)}: ${escapeHtml(h.action)} (${hDur}ms)"></div>`;
       })
       .join("");
   }
 
   if (aspace) {
+    const lastDec = (state.decisions || []).slice(-1)[0];
+    const opProbs = lastDec?.gate ? null : null;
     const decProbs = (state.decisions || []).slice(-1)[0];
     if (decProbs) {
       aspace.innerHTML = `
@@ -847,7 +379,7 @@ function renderSecondaryViews(state) {
           const isS2 = h.actor === "S2";
           const hDur = h.step_ms ?? h.latency_ms ?? 0;
           return `
-            <div class="dcard ${isS2 ? "s2" : "s1"}" onclick="openStepInspector(${h.step})">
+            <div class="dcard ${isS2 ? "s2" : "s1"}">
               <div class="dcard-top">
                 <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${h.step} ${h.actor} · ${escapeHtml(h.operation)}</span>
                 <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">${hDur} ms (S1:${h.s1_ms ?? 0} S2:${h.s2_ms ?? 0} Act:${h.act_ms ?? 0} Obs:${h.observe_ms ?? 0}) · ${escapeHtml(h.url || "")}</span>
@@ -995,19 +527,12 @@ function renderState(state) {
   if ($("btn-continue")) $("btn-continue").disabled = runningLoop || !state.page;
   if ($("btn-step")) $("btn-step").disabled = runningLoop || stepInFlight || !state.page;
 
-  // Render Studio components
-  renderBentoKPIs(state);
   ensureLiveStream(state);
   renderDomOverlay(state);
   renderDecisionStack(state);
   renderScrubberAndActionSpace(state);
   renderGuardAndChat(state);
-  renderLiveConsole(state);
   renderSecondaryViews(state);
-
-  if (activeStageTab === "mapping") {
-    renderExecutionMapping(state);
-  }
 }
 
 async function runContinuousLoop() {
@@ -1067,7 +592,7 @@ async function startSessionAndRun() {
       url,
       goal,
       mode: $("top-mode-select")?.value || "s2_only",
-      decision_backend: $("top-s1-select")?.value || "openrouter_jev",
+      decision_backend: $("top-s1-select").value,
       supervisor_model: $("top-s2-select").value,
       require_confirmation_for_destructive: $("chk-safety").checked,
       verify_done_with_supervisor: $("chk-verify-done").checked,
@@ -1092,73 +617,6 @@ function initUI() {
   if ($("btn-new-task")) {
     $("btn-new-task").addEventListener("click", () => switchView("launch"));
   }
-
-  // Stage Switcher (Live Browser vs Execution Mapping)
-  if ($("btn-tab-live")) {
-    $("btn-tab-live").addEventListener("click", () => switchStageTab("live"));
-  }
-  if ($("btn-tab-mapping")) {
-    $("btn-tab-mapping").addEventListener("click", () => switchStageTab("mapping"));
-  }
-
-  // Execution Mapping Toolbar Controls
-  if ($("btn-map-zoom-in")) {
-    $("btn-map-zoom-in").addEventListener("click", () => {
-      mapZoom = Math.min(2.0, mapZoom + 0.15);
-      const layer = $("mapping-transform-layer");
-      if (layer) layer.style.transform = `scale(${mapZoom})`;
-      if ($("btn-map-zoom-reset")) $("btn-map-zoom-reset").textContent = `${Math.round(mapZoom * 100)}%`;
-    });
-  }
-  if ($("btn-map-zoom-out")) {
-    $("btn-map-zoom-out").addEventListener("click", () => {
-      mapZoom = Math.max(0.4, mapZoom - 0.15);
-      const layer = $("mapping-transform-layer");
-      if (layer) layer.style.transform = `scale(${mapZoom})`;
-      if ($("btn-map-zoom-reset")) $("btn-map-zoom-reset").textContent = `${Math.round(mapZoom * 100)}%`;
-    });
-  }
-  if ($("btn-map-zoom-reset")) {
-    $("btn-map-zoom-reset").addEventListener("click", () => {
-      mapZoom = 1.0;
-      const layer = $("mapping-transform-layer");
-      if (layer) layer.style.transform = `scale(${mapZoom})`;
-      $("btn-map-zoom-reset").textContent = "100%";
-    });
-  }
-  if ($("btn-map-center-latest")) {
-    $("btn-map-center-latest").addEventListener("click", () => {
-      const wrap = $("mapping-canvas-wrap");
-      if (wrap) wrap.scrollLeft = wrap.scrollWidth;
-    });
-  }
-
-  // Step Inspector Drawer Close
-  if ($("btn-close-inspector")) {
-    $("btn-close-inspector").addEventListener("click", closeStepInspector);
-  }
-
-  // Collapsible Live Console Controls
-  if ($("btn-toggle-console")) {
-    $("btn-toggle-console").addEventListener("click", () => {
-      consoleCollapsed = !consoleCollapsed;
-      const dock = $("live-console-dock");
-      if (dock) dock.classList.toggle("collapsed", consoleCollapsed);
-      $("btn-toggle-console").textContent = consoleCollapsed ? "▲" : "▼";
-      requestAnimationFrame(() => {
-        if (currentState) renderDomOverlay(currentState);
-      });
-    });
-  }
-
-  document.querySelectorAll(".c-tab[data-filter]").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".c-tab[data-filter]").forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      consoleFilter = tab.dataset.filter;
-      if (currentState) renderLiveConsole(currentState);
-    });
-  });
 
   // Launch & Presets
   if ($("btn-launch")) {
@@ -1346,12 +804,7 @@ function initUI() {
   }
 
   window.addEventListener("resize", () => {
-    if (currentState) {
-      renderDomOverlay(currentState);
-      if (activeStageTab === "mapping") {
-        renderExecutionMapping(currentState);
-      }
-    }
+    if (currentState) renderDomOverlay(currentState);
   });
 
   // Initial state load
@@ -1364,9 +817,5 @@ function initUI() {
     })
     .catch(() => {});
 }
-
-// Global functions for inline DOM event bindings (if any)
-window.openStepInspector = openStepInspector;
-window.closeStepInspector = closeStepInspector;
 
 document.addEventListener("DOMContentLoaded", initUI);

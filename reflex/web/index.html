@@ -19,9 +19,6 @@
     <button class="rail-btn" data-view="live" title="Live Run & Real-Time Browser">
       <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M2 5.5h12" stroke="currentColor" stroke-width="1.3"/><circle cx="4.2" cy="4" r="0.6" fill="currentColor"/><circle cx="6.2" cy="4" r="0.6" fill="currentColor"/></svg>
     </button>
-    <button class="rail-btn" data-view="mapping" title="Execution Flow & Goal Mapping">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="4" cy="12" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 4h3l3 4M6 12h3l3-4" stroke="currentColor" stroke-width="1.3"/></svg>
-    </button>
     <button class="rail-btn" data-view="trajectory" title="Trajectory & Step Inspector">
       <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 4h11M2.5 8h7.5M2.5 12h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.5" cy="8" r="1.4" fill="currentColor"/></svg>
     </button>
@@ -211,81 +208,12 @@
     </div>
   </section>
 
-  <!-- VIEW 2: LIVE RUN & DASHBOARD -->
+  <!-- VIEW 2: LIVE RUN -->
   <section class="view-pane" id="view-live">
-
-    <!-- TOP BENTO KPI BAR -->
-    <div class="bento-kpi-bar" id="bento-kpi-bar">
-      <!-- Card 1: Step Budget -->
-      <div class="bento-card" id="kpi-card-steps">
-        <div class="kpi-top">
-          <span class="kpi-label">STEP BUDGET</span>
-          <span class="kpi-pill" id="kpi-steps-ratio">0%</span>
-        </div>
-        <div class="kpi-val"><span id="kpi-steps-val">0</span> <span class="kpi-max" id="kpi-steps-max">/ 60</span></div>
-        <div class="kpi-progress-track">
-          <div class="kpi-progress-bar" id="kpi-steps-bar" style="width:0%"></div>
-        </div>
-        <div class="kpi-sub" id="kpi-steps-sub">Budget remaining: 60</div>
-      </div>
-
-      <!-- Card 2: Dual-Engine Ratio -->
-      <div class="bento-card" id="kpi-card-ratio">
-        <div class="kpi-top">
-          <span class="kpi-label">DUAL-ENGINE RATIO</span>
-          <span class="kpi-pill s1" id="kpi-engine-mode">S2_ONLY</span>
-        </div>
-        <div class="kpi-val"><span class="s1-txt" id="kpi-s1-count">0</span> <span class="kpi-sep">:</span> <span class="s2-txt" id="kpi-s2-count">0</span></div>
-        <div class="kpi-engine-bar">
-          <div class="kpi-engine-s1" id="kpi-bar-s1" style="width:50%"></div>
-          <div class="kpi-engine-s2" id="kpi-bar-s2" style="width:50%"></div>
-        </div>
-        <div class="kpi-sub kpi-engine-sub">
-          <span>⚡ S1 <b id="kpi-s1-pct">50%</b></span>
-          <span>🧠 S2 <b id="kpi-s2-pct">50%</b></span>
-        </div>
-      </div>
-
-      <!-- Card 3: P50 Latency -->
-      <div class="bento-card" id="kpi-card-latency">
-        <div class="kpi-top">
-          <span class="kpi-label">P50 LATENCY</span>
-          <span class="kpi-pill latency" id="kpi-latency-tag">CDP/S2</span>
-        </div>
-        <div class="kpi-val" id="kpi-lat-val">0 ms</div>
-        <div class="kpi-sub" id="kpi-elapsed-val">Elapsed: 0.0s</div>
-      </div>
-
-      <!-- Card 4: Estimated Cost & Tokens -->
-      <div class="bento-card" id="kpi-card-cost">
-        <div class="kpi-top">
-          <span class="kpi-label">ESTIMATED COST &amp; TOKENS</span>
-          <span class="kpi-pill cost" id="kpi-tokens-status">ACTIVE</span>
-        </div>
-        <div class="kpi-val" id="kpi-cost-val">$0.0000</div>
-        <div class="kpi-sub" id="kpi-tokens-val">P:0 · C:0 · Tot:0</div>
-      </div>
-
-      <!-- Card 5: Safety & Governance -->
-      <div class="bento-card" id="kpi-card-guard">
-        <div class="kpi-top">
-          <span class="kpi-label">SAFETY &amp; GOVERNANCE</span>
-          <span class="kpi-pill guard" id="kpi-guard-pill">PASSIVE</span>
-        </div>
-        <div class="kpi-val" id="kpi-guard-val">GUARD ACTIVE</div>
-        <div class="kpi-sub" id="kpi-guard-sub">0 holds · 0 approved</div>
-      </div>
-    </div>
-
-    <!-- MAIN DASHBOARD CONTENT AREA -->
     <div class="live-grid">
-      <!-- Left: Stage (Live Browser vs Execution Mapping) -->
+      <!-- Left: Browser Stage -->
       <div class="stage">
         <div class="bbar">
-          <div class="stage-view-tabs">
-            <button class="sv-tab active" id="btn-tab-live" title="Live Browser Stream">🖥️ Live Browser</button>
-            <button class="sv-tab" id="btn-tab-mapping" title="Execution Flow &amp; Goal Mapping">🗺️ Execution Mapping</button>
-          </div>
           <button class="bbar-btn" id="btn-toggle-boxes" title="Toggle DOM Bounding Boxes">🎯 DOM [<span id="dom-count">0</span>]</button>
           <div class="urlbar">
             <span class="lock">●</span>
@@ -297,88 +225,54 @@
           </div>
         </div>
 
-        <!-- Mode A: Live Browser Stage -->
-        <div class="stage-content-pane active" id="stage-browser-view">
-          <div class="viewport-wrap">
-            <div class="viewport-stage" id="viewport-container">
-              <div class="viewport-empty" id="viewport-empty">
-                <div class="big">Canlı Chromium Oturumu Hazır</div>
-                <div>Sol menüden yeni görev başlatın veya <b>▶ Run</b> tuşuna basın.</div>
-              </div>
-              <img id="viewport-img" alt="Live Browser Stream" style="display:none;" />
-              <div class="dom-overlay" id="dom-overlay"></div>
-
-              <!-- Live Gliding Cursor & Click Ripple -->
-              <div class="rx-cursor" id="rx-cursor">
-                <div class="rx-ripple"></div>
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M4 3L11.5 20L14.2 13.2L21 10.5L4 3Z" fill="#C8F169" stroke="#08090C" stroke-width="1.8" stroke-linejoin="round"/>
-                </svg>
-                <div class="rx-callout" id="rx-callout">S1 · CLICK</div>
-              </div>
-
-              <!-- In-Viewport Safety Guard / ASK_USER Modal -->
-              <div class="stage-modal" id="guard-modal">
-                <div class="sm-head">
-                  <span id="guard-modal-tag">🛡️ SAFETY GUARD HOLD · IRREVERSIBLE ACTION</span>
-                  <span id="guard-modal-sig"></span>
-                </div>
-                <div class="sm-title" id="guard-modal-summary">Confirmation required</div>
-                <div class="sm-desc" id="guard-modal-reason"></div>
-                <div class="sm-actions">
-                  <button class="btn-approve" id="btn-approve">✓ Approve &amp; Execute</button>
-                  <button class="btn-reject" id="btn-reject">✕ Decline</button>
-                  <input type="text" id="input-alt-instruction" class="inp-text" placeholder="Veya alternatif talimat yaz..." style="flex:1;padding:5px 9px;font-size:11.5px;" />
-                </div>
-              </div>
+        <div class="viewport-wrap">
+          <div class="viewport-stage" id="viewport-container">
+            <div class="viewport-empty" id="viewport-empty">
+              <div class="big">Canlı Chromium Oturumu Hazır</div>
+              <div>Sol menüden yeni görev başlatın veya <b>▶ Run</b> tuşuna basın.</div>
             </div>
-          </div>
+            <img id="viewport-img" alt="Live Browser Stream" style="display:none;" />
+            <div class="dom-overlay" id="dom-overlay"></div>
 
-          <!-- Scrubber & Action Space Footer -->
-          <div class="stage-foot">
-            <div class="scrub-row">
-              <span class="scrub-lbl" id="scrub-label">STEP 0</span>
-              <div class="scrub-track" id="scrubber-track"></div>
+            <!-- Live Gliding Cursor & Click Ripple -->
+            <div class="rx-cursor" id="rx-cursor">
+              <div class="rx-ripple"></div>
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 3L11.5 20L14.2 13.2L21 10.5L4 3Z" fill="#C8F169" stroke="#08090C" stroke-width="1.8" stroke-linejoin="round"/>
+              </svg>
+              <div class="rx-callout" id="rx-callout">S1 · CLICK</div>
             </div>
-            <div class="aspace-row" id="aspace-row">
-              <span class="aspace-chip">Waiting for first System 1 distribution…</span>
+
+            <!-- In-Viewport Safety Guard / ASK_USER Modal -->
+            <div class="stage-modal" id="guard-modal">
+              <div class="sm-head">
+                <span id="guard-modal-tag">🛡️ SAFETY GUARD HOLD · IRREVERSIBLE ACTION</span>
+                <span id="guard-modal-sig"></span>
+              </div>
+              <div class="sm-title" id="guard-modal-summary">Confirmation required</div>
+              <div class="sm-desc" id="guard-modal-reason"></div>
+              <div class="sm-actions">
+                <button class="btn-approve" id="btn-approve">✓ Approve &amp; Execute</button>
+                <button class="btn-reject" id="btn-reject">✕ Decline</button>
+                <input type="text" id="input-alt-instruction" class="inp-text" placeholder="Veya alternatif talimat yaz..." style="flex:1;padding:5px 9px;font-size:11.5px;" />
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Mode B: Execution Mapping Stage -->
-        <div class="stage-content-pane" id="stage-mapping-view" style="display:none;">
-          <div class="mapping-toolbar">
-            <div class="map-controls">
-              <button class="map-btn" id="btn-map-zoom-in" title="Zoom In">🔍+</button>
-              <button class="map-btn" id="btn-map-zoom-out" title="Zoom Out">🔍−</button>
-              <button class="map-btn" id="btn-map-zoom-reset" title="Reset Zoom">100%</button>
-              <button class="map-btn primary" id="btn-map-center-latest" title="Scroll to Latest Step">Latest Step ⤢</button>
-            </div>
-            <div class="map-stats">
-              <span class="map-stat-chip" id="map-step-count">0 nodes</span>
-            </div>
+        <!-- Scrubber & Action Space Footer -->
+        <div class="stage-foot">
+          <div class="scrub-row">
+            <span class="scrub-lbl" id="scrub-label">STEP 0</span>
+            <div class="scrub-track" id="scrubber-track"></div>
           </div>
-
-          <div class="mapping-canvas-wrap" id="mapping-canvas-wrap">
-            <div class="mapping-transform-layer" id="mapping-transform-layer">
-              <svg id="mapping-svg-lines" class="mapping-svg-canvas"></svg>
-              <div id="mapping-nodes-layer" class="mapping-nodes-container"></div>
-            </div>
-          </div>
-
-          <div class="mapping-legend" id="mapping-legend">
-            <span class="m-leg root"><span class="m-dot root"></span> Root Goal</span>
-            <span class="m-leg s1"><span class="m-dot s1"></span> ⚡ S1 Reflex</span>
-            <span class="m-leg s2"><span class="m-dot s2"></span> 🧠 S2 Supervisor</span>
-            <span class="m-leg guard"><span class="m-dot guard"></span> 🛡️ Safety Guard</span>
-            <span class="m-leg warn"><span class="m-dot warn"></span> ⚠️ DOM Unsettled / Retry</span>
-            <span class="m-leg done"><span class="m-dot done"></span> 🏁 Achieved / Terminal</span>
+          <div class="aspace-row" id="aspace-row">
+            <span class="aspace-chip">Waiting for first System 1 distribution…</span>
           </div>
         </div>
       </div>
 
-      <!-- Right Column: Controls + Decision Stack -->
+      <!-- Right Column: Controls + Decision Stack + Co-Pilot Chat -->
       <div class="rcol">
         <div class="ctrl-bar">
           <button class="cbtn run" id="btn-continue">▶ Run</button>
@@ -404,32 +298,12 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- INTEGRATED COLLAPSIBLE LIVE CONSOLE DOCK -->
-    <div class="live-console-dock" id="live-console-dock">
-      <div class="console-header">
-        <div class="console-title">
-          <span class="c-pulse"></span>
-          <span>LIVE TELEMETRY CONSOLE</span>
-        </div>
-        <div class="console-tabs">
-          <button class="c-tab active" data-filter="all">All Events (<span id="cnt-log-all">0</span>)</button>
-          <button class="c-tab" data-filter="s1">⚡ S1 Reflex (<span id="cnt-log-s1">0</span>)</button>
-          <button class="c-tab" data-filter="s2">🧠 S2 Supervisor (<span id="cnt-log-s2">0</span>)</button>
-          <button class="c-tab" data-filter="chat">💬 Co-Pilot Chat</button>
-        </div>
-        <div class="console-actions">
-          <button id="btn-toggle-console" class="c-toggle-btn" title="Toggle Console Height">▼</button>
-        </div>
-      </div>
-
-      <div class="console-body">
-        <div class="console-log-scroll" id="console-log-scroll">
-          <div class="c-log-empty">No events logged yet. Start session to stream live execution telemetry.</div>
-        </div>
-        <div class="console-chat-wrapper" id="console-chat-wrapper" style="display:none;">
+        <div class="chat-sec">
+          <div class="chat-head">
+            <span>Interactive Co-Pilot Chat</span>
+            <span style="color:var(--s2)">HITL · Multi-Turn</span>
+          </div>
           <div class="chat-log" id="chat-messages"></div>
           <form class="chat-form" id="chat-form">
             <input type="text" id="input-chat" placeholder="Ajanı yönlendir, soru sor veya ASK_USER yanıtla..." autocomplete="off" />
@@ -438,128 +312,6 @@
         </div>
       </div>
     </div>
-
-    <!-- STEP INSPECTOR DRAWER -->
-    <aside class="step-inspector-drawer" id="step-inspector-drawer">
-      <div class="inspector-head">
-        <div class="insp-title-wrap">
-          <span class="insp-title" id="inspector-title">Step #0 · S1 REFLEX</span>
-          <span class="insp-pill" id="inspector-badge">CLICK</span>
-        </div>
-        <div class="insp-meta">
-          <span class="insp-lat" id="inspector-latency">0 ms</span>
-          <button class="insp-close" id="btn-close-inspector" title="Close Drawer">✕</button>
-        </div>
-      </div>
-
-      <div class="step-inspector-body" id="step-inspector-body">
-        <!-- Subsystem Latencies -->
-        <div class="insp-sec">
-          <div class="insp-sec-title">Subsystem Timing Breakdown</div>
-          <div class="timing-grid">
-            <div class="timing-box">
-              <span class="t-lbl">S1 Decision</span>
-              <span class="t-val" id="insp-t-s1">0 ms</span>
-            </div>
-            <div class="timing-box">
-              <span class="t-lbl">S2 Supervisor</span>
-              <span class="t-val" id="insp-t-s2">0 ms</span>
-            </div>
-            <div class="timing-box">
-              <span class="t-lbl">CDP Action</span>
-              <span class="t-val" id="insp-t-act">0 ms</span>
-            </div>
-            <div class="timing-box">
-              <span class="t-lbl">DOM Observe</span>
-              <span class="t-val" id="insp-t-obs">0 ms</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Parameters & Target -->
-        <div class="insp-sec">
-          <div class="insp-sec-title">Action Parameters &amp; Target</div>
-          <div class="param-row">
-            <span class="p-key">Operation:</span>
-            <span class="p-val" id="insp-op">-</span>
-          </div>
-          <div class="param-row">
-            <span class="p-key">Target Element:</span>
-            <span class="p-val" id="insp-target">-</span>
-          </div>
-          <div class="param-row" id="insp-text-row" style="display:none;">
-            <span class="p-key">Typed Input:</span>
-            <span class="p-val text-val" id="insp-text">-</span>
-          </div>
-          <div class="param-row" id="insp-rect-row">
-            <span class="p-key">Bounding Rect:</span>
-            <span class="p-val mono" id="insp-rect">-</span>
-          </div>
-        </div>
-
-        <!-- Calibration & Confidence -->
-        <div class="insp-sec">
-          <div class="insp-sec-title">Confidence &amp; Calibration Distribution</div>
-          <div class="insp-bars">
-            <div class="cbar">
-              <div class="cbar-top"><span>Operation Confidence</span><span id="insp-conf-op">0%</span></div>
-              <div class="cbar-track"><div class="cbar-fill" id="insp-bar-op" style="width:0%"></div></div>
-            </div>
-            <div class="cbar">
-              <div class="cbar-top"><span>Target Element Confidence</span><span id="insp-conf-tgt">0%</span></div>
-              <div class="cbar-track"><div class="cbar-fill" id="insp-bar-tgt" style="width:0%"></div></div>
-            </div>
-            <div class="cbar">
-              <div class="cbar-top"><span>Joint Confidence</span><span id="insp-conf-jnt">0%</span></div>
-              <div class="cbar-track"><div class="cbar-fill" id="insp-bar-jnt" style="width:0%"></div></div>
-            </div>
-            <div class="cbar">
-              <div class="cbar-top"><span>Target Margin</span><span id="insp-conf-mar">0%</span></div>
-              <div class="cbar-track"><div class="cbar-fill" id="insp-bar-mar" style="width:0%"></div></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- DOM Verification & State Change -->
-        <div class="insp-sec">
-          <div class="insp-sec-title">DOM Verification &amp; State Change</div>
-          <div class="param-row">
-            <span class="p-key">URL Transition:</span>
-            <span class="p-val mono" id="insp-url-transition">-</span>
-          </div>
-          <div class="ver-chips-wrap" id="insp-ver-chips">
-            <span class="v-chip ok">Exec ✓</span>
-            <span class="v-chip" id="insp-chip-diff">In-Place</span>
-            <span class="v-chip ok" id="insp-chip-loop">Loop-Free ✓</span>
-          </div>
-          <div class="ver-note-box" id="insp-ver-note">No verification anomalies noted.</div>
-        </div>
-
-        <!-- Supervisor Reasoning & Memory -->
-        <div class="insp-sec" id="insp-s2-sec" style="display:none;">
-          <div class="insp-sec-title">Supervisor Deliberation &amp; Memory</div>
-          <div class="s2-box">
-            <div class="s2-item">
-              <span class="s2-lbl">Escalation Trigger:</span>
-              <span class="s2-txt" id="insp-s2-trigger">-</span>
-            </div>
-            <div class="s2-item">
-              <span class="s2-lbl">Previous Goal Evaluation:</span>
-              <span class="s2-txt" id="insp-s2-eval">-</span>
-            </div>
-            <div class="s2-item">
-              <span class="s2-lbl">Working Memory Update:</span>
-              <span class="s2-txt" id="insp-s2-memory">-</span>
-            </div>
-            <div class="s2-item">
-              <span class="s2-lbl">Next Subgoal:</span>
-              <span class="s2-txt" id="insp-s2-next">-</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
   </section>
 
   <!-- VIEW 3: TRAJECTORY -->
