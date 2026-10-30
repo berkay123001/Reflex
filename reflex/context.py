@@ -45,6 +45,7 @@ class DualTierContext(BaseModel):
     active_subgoal: str = ""
     tactical_hint: str = ""
     working_memory: str = ""
+    working_memory_notes: list[str] = Field(default_factory=list)
     plan: TaskLedger | None = None
     # False for unattended runs (eval, batch): System 2 must not pause for preferences nobody will answer.
     user_present: bool = True
@@ -118,6 +119,21 @@ class DualTierContext(BaseModel):
         if len(self.verified_dom_facts) > self.max_dom_facts:
             self.verified_dom_facts = self.verified_dom_facts[-self.max_dom_facts :]
 
+    def add_working_memory_note(self, note: str) -> None:
+        """Append an escalation memory note to the additive notebook when no structured plan exists."""
+        if not isinstance(note, str):
+            return
+        text = note.strip()
+        if not text:
+            return
+        if not self.working_memory_notes or text.casefold() != self.working_memory_notes[-1].casefold():
+            self.working_memory_notes.append(text)
+            if len(self.working_memory_notes) > 12:
+                self.working_memory_notes = self.working_memory_notes[-12:]
+            while len(self.working_memory_notes) > 1 and sum(len(n) for n in self.working_memory_notes) > 1500:
+                self.working_memory_notes.pop(0)
+            self.working_memory = "\n".join(self.working_memory_notes)
+
     def _compact_chat_if_needed(self) -> None:
         """Fold newly overflowed chat turns into a compact summary string once."""
         cutoff = len(self.chat_log) - self.max_chat_window
@@ -182,6 +198,16 @@ class DualTierContext(BaseModel):
             lines.append(
                 f"Ineffective Clicks on Current Page — bu buton işe yaramadı (DO NOT CLICK THESE AGAIN): {ineff_items}"
             )
+        if self.visited_urls:
+            unique_urls: list[str] = []
+            for u in self.visited_urls:
+                if u and u not in unique_urls:
+                    unique_urls.append(u)
+            recent_urls = unique_urls[-40:]
+            if recent_urls:
+                lines.append("Visited Pages (already opened; re-open only if needed):")
+                for u in recent_urls:
+                    lines.append(f"  - {u[:150]}")
         if self.subgoal_queue:
             lines.append(f"Remaining Subgoals: {self.subgoal_queue}")
         if self.completed_subgoals:

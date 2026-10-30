@@ -189,6 +189,12 @@ class ReflexSession:
                 self.browser.close()
                 raise
 
+            init_url = str(self.page.get("url", "")) if self.page else ""
+            if not init_url and self.url:
+                init_url = self.url
+            if init_url and init_url not in self.ctx.visited_urls:
+                self.ctx.visited_urls.append(init_url)
+
             try:
                 interp = interp_future.result()
                 self.interpret_calls.append(interp.model_dump())
@@ -1139,8 +1145,8 @@ class ReflexSession:
             self.ctx.plan.summarize_completed_results(threshold=2500)
             self.ctx.working_memory = self.ctx.plan.format_for_s2()
         else:
-            if sup.memory:
-                self.ctx.working_memory = sup.memory
+            if sup.memory and isinstance(sup.memory, str):
+                self.ctx.add_working_memory_note(sup.memory)
 
         esc_record = {
             "step": len(self.history) + 1,
@@ -1882,6 +1888,7 @@ class ReflexSession:
             self.ctx.active_subgoal = interp.updated_subgoal or clean_goal
             self.ctx.tactical_hint = interp.tactical_hint or ""
             self.ctx.working_memory = ""
+            self.ctx.working_memory_notes.clear()
             if interp.plan and interp.plan.needs_plan:
                 self.ctx.plan = interp.plan
                 active_sg = self.ctx.plan.get_active_subgoal()
@@ -1902,9 +1909,15 @@ class ReflexSession:
             self.config.max_steps = max(self.config.max_steps, len(self.history) + 60)
             self.config.max_escalations = max(self.config.max_escalations, len(self.escalations) + 30)
 
-            if interp.target_url and interp.target_url.rstrip("/").lower() != str(self.page.get("url", "")).rstrip("/").lower():
-                self.browser.navigate(interp.target_url)
-                self.page = self.browser.observe(screenshot=self.config.screenshots)
+            if interp.target_url:
+                if interp.target_url.rstrip("/").lower() != str(self.page.get("url", "")).rstrip("/").lower():
+                    self.browser.navigate(interp.target_url)
+                    self.page = self.browser.observe(screenshot=self.config.screenshots)
+                nav_url = str(self.page.get("url", "")) if self.page else ""
+                if not nav_url:
+                    nav_url = interp.target_url
+                if nav_url and nav_url not in self.ctx.visited_urls:
+                    self.ctx.visited_urls.append(nav_url)
 
             if interp.direct_reply:
                 self.ctx.add_agent_message(interp.direct_reply, kind="chat")
@@ -1915,7 +1928,49 @@ class ReflexSession:
         self.ctx.add_user_message(text, kind="chat")
         if interp.new_goal:
             self.ctx.primary_goal = interp.new_goal
-        self.ctx.active_subgoal = interp.updated_subgoal or interp.new_goal or text
+
+        if interp.plan and interp.plan.needs_plan:
+            if self.ctx.plan is None:
+                self.ctx.plan = interp.plan
+                active_sg = self.ctx.plan.get_active_subgoal()
+                if interp.updated_subgoal:
+                    self.ctx.active_subgoal = interp.updated_subgoal
+                elif active_sg:
+                    self.ctx.active_subgoal = active_sg.text
+                else:
+                    self.ctx.active_subgoal = interp.new_goal or text
+            else:
+                # Preserve existing plan and completed results, append new subgoals
+                existing_texts = {sg.text.casefold() for sg in self.ctx.plan.subgoals}
+                existing_ids = {sg.id for sg in self.ctx.plan.subgoals}
+                next_id_num = len(self.ctx.plan.subgoals) + 1
+                for sg in interp.plan.subgoals:
+                    if sg.text.casefold() not in existing_texts:
+                        while f"sg_{next_id_num}" in existing_ids:
+                            next_id_num += 1
+                        new_id = f"sg_{next_id_num}"
+                        next_id_num += 1
+                        sg_copy = sg.model_copy(update={"id": new_id, "status": "pending"})
+                        self.ctx.plan.subgoals.append(sg_copy)
+                        existing_texts.add(sg.text.casefold())
+                        existing_ids.add(new_id)
+                if interp.updated_subgoal:
+                    self.ctx.active_subgoal = interp.updated_subgoal
+                else:
+                    active_sg = self.ctx.plan.get_active_subgoal()
+                    if active_sg:
+                        self.ctx.active_subgoal = active_sg.text
+                    else:
+                        self.ctx.active_subgoal = interp.new_goal or text
+        else:
+            # If needs_plan is False or None, do NOT reset self.ctx.plan!
+            if interp.updated_subgoal:
+                self.ctx.active_subgoal = interp.updated_subgoal
+            elif self.ctx.plan and self.ctx.plan.get_active_subgoal():
+                self.ctx.active_subgoal = self.ctx.plan.get_active_subgoal().text
+            else:
+                self.ctx.active_subgoal = interp.new_goal or text
+
         self.ctx.tactical_hint = interp.tactical_hint or f"Focus on user instruction: {text}"
         self.pending_fact_key = None
         self.pending_confirmation = None
@@ -1924,9 +1979,16 @@ class ReflexSession:
         self.last_error = None
         self.config.max_steps = max(self.config.max_steps, len(self.history) + 60)
         self.config.max_escalations = max(self.config.max_escalations, len(self.escalations) + 30)
-        if interp.target_url and interp.target_url.rstrip("/").lower() != str(self.page.get("url", "")).rstrip("/").lower():
-            self.browser.navigate(interp.target_url)
-            self.page = self.browser.observe(screenshot=self.config.screenshots)
+
+        if interp.target_url:
+            if interp.target_url.rstrip("/").lower() != str(self.page.get("url", "")).rstrip("/").lower():
+                self.browser.navigate(interp.target_url)
+                self.page = self.browser.observe(screenshot=self.config.screenshots)
+            nav_url = str(self.page.get("url", "")) if self.page else ""
+            if not nav_url:
+                nav_url = interp.target_url
+            if nav_url and nav_url not in self.ctx.visited_urls:
+                self.ctx.visited_urls.append(nav_url)
         if interp.direct_reply:
             self.ctx.add_agent_message(interp.direct_reply, kind="chat")
         self.status = "ready"

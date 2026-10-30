@@ -178,22 +178,55 @@ def verify_step(
             and fps[-4] != fps[-3]
         )
         three_step_osc = (
-            len(fps) >= 6
-            and fps[-6] == fps[-3]
-            and fps[-5] == fps[-2]
-            and fps[-4] == fps[-1]
-            and len({fps[-6], fps[-5], fps[-4]}) >= 2
+            (
+                len(fps) >= 6
+                and fps[-6] == fps[-3]
+                and fps[-5] == fps[-2]
+                and fps[-4] == fps[-1]
+                and len({fps[-6], fps[-5], fps[-4]}) >= 2
+            )
+            or (
+                len(fps) >= 5
+                and fps[-5] == fps[-2]
+                and fps[-4] == fps[-1]
+                and len({fps[-5], fps[-4], fps[-3]}) >= 3
+            )
         )
 
     repeated_transition = False
     if kind not in ("scroll", "wait") and after_fp and len(history) >= 2:
         cur_trans = (kind, action.get("label"), typed_text, after_fp)
-        prev_transitions = [
-            (h.get("kind"), h.get("action"), h.get("text"), h.get("after_fingerprint"))
-            for h in history[-8:-1]
-        ]
-        if cur_trans in prev_transitions:
-            repeated_transition = True
+        action_label = action.get("label") or action.get("kind")
+        prev_idx: int | None = None
+        for idx in range(len(history) - 2, max(-1, len(history) - 9), -1):
+            h = history[idx]
+            h_trans = (h.get("kind"), h.get("action"), h.get("text"), h.get("after_fingerprint"))
+            if h_trans == cur_trans or (
+                h.get("kind"),
+                h.get("action") or h.get("label"),
+                h.get("text"),
+                h.get("after_fingerprint"),
+            ) == (kind, action_label, typed_text, after_fp):
+                prev_idx = idx
+                break
+
+        if prev_idx is not None:
+            intermediate_steps = history[prev_idx + 1 :]
+            novel_page_found = False
+            for offset, mid_step in enumerate(intermediate_steps):
+                mid_idx = prev_idx + 1 + offset
+                mid_fp = mid_step.get("after_fingerprint")
+                if mid_fp:
+                    prior_fps = {
+                        h.get("after_fingerprint")
+                        for h in history[:mid_idx]
+                        if h.get("after_fingerprint")
+                    }
+                    if mid_fp not in prior_fps:
+                        novel_page_found = True
+                        break
+            if not novel_page_found:
+                repeated_transition = True
 
     oscillation_detected = two_step_osc or three_step_osc or repeated_transition or scroll_bounce
 
