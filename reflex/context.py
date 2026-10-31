@@ -332,10 +332,15 @@ class DualTierContext(BaseModel):
         return "\n".join(parts)
 
     def build_supervisor_context_block(self, history: list[dict[str, Any]]) -> str:
-        """Build the bounded, provenance-separated context summary for System 2 (Supervisor)."""
+        """Build the bounded, provenance-separated context summary for System 2 (Supervisor).
+
+        Sections are ordered strictly by frequency of change to maximize prompt cache hits:
+        - Tier 1: Static throughout task (Goal, Constraints, User availability, User facts)
+        - Tier 2: Slow-changing (Task ledger/plan, Visited pages, Queue, Subgoals, Clicks, DOM facts, Chat)
+        - Tier 3: Dynamic / every step changing (Tactical hint, Recent execution trajectory)
+        """
         lines: list[str] = [
             f"Primary Goal: {self.primary_goal}",
-            f"Active Subgoal: {self.active_subgoal or self.primary_goal}",
         ]
         if self.constraints:
             lines.append(f"Active Constraints: {'; '.join(self.constraints)}")
@@ -345,8 +350,14 @@ class DualTierContext(BaseModel):
                 "ranges or choices: pick a sensible default and state it in summary_for_user. ASK_USER only for "
                 "data that must not be invented (login credentials, personal data, payment details)."
             )
-        if self.tactical_hint:
-            lines.append(f"Current Tactical Hint: {self.tactical_hint}")
+
+        # 1. Explicit User Facts (Provenance: human, static throughout task)
+        if self.user_facts:
+            lines.append("User Facts (verified from human user):")
+            for k, v in list(self.user_facts.items())[-10:]:
+                lines.append(f"  - {k}: {v}")
+
+        # 2. Slow-changing task state
         if self.plan and self.plan.needs_plan:
             lines.append("Structured Task Ledger:")
             lines.append(self.plan.format_for_s2())
@@ -354,6 +365,7 @@ class DualTierContext(BaseModel):
                 lines.append(f"Cumulative Working Memory: {self.working_memory}")
         elif self.working_memory:
             lines.append(f"Cumulative Working Memory: {self.working_memory}")
+
         if self.rejected_links:
             lines.append(f"Already Visited & Rejected Links (DO NOT CLICK THESE AGAIN): {self.rejected_links[-10:]}")
         if self.ineffective_clicks:
@@ -364,6 +376,7 @@ class DualTierContext(BaseModel):
             lines.append(
                 f"Ineffective Clicks on Current Page — bu buton işe yaramadı (DO NOT CLICK THESE AGAIN): {ineff_items}"
             )
+
         if self.visited_urls:
             unique_urls: list[str] = []
             for u in self.visited_urls:
@@ -374,6 +387,7 @@ class DualTierContext(BaseModel):
                 lines.append("Visited Pages (already opened; re-open only if needed):")
                 for u in recent_urls:
                     lines.append(f"  - {u[:150]}")
+
         self.prune_visit_queue()
         if self.visit_queue:
             lines.append(
@@ -381,18 +395,14 @@ class DualTierContext(BaseModel):
             )
             for u in self.visit_queue[:MAX_VISIT_QUEUE_URLS]:
                 lines.append(f"  - {u[:MAX_VISIT_QUEUE_URL_CHARS]}")
+
+        lines.append(f"Active Subgoal: {self.active_subgoal or self.primary_goal}")
         if self.subgoal_queue:
             lines.append(f"Remaining Subgoals: {self.subgoal_queue}")
         if self.completed_subgoals:
             lines.append(f"Completed Subgoals: {self.completed_subgoals[-5:]}")
 
-        # 1. Explicit User Facts (Provenance: human)
-        if self.user_facts:
-            lines.append("User Facts (verified from human user):")
-            for k, v in list(self.user_facts.items())[-10:]:
-                lines.append(f"  - {k}: {v}")
-
-        # 2. Verified DOM Facts (Provenance: page state, sanitized)
+        # Verified DOM Facts (Provenance: page state, sanitized)
         if self.verified_dom_facts:
             lines.append("Verified DOM Observations:")
             for f in self.verified_dom_facts[-8:]:
@@ -400,7 +410,20 @@ class DualTierContext(BaseModel):
                 v_clean = sanitize_untrusted_text(f.value, 200)
                 lines.append(f"  - [step {f.step}] {k_clean}: {v_clean}")
 
-        # 3. Compact Trajectory Summary (no raw historical DOMs!)
+        # Bounded Chat Window
+        if self.older_chat_summary:
+            lines.append(f"Earlier Chat Summary: {self.older_chat_summary}")
+        recent_chat = self.chat_log[-self.max_chat_window :]
+        if recent_chat:
+            lines.append("Recent User-Agent Conversation:")
+            for m in recent_chat:
+                lines.append(f"  [{m.role} ({m.kind})]: {m.content[:300]}")
+
+        # 3. Dynamic / step-changing context
+        if self.tactical_hint:
+            lines.append(f"Current Tactical Hint: {self.tactical_hint}")
+
+        # Compact Trajectory Summary (no raw historical DOMs!)
         if history:
             lines.append("Recent Execution Trajectory (most recent last):")
             for h in history[-8:]:
@@ -411,15 +434,6 @@ class DualTierContext(BaseModel):
                 url_c = sanitize_untrusted_text(str(h.get("url", "")), 160)
                 prog = "progressed" if h.get("effective_progress") else "no-change"
                 lines.append(f"  - Step {h.get('step')} [{actor}] {op} '{lbl}'{txt} -> {prog} (url={url_c})")
-
-        # 4. Bounded Chat Window
-        if self.older_chat_summary:
-            lines.append(f"Earlier Chat Summary: {self.older_chat_summary}")
-        recent_chat = self.chat_log[-self.max_chat_window :]
-        if recent_chat:
-            lines.append("Recent User-Agent Conversation:")
-            for m in recent_chat:
-                lines.append(f"  [{m.role} ({m.kind})]: {m.content[:300]}")
 
         return "\n".join(lines)
 

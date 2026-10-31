@@ -373,6 +373,7 @@ class ReflexSession:
             for u in usage_records
             if isinstance(u, dict)
         )
+        cache_hit_ratio = round(cached_tokens / prompt_tokens, 4) if prompt_tokens > 0 else 0.0
 
         latencies = [h["latency_ms"] for h in self.history if isinstance(h.get("latency_ms"), (int, float))]
         median_ms = sorted(latencies)[len(latencies) // 2] if latencies else 0
@@ -429,6 +430,7 @@ class ReflexSession:
                     "completion_tokens": completion_tokens,
                     "cached_tokens": cached_tokens,
                     "total_tokens": total_tokens,
+                    "cache_hit_ratio": cache_hit_ratio,
                 },
             },
         }
