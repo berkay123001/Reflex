@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -187,6 +187,13 @@ def get_meta_api_key() -> str:
     )
 
 
+def get_default_trace_path() -> str | None:
+    """Return the default trace log path from REFLEX_TRACE_PATH, or None if unset."""
+    load_env()
+    val = os.environ.get("REFLEX_TRACE_PATH", "").strip()
+    return val or None
+
+
 def save_env_key(key_name: str, key_value: str) -> None:
     """Persist an API key (`META_API_KEY`, `LLAMA_API_KEY`, `OPENROUTER_API_KEY`) into `.env` and `os.environ`."""
     if "\n" in key_name or "\r" in key_name:
@@ -262,6 +269,15 @@ class ReflexConfig(BaseModel):
     model_pricing: dict[str, dict[str, float]] = Field(
         default_factory=lambda: {k: dict(v) for k, v in MODEL_PRICING.items()}
     )
+    trace_path: str | None = Field(default_factory=get_default_trace_path)
+
+    @field_validator("trace_path", mode="before")
+    @classmethod
+    def _normalize_trace_path(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        val = str(v).strip()
+        return val or None
 
     @property
     def escalation_limit(self) -> int:

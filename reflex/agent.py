@@ -7,9 +7,14 @@ escalation gates, irreversible action safety guards, and interactive human-in-th
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 
@@ -29,7 +34,7 @@ def _is_raw_dom(text: str) -> bool:
 
 from .browser import Browser, NavigationTimeout, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
-from .config import ReflexConfig
+from .config import ReflexConfig, run_mode_of
 from .context import DualTierContext, _url_match_keys
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
@@ -41,7 +46,7 @@ from .supervisor import (
     interpret_user_message,
     resolve_escalation,
 )
-from .system1 import MAX_SUPERVISOR_ELEMENTS, action_space, choose_action
+from .system1 import MAX_SUPERVISOR_ELEMENTS, MAX_SYSTEM1_ELEMENTS, action_space, choose_action
 from .verifier import VerificationResult, verify_step
 
 
@@ -120,12 +125,16 @@ class ReflexSession:
         config: ReflexConfig | None = None,
         constraints: list[str] | None = None,
         allow_arbitrary_choices: bool = False,
+        session_id: str | None = None,
     ):
         if not goal or not goal.strip():
             raise ValueError("Supply a non-empty goal")
         self.config = config or ReflexConfig()
         clean_url = url.strip()
         self.url = clean_url
+        self.session_id: str = (session_id or "").strip() or uuid.uuid4().hex[:12]
+        self.trace_path: str | None = self.config.trace_path
+        self.trace_write_errors: int = 0
         self.ctx = DualTierContext(
             primary_goal=goal.strip(),
             active_subgoal=goal.strip(),
@@ -385,6 +394,7 @@ class ReflexSession:
         median_step_ms = sorted(step_durations)[len(step_durations) // 2] if step_durations else 0
 
         return {
+            "session_id": self.session_id,
             "status": self.status,
             "goal": self.ctx.primary_goal,
             "compiled_goal": self.ctx.compile_system1_goal(
@@ -420,6 +430,7 @@ class ReflexSession:
                 "stuck_counter": self._stuck_counter,
                 "s1_errors": self.s1_errors,
                 "text_helper_calls": len(self.text_calls),
+                "trace_write_errors": self.trace_write_errors,
                 "visit_queue_rejected_count": self.ctx.visit_queue_rejected_count,
                 "median_decision_ms": median_ms,
                 "median_step_ms": median_step_ms,
@@ -471,6 +482,17 @@ class ReflexSession:
             self.status = "blocked"
             self.last_error = f"Reached max steps limit ({self.config.max_steps})"
             self.ctx.add_agent_message(self.last_error, kind="escalation_note")
+            self._log_trace_step(
+                actor="system",
+                action={"id": "max_steps", "label": "Max steps limit reached", "kind": "blocked"},
+                operation="BLOCKED",
+                target=None,
+                typed_text=None,
+                verification={"effective_progress": False, "flags": {}, "reason": "Max steps limit reached"},
+                task_status="blocked",
+                page=self.page,
+                step_no=len(self.history),
+            )
             return self.snapshot()
 
         step_t0 = time.perf_counter()
@@ -538,6 +560,18 @@ class ReflexSession:
                     "elapsed_ms": self.elapsed(),
                 }
                 self.history.append(step_record)
+                self._log_trace_step(
+                    actor="system",
+                    action={"id": "observe", "label": "observe", "kind": "observe"},
+                    operation="OBSERVE",
+                    target=None,
+                    typed_text=None,
+                    goto_url=None,
+                    verification={"effective_progress": False, "flags": {}, "reason": "page_unsettled"},
+                    task_status="blocked" if len(self.history) >= self.config.max_steps else None,
+                    page=self.page,
+                    step_no=len(self.history),
+                )
                 if len(self.history) >= self.config.max_steps:
                     self.status = "blocked"
                     self.last_error = f"Reached max steps limit ({self.config.max_steps})"
@@ -770,6 +804,17 @@ class ReflexSession:
                 "Goal completed by System 1 (high confidence verification passed).",
                 kind="chat",
             )
+            self._log_trace_step(
+                actor="S1",
+                action={"id": "done", "label": "DONE", "kind": "done"},
+                operation="DONE",
+                target=None,
+                typed_text=None,
+                verification={"effective_progress": True, "flags": {}, "reason": "System 1 high confidence DONE"},
+                task_status="done",
+                page=self.page,
+                step_no=len(self.history) + 1,
+            )
             return self.snapshot()
 
         # 5. Execute System 1 Selected Action
@@ -933,6 +978,17 @@ class ReflexSession:
         if not self.ctx.plan or not self.ctx.plan.needs_plan:
             self.status = "done"
             self.ctx.add_agent_message(summary or "Task completed.", kind="chat")
+            self._log_trace_step(
+                actor="S2",
+                action={"id": "complete_task", "label": "COMPLETE_TASK", "kind": "complete_task"},
+                operation="DONE",
+                target=None,
+                typed_text=None,
+                verification={"effective_progress": True, "flags": {}, "reason": "Supervisor COMPLETE_TASK"},
+                task_status="done",
+                page=self.page,
+                step_no=len(self.history) + 1,
+            )
             return self.snapshot()
 
         # System 2 judged the task complete, so the subgoal it was working on is complete too. Planners often
@@ -979,6 +1035,17 @@ class ReflexSession:
         self.status = "done"
         final_answer = summary or self.ctx.plan.synthesize_final_answer(self.ctx.primary_goal)
         self.ctx.add_agent_message(final_answer, kind="chat")
+        self._log_trace_step(
+            actor="S2",
+            action={"id": "complete_task", "label": "COMPLETE_TASK", "kind": "complete_task"},
+            operation="DONE",
+            target=None,
+            typed_text=None,
+            verification={"effective_progress": True, "flags": {}, "reason": "Plan completed and verified"},
+            task_status="done",
+            page=self.page,
+            step_no=len(self.history) + 1,
+        )
         return self.snapshot()
 
     def _handle_escalation(
@@ -1248,6 +1315,17 @@ class ReflexSession:
             self.status = "done"
             msg = sup.summary_for_user or sup.reasoning or "Task verified complete by Supervisor."
             self.ctx.add_agent_message(msg, kind="chat")
+            self._log_trace_step(
+                actor="S2",
+                action={"id": "complete_task", "label": "COMPLETE_TASK", "kind": "complete_task"},
+                operation="DONE",
+                target=None,
+                typed_text=None,
+                verification={"effective_progress": True, "flags": {}, "reason": "Supervisor COMPLETE_TASK"},
+                task_status="done",
+                page=self.page,
+                step_no=len(self.history) + 1,
+            )
             return self.snapshot()
 
         if trigger_type == "verify_done":
@@ -1719,6 +1797,18 @@ class ReflexSession:
                 "elapsed_ms": self.elapsed(),
             }
             self.history.append(step_record)
+            self._log_trace_step(
+                actor=actor,
+                action=action,
+                operation=operation,
+                target=target,
+                typed_text=typed_text,
+                goto_url=None,
+                verification={"effective_progress": False, "flags": {}, "reason": "page_unsettled"},
+                task_status="blocked" if len(self.history) >= self.config.max_steps else None,
+                page=before_page,
+                step_no=len(self.history),
+            )
             self.page = {}  # force subsequent step to re-observe without reusing stale page
             if self.unsettled_count >= 3:
                 self.pending_escalation_reason = (
@@ -1837,6 +1927,18 @@ class ReflexSession:
             "elapsed_ms": self.elapsed(),
         }
         self.history.append(step_record)
+        self._log_trace_step(
+            actor=actor,
+            action=action,
+            operation=operation,
+            target=target,
+            typed_text=typed_text,
+            goto_url=None,
+            verification=verification,
+            task_status=None,
+            page=before_page,
+            step_no=len(self.history),
+        )
 
         # 5. Schedule post-step escalation if a loop, oscillation, or scroll budget was reached
         if (
@@ -2123,7 +2225,204 @@ class ReflexSession:
             self.last_error = None
         return self.snapshot()
 
+    def _scrub_trace_text(self, text: str) -> str:
+        """Redact sensitive user facts and API keys from a serialized JSON or text line."""
+        result = text
+
+        # 1. User facts values
+        facts_to_scrub: list[str] = []
+        if hasattr(self, "ctx") and getattr(self.ctx, "user_facts", None):
+            for raw_val in self.ctx.user_facts.values():
+                if raw_val is not None:
+                    s_val = str(raw_val).strip()
+                    if s_val:
+                        facts_to_scrub.append(s_val)
+        facts_to_scrub.sort(key=len, reverse=True)
+        for s_val in facts_to_scrub:
+            result = result.replace(s_val, "<redacted>")
+
+        # 2. Active environment API keys & secrets
+        env_keys_to_scrub: list[str] = []
+        for env_var in ("OPENROUTER_API_KEY", "META_API_KEY", "LLAMA_API_KEY", "BASETEN_API_KEY"):
+            val = os.environ.get(env_var, "").strip()
+            if val and len(val) >= 6:
+                env_keys_to_scrub.append(val)
+        for k, v in os.environ.items():
+            if any(tok in k.upper() for tok in ("API_KEY", "SECRET", "AUTH_TOKEN", "BEARER")):
+                clean_v = str(v).strip()
+                if len(clean_v) >= 8:
+                    env_keys_to_scrub.append(clean_v)
+        env_keys_to_scrub.sort(key=len, reverse=True)
+        for env_val in env_keys_to_scrub:
+            result = result.replace(env_val, "<redacted>")
+
+        # 3. Known API key patterns and Bearer tokens
+        result = re.sub(r"sk-or-v1-[a-zA-Z0-9_\-]+", "<redacted>", result)
+        result = re.sub(r"LA-[a-zA-Z0-9_\-]+", "<redacted>", result)
+        result = re.sub(r"(?i)bearer\s+[a-zA-Z0-9_\.\-]+", "Bearer <redacted>", result)
+
+        return result
+
+    def _log_trace_step(
+        self,
+        *,
+        actor: str = "S1",
+        action: dict[str, Any] | None = None,
+        operation: str = "",
+        target: str | None = None,
+        typed_text: str | None = None,
+        goto_url: str | None = None,
+        verification: Any = None,
+        task_status: str | None = None,
+        page: dict[str, Any] | None = None,
+        step_no: int | None = None,
+    ) -> None:
+        """Write an execution trace step to JSONL if trace logging is enabled."""
+        if not self.trace_path:
+            return
+
+        try:
+            eff_page = page if page is not None else (self.page or {})
+            page_url = str(eff_page.get("url") or getattr(self, "url", ""))
+            page_actions = eff_page.get("actions", [])
+            elements_raw, _, _ = action_space(page_actions, max_elements=MAX_SYSTEM1_ELEMENTS)
+            clean_elements = [
+                {k: v for k, v in el.items() if k not in ("rect", "node", "href")}
+                for el in elements_raw
+            ]
+            site_hint = (
+                self.site_memory.get_domain_hint(page_url)
+                if getattr(self.config, "enable_site_memory", False)
+                else ""
+            )
+            compiled_goal = self.ctx.compile_system1_goal(site_hint)
+            s1_input = {
+                "compiled_goal": compiled_goal,
+                "elements": clean_elements,
+            }
+
+            eff_step = step_no if step_no is not None else max(1, len(self.history))
+            mode_str = run_mode_of(self.config.s2_every_step, self.config.s1_strict)
+
+            act = action or {}
+            action_label = str(act.get("label") or act.get("action") or operation or "").strip()
+            op_str = str(operation or act.get("kind") or "").upper()
+            target_index = str(act.get("index") or act.get("id") or target or "") or None
+            target_tag = act.get("role") or act.get("tag") or None
+            target_href = act.get("href") or None
+            eff_goto_url = goto_url or act.get("url") or (target if op_str in {"GOTO_URL", "NAVIGATE", "OPEN_URL"} else None)
+
+            # Password redaction for typed text
+            eff_typed_text = typed_text
+            is_password = False
+            if act.get("type") == "password" or act.get("input_type") == "password" or act.get("role") == "password":
+                is_password = True
+            lbl_lower = str(act.get("label", "")).lower()
+            if any(pw in lbl_lower for pw in ("password", "parola", "şifre", "sifre")):
+                is_password = True
+            if is_password:
+                eff_typed_text = "<redacted>"
+
+            if isinstance(verification, VerificationResult):
+                validator = {
+                    "effective_progress": verification.effective_progress,
+                    "flags": {
+                        "page_changed": verification.page_changed,
+                        "url_changed": verification.url_changed,
+                        "element_state_changed": verification.element_state_changed,
+                        "loop_detected": verification.loop_detected,
+                        "oscillation_detected": verification.oscillation_detected,
+                        "scroll_budget_exceeded": verification.scroll_budget_exceeded,
+                    },
+                    "reason": verification.reason,
+                }
+            elif isinstance(verification, dict):
+                validator = verification
+            else:
+                validator = {
+                    "effective_progress": bool(task_status == "done"),
+                    "flags": {
+                        "page_changed": False,
+                        "url_changed": False,
+                        "element_state_changed": False,
+                        "loop_detected": False,
+                        "oscillation_detected": False,
+                        "scroll_budget_exceeded": False,
+                    },
+                    "reason": "terminal" if task_status else "none",
+                }
+
+            now_utc = datetime.now(timezone.utc)
+            record = {
+                "time": now_utc.isoformat(),
+                "timestamp": now_utc.timestamp(),
+                "session_id": getattr(self, "session_id", "default"),
+                "step_no": eff_step,
+                "url": page_url,
+                "mode": mode_str,
+                "s2_model": self.config.supervisor_model,
+                "s1_input": s1_input,
+                "decision_maker": actor,
+                "actor": actor,
+                "action": action_label,
+                "operation": op_str,
+                "target_index": target_index,
+                "target_tag": target_tag,
+                "target_href": target_href,
+                "target_element": {
+                    "role": target_tag,
+                    "label": action_label,
+                    "href": target_href,
+                },
+                "typed_text": eff_typed_text,
+                "goto_url": eff_goto_url,
+                "validator": validator,
+                "progress_made": validator.get("effective_progress", False),
+                "task_status": task_status,
+                "status": self.status,
+            }
+
+            raw_json = json.dumps(record, ensure_ascii=False)
+            scrubbed_line = self._scrub_trace_text(raw_json)
+
+            trace_file = Path(self.trace_path)
+            trace_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(trace_file, "a", encoding="utf-8") as f:
+                f.write(scrubbed_line + "\n")
+        except Exception:
+            self.trace_write_errors += 1
+
+    def _sync_trace_terminal_status(self) -> None:
+        """Ensure the last row in trace_path reflects the final session status."""
+        if not self.trace_path:
+            return
+        try:
+            trace_file = Path(self.trace_path)
+            if not trace_file.is_file():
+                return
+            content = trace_file.read_text(encoding="utf-8")
+            lines = [l for l in content.splitlines() if l.strip()]
+            if not lines:
+                return
+            last_line = lines[-1]
+            try:
+                rec = json.loads(last_line)
+            except Exception:
+                return
+            if rec.get("task_status") is None and self.status in {"done", "blocked", "error", "waiting_user", "waiting_confirmation"}:
+                rec["task_status"] = self.status
+                rec["status"] = self.status
+                updated_json = json.dumps(rec, ensure_ascii=False)
+                lines[-1] = self._scrub_trace_text(updated_json)
+                trace_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        except Exception:
+            self.trace_write_errors += 1
+
     def close(self) -> None:
+        try:
+            self._sync_trace_terminal_status()
+        except Exception:
+            self.trace_write_errors += 1
         self.browser.close()
 
     def __enter__(self) -> ReflexSession:
