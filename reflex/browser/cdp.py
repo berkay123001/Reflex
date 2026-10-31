@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 READ_STATE = Path(__file__).with_name("snapshot.js").read_text(encoding="utf-8")
 MARKER = f"(() => {{ const state={READ_STATE}; return state?.marker ?? null; }})()"
 DEFAULT_CDP_PORT = 9333
+# Page.navigate only answers once the server responds; slow or dead sites exceed the 5 s IPC default.
+NAVIGATE_RESPONSE_TIMEOUT_S = 15.0
 _AD_BLOCK_URLS = [
     "*://*.googlesyndication.com/*",
     "*://*.doubleclick.net/*",
@@ -196,6 +198,10 @@ class EvaluationTimeout(StalePage):
 
 class TargetCoveredError(RuntimeError):
     """Raised when the target element is obscured by a modal/overlay at hit-test time."""
+
+
+class NavigationTimeout(RuntimeError):
+    """Raised when Page.navigate gets no response in time (site down or hanging); the tab stays usable."""
 
 
 _NAVIGATION_CDP_ERRORS = (
@@ -379,7 +385,16 @@ class Browser:
             prev_origin = self.evaluate("performance.timeOrigin")
         except Exception:
             prev_origin = None
-        self.call("Page.navigate", url=url)
+        try:
+            self.call("Page.navigate", url=url, _response_timeout=NAVIGATE_RESPONSE_TIMEOUT_S)
+        except TimeoutError as exc:
+            try:
+                self.call("Page.stopLoading")
+            except Exception:
+                pass
+            raise NavigationTimeout(
+                f"{url} did not respond within {NAVIGATE_RESPONSE_TIMEOUT_S:g}s (site may be down)"
+            ) from exc
         self._wait_for_navigation_and_settle(prev_origin=prev_origin, max_wait=15.0)
         self.after_input = {"kind": "click"}
 

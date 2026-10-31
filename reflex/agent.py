@@ -27,7 +27,7 @@ def _is_raw_dom(text: str) -> bool:
         or ("</p>" in s_low and "<p" in s_low)
     )
 
-from .browser import Browser, StalePage, TargetCoveredError
+from .browser import Browser, NavigationTimeout, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
 from .config import ReflexConfig
 from .context import DualTierContext
@@ -994,9 +994,9 @@ class ReflexSession:
             self.unsettled_count = 0
         if step_t0 is None:
             step_t0 = time.perf_counter()
-        if len(self.escalations) >= self.config.max_escalations:
+        if len(self.escalations) >= self.config.escalation_limit:
             self.status = "blocked"
-            self.last_error = f"Reached max supervisor escalations ({self.config.max_escalations}): {reason}"
+            self.last_error = f"Reached max supervisor escalations ({self.config.escalation_limit}): {reason}"
             self.ctx.add_agent_message(self.last_error, kind="escalation_note")
             return self.snapshot()
 
@@ -1540,6 +1540,16 @@ class ReflexSession:
         try:
             act_res = self.browser.act(action, before_page, text=typed_text) or {}
             act_ms += round((time.perf_counter() - act_t0) * 1000)
+        except NavigationTimeout as exc:
+            # A dead or hanging site is an observation for System 2 (pick another source), not a session crash.
+            dead_url = str(action.get("url") or typed_text or action.get("label", ""))
+            self.ctx.rejected_links.append(f"site did not respond ({dead_url})")
+            self.pending_escalation_reason = ("navigation_timeout", str(exc))
+            settled = self._observe_settled()
+            if settled is not None:
+                self.page = settled
+            self.status = "ready"
+            return self.snapshot()
         except TargetCoveredError as exc:
             act_ms += round((time.perf_counter() - act_t0) * 1000)
             if actor == "S1":

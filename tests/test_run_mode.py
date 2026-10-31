@@ -133,3 +133,42 @@ async def test_mcp_start_defaults_to_s2_only_and_accepts_explicit_mode() -> None
 
     assert [c.s2_every_step for c in configs] == [True, False]
     assert all(c.interactive for c in configs)
+
+
+def _session_with_spent_escalation_budget(mode: str) -> Any:
+    from reflex.agent import ReflexSession
+    from reflex.context import DualTierContext
+
+    sess = ReflexSession.__new__(ReflexSession)
+    sess.config = ReflexConfig(max_steps=60, max_escalations=40, **run_mode_flags(mode))
+    sess.escalations = [object()] * 40
+    sess.history = []
+    sess.page = {"actions": [], "url": "https://example.com/"}
+    sess.ctx = DualTierContext(primary_goal="g", active_subgoal="g")
+    sess.status = "ready"
+    sess.last_error = None
+    sess.snapshot = lambda: {"status": sess.status}
+    return sess
+
+
+def test_escalation_limit_never_falls_below_max_steps_when_s2_leads() -> None:
+    for mode in ("s2_only", "strict"):
+        assert ReflexConfig(max_steps=60, max_escalations=40, **run_mode_flags(mode)).escalation_limit == 60
+        assert ReflexConfig(max_steps=20, max_escalations=40, **run_mode_flags(mode)).escalation_limit == 40
+    assert ReflexConfig(max_steps=60, max_escalations=40, **run_mode_flags("hybrid")).escalation_limit == 40
+
+
+@pytest.mark.parametrize("mode", ["s2_only", "strict"])
+def test_s2_led_session_reaches_supervisor_after_40_escalations(mode: str) -> None:
+    sess = _session_with_spent_escalation_budget(mode)
+    with patch("reflex.agent.resolve_escalation", side_effect=RuntimeError("supervisor reached")):
+        sess._handle_escalation(trigger_type="s2_every_step", reason="r", s1_decision=None)
+    assert sess.last_error == "supervisor reached"
+
+
+def test_hybrid_session_still_blocks_at_escalation_budget() -> None:
+    sess = _session_with_spent_escalation_budget("hybrid")
+    with patch("reflex.agent.resolve_escalation", side_effect=RuntimeError("supervisor reached")):
+        sess._handle_escalation(trigger_type="low_confidence", reason="r", s1_decision=None)
+    assert sess.status == "blocked"
+    assert sess.last_error.startswith("Reached max supervisor escalations (40)")

@@ -252,7 +252,7 @@ class ReflexConfig(BaseModel):
     s2_every_step: bool = False  # evaluation baseline: no System 1, System 2 decides every step
     s1_strict: bool = False  # System 1 only for confident clicks/typing; scrolling and arbitrary choices go to System 2
     max_steps: int = 80
-    max_escalations: int = 40
+    max_escalations: int = 40  # System 2 call budget; see escalation_limit
     observe_deadline_s: float = 8.0
     require_confirmation_for_destructive: bool = True
     verify_done_with_supervisor: bool = True
@@ -262,3 +262,14 @@ class ReflexConfig(BaseModel):
     model_pricing: dict[str, dict[str, float]] = Field(
         default_factory=lambda: {k: dict(v) for k, v in MODEL_PRICING.items()}
     )
+
+    @property
+    def escalation_limit(self) -> int:
+        """Effective System 2 call budget.
+
+        In s2_only and strict modes System 2 decides every or most steps, so a budget below
+        max_steps would stop the run early; max_steps bounds those runs instead.
+        """
+        if self.s2_every_step or self.s1_strict:
+            return max(self.max_escalations, self.max_steps)
+        return self.max_escalations
