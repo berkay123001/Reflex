@@ -11,13 +11,81 @@ the System 2 (Supervisor) prompt window strictly bounded.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+import re
 import time
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import BaseModel, Field
 
+from .browser.cdp import canonical_url
 from .planner import TaskLedger
 from .safety import sanitize_untrusted_text
+
+MAX_VISIT_QUEUE_URLS = 30
+MAX_VISIT_QUEUE_URL_CHARS = 200
+_REJECTED_URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
+
+
+def _url_match_keys(raw_url: str) -> set[str]:
+    """Return canonical_url(raw_url) and HTTP(S)/www-normalized equivalent for queue matching."""
+    c = canonical_url(raw_url)
+    if not c:
+        return set()
+    keys = {c}
+    try:
+        parts = urlsplit(c)
+        if parts.scheme in ("http", "https") and parts.netloc:
+            host = parts.netloc.removeprefix("www.")
+            keys.add(urlunsplit(("https", host, parts.path or "/", parts.query, "")))
+    except Exception:
+        pass
+    return keys
+
+
+def _extract_rejected_url_keys(rejected_entry: str) -> set[str]:
+    """Extract canonical URL keys from a `rejected_links` entry (e.g. 'label (url)' or 'site did not respond (url)')."""
+    entry = str(rejected_entry or "").strip()
+    if not entry:
+        return set()
+    keys: set[str] = set()
+    if " (" in entry and entry.endswith(")"):
+        _, paren_url = entry.rsplit(" (", 1)
+        keys.update(_url_match_keys(paren_url[:-1].strip()))
+    for m in _REJECTED_URL_RE.findall(entry):
+        keys.update(_url_match_keys(m.rstrip(".,;:!?)']\"")))
+    if "://" in entry and " " not in entry:
+        keys.update(_url_match_keys(entry))
+    return keys
+
+
+class _PruningList(list[str]):
+    """List subclass that triggers visit-queue pruning when mutated in place."""
+
+    def __init__(self, iterable: Iterable[str] = (), on_mutate: Callable[[], None] | None = None) -> None:
+        super().__init__(iterable)
+        self._on_mutate = on_mutate
+
+    def _notify(self) -> None:
+        if self._on_mutate is not None:
+            self._on_mutate()
+
+    def append(self, item: str) -> None:
+        super().append(item)
+        self._notify()
+
+    def extend(self, iterable: Iterable[str]) -> None:
+        super().extend(iterable)
+        self._notify()
+
+    def insert(self, index: Any, item: str) -> None:
+        super().insert(index, item)
+        self._notify()
+
+    def __setitem__(self, index: Any, value: Any) -> None:
+        super().__setitem__(index, value)
+        self._notify()
 
 
 class ChatMessage(BaseModel):
@@ -55,6 +123,8 @@ class DualTierContext(BaseModel):
     completed_subgoals: list[str] = Field(default_factory=list)
     visited_urls: list[str] = Field(default_factory=list)
     rejected_links: list[str] = Field(default_factory=list)
+    visit_queue: list[str] = Field(default_factory=list)
+    visit_queue_rejected_count: int = 0
     ineffective_clicks: list[tuple[str, str, str]] = Field(default_factory=list)
 
     # Strictly separated knowledge stores
@@ -77,6 +147,102 @@ class DualTierContext(BaseModel):
 
     # Goal & user constraints (e.g. "do not submit form", "only add to cart")
     constraints: list[str] = Field(default_factory=list)
+
+    def model_post_init(self, __context: Any) -> None:
+        self._wrap_pruning_lists()
+        self.prune_visit_queue()
+
+    def _wrap_pruning_lists(self) -> None:
+        if not isinstance(self.visited_urls, _PruningList):
+            object.__setattr__(self, "visited_urls", _PruningList(self.visited_urls, on_mutate=self.prune_visit_queue))
+        else:
+            self.visited_urls._on_mutate = self.prune_visit_queue
+        if not isinstance(self.rejected_links, _PruningList):
+            object.__setattr__(self, "rejected_links", _PruningList(self.rejected_links, on_mutate=self.prune_visit_queue))
+        else:
+            self.rejected_links._on_mutate = self.prune_visit_queue
+
+    def _blocked_url_keys(self) -> set[str]:
+        blocked: set[str] = set()
+        for u in self.visited_urls:
+            blocked.update(_url_match_keys(u))
+        for rej in self.rejected_links:
+            blocked.update(_extract_rejected_url_keys(rej))
+        return blocked
+
+    def prune_visit_queue(self) -> None:
+        """Drop visited or rejected URLs and deduplicate `visit_queue` in place."""
+        if not self.visit_queue:
+            return
+        blocked = self._blocked_url_keys()
+        seen: set[str] = set()
+        kept: list[str] = []
+        for raw_u in self.visit_queue:
+            clipped = str(raw_u or "").strip()[:MAX_VISIT_QUEUE_URL_CHARS]
+            if not clipped:
+                continue
+            u_keys = _url_match_keys(clipped)
+            if not u_keys or (u_keys & blocked) or (u_keys & seen):
+                continue
+            seen.update(u_keys)
+            kept.append(clipped)
+            if len(kept) >= MAX_VISIT_QUEUE_URLS:
+                break
+        self.visit_queue[:] = kept
+
+    def drop_queued_url(self, url: str) -> None:
+        """Explicitly remove `url` (matched via canonical_url) from `visit_queue`."""
+        if not url or not self.visit_queue:
+            return
+        drop_keys = _url_match_keys(str(url).strip()[:MAX_VISIT_QUEUE_URL_CHARS]) | _url_match_keys(str(url).strip())
+        if not drop_keys:
+            return
+        self.visit_queue[:] = [
+            u for u in self.visit_queue if not (_url_match_keys(u) & drop_keys)
+        ]
+
+    def enqueue_urls(
+        self,
+        urls: Iterable[str],
+        page_hrefs: Iterable[str | dict[str, Any]] | None = None,
+    ) -> list[str]:
+        """Ground candidate URLs against current step's observed `href`s and append valid ones to `visit_queue`."""
+        self._wrap_pruning_lists()
+        self.prune_visit_queue()
+
+        allowed_keys: set[str] = set()
+        for item in page_hrefs or ():
+            raw_h = item.get("href", "") if isinstance(item, dict) else str(item or "")
+            clean_h = str(raw_h or "").strip()
+            if not clean_h or clean_h == "#" or clean_h.lower().startswith("javascript:"):
+                continue
+            allowed_keys.update(_url_match_keys(clean_h))
+            allowed_keys.update(_url_match_keys(clean_h[:MAX_VISIT_QUEUE_URL_CHARS]))
+            allowed_keys.update(_url_match_keys(clean_h[:180]))
+
+        blocked = self._blocked_url_keys()
+        for existing in self.visit_queue:
+            blocked.update(_url_match_keys(existing))
+
+        accepted: list[str] = []
+        for raw_u in urls or ():
+            if not isinstance(raw_u, str):
+                continue
+            clean_u = raw_u.strip()
+            if not clean_u:
+                continue
+            clipped = clean_u[:MAX_VISIT_QUEUE_URL_CHARS]
+            u_keys = _url_match_keys(clipped) | _url_match_keys(clean_u)
+            if not u_keys or not (u_keys & allowed_keys):
+                self.visit_queue_rejected_count += 1
+                continue
+            if u_keys & blocked:
+                continue
+            if len(self.visit_queue) < MAX_VISIT_QUEUE_URLS:
+                self.visit_queue.append(clipped)
+                accepted.append(clipped)
+                blocked.update(u_keys)
+        return accepted
 
     @property
     def messages(self) -> list[dict[str, Any]]:
@@ -208,6 +374,13 @@ class DualTierContext(BaseModel):
                 lines.append("Visited Pages (already opened; re-open only if needed):")
                 for u in recent_urls:
                     lines.append(f"  - {u[:150]}")
+        self.prune_visit_queue()
+        if self.visit_queue:
+            lines.append(
+                "Queued URLs (collected earlier; open with GOTO_URL directly, no need to return to the source page):"
+            )
+            for u in self.visit_queue[:MAX_VISIT_QUEUE_URLS]:
+                lines.append(f"  - {u[:MAX_VISIT_QUEUE_URL_CHARS]}")
         if self.subgoal_queue:
             lines.append(f"Remaining Subgoals: {self.subgoal_queue}")
         if self.completed_subgoals:
@@ -252,6 +425,7 @@ class DualTierContext(BaseModel):
 
     def snapshot_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable view of the context for the frontend inspector."""
+        self.prune_visit_queue()
         return {
             "primary_goal": self.primary_goal,
             "active_subgoal": self.active_subgoal or self.primary_goal,
@@ -262,6 +436,8 @@ class DualTierContext(BaseModel):
             "plan": self.plan.model_dump() if self.plan else None,
             "visited_urls": self.visited_urls[-15:],
             "rejected_links": self.rejected_links[-15:],
+            "visit_queue": list(self.visit_queue[:MAX_VISIT_QUEUE_URLS]),
+            "visit_queue_rejected_count": self.visit_queue_rejected_count,
             "ineffective_clicks": [list(item) for item in self.ineffective_clicks[-15:]],
             "subgoal_queue": self.subgoal_queue,
             "completed_subgoals": self.completed_subgoals,

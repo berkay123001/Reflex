@@ -104,6 +104,7 @@ Choose ONE of these three `action_type` values in your JSON response (NEVER use 
    - HARD RULE A (NEVER RE-CLICK REJECTED LINKS): Check `Already Visited & Rejected Links` and `Recent Execution Trajectory`. If a link was already clicked and followed by `GO_BACK`, NEVER click that same element again!
    - HARD RULE B (SCROLL ON SEARCH RESULTS): When on a search results page, if the visible top results are unrelated or were already visited, you MUST use `operation: "SCROLL_DOWN"` to reveal the remaining search results below the fold BEFORE rewriting the search query!
    - HARD RULE C (SHORT SEARCH QUERIES): If you ever use `TYPE_TEXT` on a search input, use only 2-3 words (e.g. the person's or product's name), NEVER `site:` filters or long sentences.
+   - VISIT QUEUE RULE (QUEUE LIST URLS BEFORE LEAVING): If the task requires visiting multiple items listed on the current page, write their `href` URLs from Interactive Elements into `queue_urls` before scrolling or leaving the page (include extra backups if available); after each item, navigate directly to the next URL in `Queued URLs` with `operation: "GOTO_URL"` instead of returning to the list page.
    - If the current page/domain is completely wrong and you know the exact target URL, use `operation: "GOTO_URL"` and set `url` to the full `https://...` URL.
    - If `operation` is "CLICK", "TYPE_TEXT", or "SELECT", you MUST set `target` to a valid element index from Interactive Elements (e.g. "4", or "3:2" for SELECT option).
 2. "ASK_USER": Pause execution and ask the human user a direct question (`question_for_user`) ONLY when private user data is missing, login/2FA/CAPTCHA blocks progress, or human preference is required.
@@ -123,6 +124,7 @@ Return ONLY a valid JSON object with these keys (CRITICAL: Keep evaluation_previ
   "target": "element index like '4' or '2:1', or null",
   "text": "string to type if operation is TYPE_TEXT, or null",
   "url": "full https:// URL to open if operation is GOTO_URL, or null",
+  "queue_urls": ["optional list of href URLs from current Interactive Elements to visit later when the task requires opening multiple listed items"],
   "updated_subgoal": null,
   "tactical_hint": "short hint for System 1, or null",
   "question_for_user": "clear question for the human user if action_type is ASK_USER, or null",
@@ -167,6 +169,7 @@ class SupervisorDecision(BaseModel):
     target: str | None = None
     text: str | None = None
     url: str | None = None
+    queue_urls: list[str] = Field(default_factory=list)
     updated_subgoal: str | None = None
     tactical_hint: str | None = None
     question_for_user: str | None = None
@@ -694,6 +697,12 @@ def resolve_escalation(
     next_goal_str = str(parsed.get("next_goal") or "").strip()
     tactical_str = str(parsed.get("tactical_hint") or next_goal_str or "").strip()
     subgoal_str = str(parsed.get("updated_subgoal") or "").strip()
+    raw_queue_urls = parsed.get("queue_urls") or []
+    queue_urls = (
+        [str(u).strip() for u in raw_queue_urls if isinstance(u, str) and str(u).strip()]
+        if isinstance(raw_queue_urls, (list, tuple))
+        else []
+    )
 
     raw_results = parsed.get("new_results") or parsed.get("extracted_results") or parsed.get("results") or []
     extracted_results = list(raw_results) if isinstance(raw_results, (list, tuple)) else []
@@ -721,6 +730,7 @@ def resolve_escalation(
         target=target or None,
         text=str(parsed["text"]).strip() if isinstance(parsed.get("text"), str) and parsed["text"].strip() else None,
         url=str(parsed["url"]).strip() if isinstance(parsed.get("url"), str) and parsed["url"].strip() else None,
+        queue_urls=queue_urls,
         updated_subgoal=subgoal_str or None,
         tactical_hint=tactical_str or None,
         question_for_user=str(parsed["question_for_user"]).strip() if isinstance(parsed.get("question_for_user"), str) and parsed["question_for_user"].strip() else None,

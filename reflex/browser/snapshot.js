@@ -425,6 +425,22 @@
   const h34=[...document.querySelectorAll('h3,h4')].filter(isUnclipped)
     .map(h=>`[${h.tagName.toLowerCase()}] `+h.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
   const headings=[...new Set([...h12,...h34])].slice(0,80);
+  const seenPageHrefs=new Set(actions.map(a=>a.href).filter(Boolean));
+  const pageLinksByHref=new Map();
+  for (const a of document.querySelectorAll('a[href]')) {
+    const attrHref=a.getAttribute('href')?.trim() ?? '';
+    if (!attrHref || attrHref==='#' || /^javascript:|^mailto:|^tel:/i.test(attrHref)) continue;
+    const rawHref=a.href ? a.href.slice(0,240) : '';
+    if (!rawHref || seenPageHrefs.has(rawHref) || !isUnclipped(a)) continue;
+    const lbl=name(a).slice(0,140);
+    const prev=pageLinksByHref.get(rawHref);
+    if (!prev) {
+      if (pageLinksByHref.size<150) pageLinksByHref.set(rawHref,{role:'link',label:lbl||rawHref,href:rawHref});
+    } else if (lbl && prev.label===rawHref) {
+      prev.label=lbl;
+    }
+  }
+  const page_links=[...pageLinksByHref.values()];
   const dialogs=Array.isArray(window.__reflexDialogs)?window.__reflexDialogs.slice(0,5):[];
   const dlgPrefix=dialogs.length?dialogs.join('\n')+'\n':'';
   const text=(dlgPrefix+words.join('\n')).slice(0,6000), full_text=(dlgPrefix+fullWords.join('\n')).slice(0,30000), height=document.documentElement.scrollHeight;
@@ -440,6 +456,6 @@
   if (scrollY+innerHeight<height-2) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
   if (scrollY>0) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
   actions.push({id:'wait',kind:'wait',label:'Wait for the page to update'});
-  return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,
+  return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,page_links,
     scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions};
 })()

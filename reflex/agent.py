@@ -30,7 +30,7 @@ def _is_raw_dom(text: str) -> bool:
 from .browser import Browser, NavigationTimeout, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
 from .config import ReflexConfig
-from .context import DualTierContext
+from .context import DualTierContext, _url_match_keys
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
 from .planner import Subgoal, _extract_domain
@@ -419,6 +419,7 @@ class ReflexSession:
                 "stuck_counter": self._stuck_counter,
                 "s1_errors": self.s1_errors,
                 "text_helper_calls": len(self.text_calls),
+                "visit_queue_rejected_count": self.ctx.visit_queue_rejected_count,
                 "median_decision_ms": median_ms,
                 "median_step_ms": median_step_ms,
                 "total_cost_usd": total_cost,
@@ -1004,6 +1005,35 @@ class ReflexSession:
             self.page.get("actions", []),
             max_elements=MAX_SUPERVISOR_ELEMENTS,
         )
+        existing_href_keys: set[str] = set()
+        for el in elements:
+            existing_href_keys.update(_url_match_keys(str(el.get("href") or "")))
+        for pl in self.page.get("page_links") or []:
+            if len(elements) >= MAX_SUPERVISOR_ELEMENTS or not isinstance(pl, dict):
+                break
+            pl_href = str(pl.get("href") or "").strip()
+            pl_keys = _url_match_keys(pl_href)
+            if not pl_keys or (pl_keys & existing_href_keys):
+                continue
+            existing_href_keys.update(pl_keys)
+            idx = str(len(elements) + 1)
+            pl_lbl = str(pl.get("label") or pl_href).strip()
+            elements.append(
+                {
+                    "index": idx,
+                    "role": "link",
+                    "label": pl_lbl,
+                    "href": pl_href,
+                    "operations": ["GOTO_URL"],
+                }
+            )
+            targets.setdefault("CLICK", {})[idx] = {
+                "id": "goto_url",
+                "kind": "goto_url",
+                "label": f"Navigate to {pl_href}",
+                "url": pl_href,
+                "href": pl_href,
+            }
         s2_t0 = time.perf_counter()
         try:
             sup: SupervisorDecision = resolve_escalation(
@@ -1148,6 +1178,18 @@ class ReflexSession:
             if sup.memory and isinstance(sup.memory, str):
                 self.ctx.add_working_memory_note(sup.memory)
 
+        raw_queue_urls = (
+            getattr(sup, "queue_urls", None)
+            or (sup.raw.get("queue_urls") if isinstance(getattr(sup, "raw", None), dict) else None)
+            or []
+        )
+        accepted_queue_urls: list[str] = []
+        rejected_queue_delta = 0
+        if isinstance(raw_queue_urls, (list, tuple)) and raw_queue_urls:
+            rej_before = self.ctx.visit_queue_rejected_count
+            accepted_queue_urls = self.ctx.enqueue_urls(raw_queue_urls, elements)
+            rejected_queue_delta = self.ctx.visit_queue_rejected_count - rej_before
+
         esc_record = {
             "step": len(self.history) + 1,
             "trigger_type": trigger_type,
@@ -1161,6 +1203,8 @@ class ReflexSession:
             "target": sup.target,
             "text": sup.text,
             "url": sup.url,
+            "queue_urls": accepted_queue_urls,
+            "rejected_queue_urls": rejected_queue_delta,
             "updated_subgoal": sup.updated_subgoal,
             "tactical_hint": sup.tactical_hint,
             "question_for_user": sup.question_for_user,
@@ -1291,6 +1335,11 @@ class ReflexSession:
             self.status = "ready"
             return self.snapshot()
 
+        esc_note = (
+            f"[{trigger_type}] (queue +{len(accepted_queue_urls)}, rej {rejected_queue_delta}) {sup.reasoning}"
+            if isinstance(raw_queue_urls, (list, tuple)) and raw_queue_urls
+            else f"[{trigger_type}] {sup.reasoning}"
+        )
         return self._execute_and_verify(
             action=action_dict,
             actor="S2",
@@ -1304,7 +1353,7 @@ class ReflexSession:
             model_name=sup.model,
             usage={"cost": 0.0},
             preset_text=sup.text,
-            escalation_note=f"[{trigger_type}] {sup.reasoning}",
+            escalation_note=esc_note,
             step_t0=step_t0,
             s1_ms=s1_ms,
             s2_ms=s2_ms,
@@ -1542,8 +1591,9 @@ class ReflexSession:
             act_ms += round((time.perf_counter() - act_t0) * 1000)
         except NavigationTimeout as exc:
             # A dead or hanging site is an observation for System 2 (pick another source), not a session crash.
-            dead_url = str(action.get("url") or typed_text or action.get("label", ""))
+            dead_url = str(action.get("url") or action.get("href") or typed_text or action.get("label", ""))
             self.ctx.rejected_links.append(f"site did not respond ({dead_url})")
+            self.ctx.drop_queued_url(dead_url)
             self.pending_escalation_reason = ("navigation_timeout", str(exc))
             settled = self._observe_settled()
             if settled is not None:
@@ -1683,6 +1733,14 @@ class ReflexSession:
         after_url = str(after_page.get("url", ""))
         if after_url and after_url not in self.ctx.visited_urls:
             self.ctx.visited_urls.append(after_url)
+        if action.get("kind") == "goto_url" and action.get("url"):
+            nav_target_url = str(action.get("url")).strip()
+            if nav_target_url and nav_target_url not in self.ctx.visited_urls:
+                self.ctx.visited_urls.append(nav_target_url)
+            self.ctx.drop_queued_url(nav_target_url)
+        elif action.get("kind") == "click" and after_url != str(before_page.get("url", "")) and action.get("href"):
+            self.ctx.drop_queued_url(str(action.get("href")))
+        self.ctx.prune_visit_queue()
 
         # 4. Three-Layer Action Verification
         verification: VerificationResult = verify_step(
@@ -1907,6 +1965,8 @@ class ReflexSession:
             elif interp.plan and not interp.plan.needs_plan:
                 self.ctx.plan = None
             self.ctx.rejected_links.clear()
+            self.ctx.visit_queue.clear()
+            self.ctx.visit_queue_rejected_count = 0
             self._clear_ineffective_clicks()
             self.ctx.approved_actions.clear()
             self.ctx.constraints = list(interp.constraints)
