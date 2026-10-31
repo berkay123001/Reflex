@@ -135,6 +135,7 @@ class ReflexSession:
         self.session_id: str = (session_id or "").strip() or uuid.uuid4().hex[:12]
         self.trace_path: str | None = self.config.trace_path
         self.trace_write_errors: int = 0
+        self._terminal_trace_logged: bool = False
         self.ctx = DualTierContext(
             primary_goal=goal.strip(),
             active_subgoal=goal.strip(),
@@ -2225,11 +2226,8 @@ class ReflexSession:
             self.last_error = None
         return self.snapshot()
 
-    def _scrub_trace_text(self, text: str) -> str:
-        """Redact sensitive user facts and API keys from a serialized JSON or text line."""
-        result = text
-
-        # 1. User facts values
+    def _get_scrub_targets(self) -> tuple[list[str], list[str]]:
+        """Collect user facts and environment secrets to redact, ordered by length descending."""
         facts_to_scrub: list[str] = []
         if hasattr(self, "ctx") and getattr(self.ctx, "user_facts", None):
             for raw_val in self.ctx.user_facts.values():
@@ -2237,11 +2235,9 @@ class ReflexSession:
                     s_val = str(raw_val).strip()
                     if s_val:
                         facts_to_scrub.append(s_val)
+        facts_to_scrub = list(dict.fromkeys(facts_to_scrub))
         facts_to_scrub.sort(key=len, reverse=True)
-        for s_val in facts_to_scrub:
-            result = result.replace(s_val, "<redacted>")
 
-        # 2. Active environment API keys & secrets
         env_keys_to_scrub: list[str] = []
         for env_var in ("OPENROUTER_API_KEY", "META_API_KEY", "LLAMA_API_KEY", "BASETEN_API_KEY"):
             val = os.environ.get(env_var, "").strip()
@@ -2252,12 +2248,126 @@ class ReflexSession:
                 clean_v = str(v).strip()
                 if len(clean_v) >= 8:
                     env_keys_to_scrub.append(clean_v)
+        env_keys_to_scrub = list(dict.fromkeys(env_keys_to_scrub))
         env_keys_to_scrub.sort(key=len, reverse=True)
+        return facts_to_scrub, env_keys_to_scrub
+
+    def _scrub_trace_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        """Scrub user facts and secrets from record dictionary while preserving schema integrity."""
+        facts_to_scrub, env_keys_to_scrub = self._get_scrub_targets()
+
+        def _scrub_str(val: Any, is_primary_fact_target: bool = False) -> Any:
+            if not isinstance(val, str):
+                return val
+            res = val
+            # 1. User facts scrubbing
+            for s_val in facts_to_scrub:
+                if len(s_val) >= 4 or is_primary_fact_target:
+                    res = res.replace(s_val, "<redacted>")
+            # 2. Active environment API keys & secrets
+            for env_val in env_keys_to_scrub:
+                res = res.replace(env_val, "<redacted>")
+            # 3. Known API key patterns and Bearer tokens
+            res = re.sub(r"sk-proj-[a-zA-Z0-9_\-]+", "<redacted>", res)
+            res = re.sub(r"sk-or-v1-[a-zA-Z0-9_\-]+", "<redacted>", res)
+            res = re.sub(r"sk-admin-[a-zA-Z0-9_\-]+", "<redacted>", res)
+            res = re.sub(r"sk-ant-[a-zA-Z0-9_\-]+", "<redacted>", res)
+            res = re.sub(r"sk-[a-zA-Z0-9_\-]{20,}", "<redacted>", res)
+            res = re.sub(r"LA-[a-zA-Z0-9_\-]+", "<redacted>", res)
+            res = re.sub(r"(?i)bearer\s+[a-zA-Z0-9_\.\-]+", "Bearer <redacted>", res)
+            return res
+
+        rec = dict(record)
+
+        # Scrub s1_input
+        if "s1_input" in rec and isinstance(rec["s1_input"], dict):
+            s1_in = dict(rec["s1_input"])
+            if "compiled_goal" in s1_in and isinstance(s1_in["compiled_goal"], str):
+                s1_in["compiled_goal"] = _scrub_str(s1_in["compiled_goal"], is_primary_fact_target=True)
+            if "elements" in s1_in and isinstance(s1_in["elements"], list):
+                clean_els = []
+                for el in s1_in["elements"]:
+                    if isinstance(el, dict):
+                        el_copy = dict(el)
+                        for k in ("label", "text", "value"):
+                            if k in el_copy and isinstance(el_copy[k], str):
+                                el_copy[k] = _scrub_str(el_copy[k], is_primary_fact_target=False)
+                        if "options" in el_copy and isinstance(el_copy["options"], list):
+                            clean_opts = []
+                            for opt in el_copy["options"]:
+                                if isinstance(opt, dict):
+                                    opt_copy = dict(opt)
+                                    for ok in ("label", "value"):
+                                        if ok in opt_copy and isinstance(opt_copy[ok], str):
+                                            opt_copy[ok] = _scrub_str(opt_copy[ok], is_primary_fact_target=False)
+                                    clean_opts.append(opt_copy)
+                                else:
+                                    clean_opts.append(opt)
+                            el_copy["options"] = clean_opts
+                        clean_els.append(el_copy)
+                    else:
+                        clean_els.append(el)
+                s1_in["elements"] = clean_els
+            rec["s1_input"] = s1_in
+
+        # Scrub typed_text (primary target for user facts)
+        if "typed_text" in rec and isinstance(rec["typed_text"], str):
+            rec["typed_text"] = _scrub_str(rec["typed_text"], is_primary_fact_target=True)
+
+        # Scrub action and target_element
+        if "action" in rec and isinstance(rec["action"], str):
+            rec["action"] = _scrub_str(rec["action"], is_primary_fact_target=False)
+        if "target_element" in rec and isinstance(rec["target_element"], dict):
+            te = dict(rec["target_element"])
+            if "label" in te and isinstance(te["label"], str):
+                te["label"] = _scrub_str(te["label"], is_primary_fact_target=False)
+            rec["target_element"] = te
+
+        # Scrub URLs
+        for url_field in ("url", "goto_url"):
+            if url_field in rec and isinstance(rec[url_field], str):
+                rec[url_field] = _scrub_str(rec[url_field], is_primary_fact_target=False)
+
+        # Scrub validator reason
+        if "validator" in rec and isinstance(rec["validator"], dict):
+            v_dict = dict(rec["validator"])
+            if "reason" in v_dict and isinstance(v_dict["reason"], str):
+                v_dict["reason"] = _scrub_str(v_dict["reason"], is_primary_fact_target=False)
+            rec["validator"] = v_dict
+
+        return rec
+
+    def _scrub_trace_text(self, text: str) -> str:
+        """Redact sensitive user facts and API keys from a serialized JSON or text line."""
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                scrubbed_dict = self._scrub_trace_record(parsed)
+                return json.dumps(scrubbed_dict, ensure_ascii=False)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+        # Raw string scrubbing fallback for non-JSON text
+        result = text
+        facts_to_scrub, env_keys_to_scrub = self._get_scrub_targets()
+
+        for s_val in facts_to_scrub:
+            result = result.replace(s_val, "<redacted>")
+            try:
+                encoded_s_val = json.dumps(s_val, ensure_ascii=False)[1:-1]
+                if encoded_s_val != s_val:
+                    result = result.replace(encoded_s_val, "<redacted>")
+            except (TypeError, ValueError):
+                pass
+
         for env_val in env_keys_to_scrub:
             result = result.replace(env_val, "<redacted>")
 
-        # 3. Known API key patterns and Bearer tokens
+        result = re.sub(r"sk-proj-[a-zA-Z0-9_\-]+", "<redacted>", result)
         result = re.sub(r"sk-or-v1-[a-zA-Z0-9_\-]+", "<redacted>", result)
+        result = re.sub(r"sk-admin-[a-zA-Z0-9_\-]+", "<redacted>", result)
+        result = re.sub(r"sk-ant-[a-zA-Z0-9_\-]+", "<redacted>", result)
+        result = re.sub(r"sk-[a-zA-Z0-9_\-]{20,}", "<redacted>", result)
         result = re.sub(r"LA-[a-zA-Z0-9_\-]+", "<redacted>", result)
         result = re.sub(r"(?i)bearer\s+[a-zA-Z0-9_\.\-]+", "Bearer <redacted>", result)
 
@@ -2315,11 +2425,25 @@ class ReflexSession:
             # Password redaction for typed text
             eff_typed_text = typed_text
             is_password = False
-            if act.get("type") == "password" or act.get("input_type") == "password" or act.get("role") == "password":
+            type_attr = str(act.get("type") or act.get("input_type") or "").lower()
+            role_attr = str(act.get("role") or "").lower()
+            if type_attr == "password" or role_attr == "password":
                 is_password = True
-            lbl_lower = str(act.get("label", "")).lower()
-            if any(pw in lbl_lower for pw in ("password", "parola", "şifre", "sifre")):
+
+            pw_keywords = ("password", "passwd", "parola", "şifre", "sifre")
+            candidate_strings = [
+                str(act.get("label") or ""),
+                str(act.get("aria-label") or ""),
+                str(act.get("aria_label") or ""),
+                str(act.get("placeholder") or ""),
+                str(act.get("name") or ""),
+                str(act.get("id") or ""),
+                str(act.get("autocomplete") or ""),
+                str(target or ""),
+            ]
+            if any(any(pw in s.lower() for pw in pw_keywords) for s in candidate_strings):
                 is_password = True
+
             if is_password:
                 eff_typed_text = "<redacted>"
 
@@ -2353,6 +2477,12 @@ class ReflexSession:
                 }
 
             now_utc = datetime.now(timezone.utc)
+            eff_task_status = task_status
+            if eff_task_status is None and self.status in {"done", "blocked", "error"}:
+                eff_task_status = self.status
+            if eff_task_status is not None:
+                self._terminal_trace_logged = True
+
             record = {
                 "time": now_utc.isoformat(),
                 "timestamp": now_utc.timestamp(),
@@ -2378,12 +2508,12 @@ class ReflexSession:
                 "goto_url": eff_goto_url,
                 "validator": validator,
                 "progress_made": validator.get("effective_progress", False),
-                "task_status": task_status,
+                "task_status": eff_task_status,
                 "status": self.status,
             }
 
-            raw_json = json.dumps(record, ensure_ascii=False)
-            scrubbed_line = self._scrub_trace_text(raw_json)
+            scrubbed_record = self._scrub_trace_record(record)
+            scrubbed_line = json.dumps(scrubbed_record, ensure_ascii=False)
 
             trace_file = Path(self.trace_path)
             trace_file.parent.mkdir(parents=True, exist_ok=True)
@@ -2393,30 +2523,19 @@ class ReflexSession:
             self.trace_write_errors += 1
 
     def _sync_trace_terminal_status(self) -> None:
-        """Ensure the last row in trace_path reflects the final session status."""
+        """Ensure trace_path reflects final session status via append-only logging without file rewrites."""
         if not self.trace_path:
             return
-        try:
-            trace_file = Path(self.trace_path)
-            if not trace_file.is_file():
-                return
-            content = trace_file.read_text(encoding="utf-8")
-            lines = [l for l in content.splitlines() if l.strip()]
-            if not lines:
-                return
-            last_line = lines[-1]
-            try:
-                rec = json.loads(last_line)
-            except Exception:
-                return
-            if rec.get("task_status") is None and self.status in {"done", "blocked", "error", "waiting_user", "waiting_confirmation"}:
-                rec["task_status"] = self.status
-                rec["status"] = self.status
-                updated_json = json.dumps(rec, ensure_ascii=False)
-                lines[-1] = self._scrub_trace_text(updated_json)
-                trace_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        except Exception:
-            self.trace_write_errors += 1
+        if getattr(self, "_terminal_trace_logged", False):
+            return
+        if self.status in {"done", "blocked", "error", "waiting_user", "waiting_confirmation"}:
+            self._log_trace_step(
+                actor="system",
+                action={"id": "terminal", "label": f"Session {self.status}", "kind": "terminal"},
+                operation="TERMINAL",
+                task_status=self.status,
+            )
+            self._terminal_trace_logged = True
 
     def close(self) -> None:
         try:

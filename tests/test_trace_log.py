@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-import pytest
 
 from reflex.agent import ReflexSession
 from reflex.config import ReflexConfig, get_default_trace_path
-from reflex.context import DualTierContext
 from reflex.supervisor import UserMessageInterpretation
 from reflex.system1 import MAX_SYSTEM1_ELEMENTS, action_space
 from reflex.verifier import VerificationResult
@@ -401,3 +398,176 @@ def test_terminal_task_status_and_close_sync(tmp_path):
     lines_after_close = trace_file.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines_after_close) == 2
     assert json.loads(lines_after_close[1])["task_status"] == "done"
+
+
+def test_user_facts_digits_and_short_strings_preserve_json_syntax(tmp_path):
+    """Verify short user facts ('1', '0', 'step') do not corrupt JSON syntax, step_no, or actor enum."""
+    trace_file = tmp_path / "short_facts.jsonl"
+    session = _create_mock_session(
+        url="https://example.com/options",
+        goal="Select option 1",
+        trace_path=str(trace_file),
+        user_facts={"choice": "1", "zero": "0", "word": "step"},
+    )
+
+    action = {"id": "1", "kind": "click", "role": "button", "label": "Option 1"}
+    session._log_trace_step(
+        actor="S1",
+        action=action,
+        operation="CLICK",
+        target="1",
+        step_no=1,
+    )
+
+    lines = trace_file.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    # Must be valid JSON
+    row = json.loads(lines[0])
+    assert row["step_no"] == 1
+    assert row["actor"] == "S1"
+    assert row["decision_maker"] == "S1"
+    assert "s1_input" in row
+    assert "choice=<redacted>" in row["s1_input"]["compiled_goal"]
+
+
+def test_user_facts_with_quotes_and_backslashes_redacted(tmp_path):
+    """Verify user facts containing quotes, backslashes, and special characters are masked cleanly."""
+    trace_file = tmp_path / "escaped_facts.jsonl"
+    session = _create_mock_session(
+        url="https://example.com/profile",
+        goal="Update sensitive profile",
+        trace_path=str(trace_file),
+        user_facts={
+            "quotes": 'Alice "The Boss" Smith',
+            "backslash": r"C:\Users\Alice\Secret",
+            "regex_symbols": "$100.00 (bonus) *critical* [level-5] {admin}",
+        },
+    )
+
+    session._log_trace_step(
+        actor="S2",
+        action={"id": "input_quotes", "label": "Enter Quotes"},
+        operation="TYPE_TEXT",
+        target="input_quotes",
+        typed_text='Alice "The Boss" Smith',
+        step_no=1,
+    )
+    session._log_trace_step(
+        actor="S2",
+        action={"id": "input_path", "label": "Enter Path"},
+        operation="TYPE_TEXT",
+        target="input_path",
+        typed_text=r"C:\Users\Alice\Secret",
+        step_no=2,
+    )
+
+    content = trace_file.read_text(encoding="utf-8")
+    assert 'Alice "The Boss" Smith' not in content
+    assert r"Alice \"The Boss\" Smith" not in content
+    assert r"C:\Users\Alice\Secret" not in content
+    assert r"C:\\Users\\Alice\\Secret" not in content
+
+    lines = [json.loads(l) for l in content.strip().splitlines()]
+    assert lines[0]["typed_text"] == "<redacted>"
+    assert lines[1]["typed_text"] == "<redacted>"
+
+
+def test_password_detection_across_obfuscated_attributes(tmp_path):
+    """Verify password masking triggers for aria-label, placeholder, name, id, and autocomplete."""
+    trace_file = tmp_path / "password_attrs.jsonl"
+    session = _create_mock_session(trace_path=str(trace_file))
+
+    test_actions = [
+        ({"id": "1", "aria-label": "Enter Password"}, "SecretPass1"),
+        ({"id": "2", "placeholder": "Yeni Şifre"}, "SecretPass2"),
+        ({"id": "3", "name": "user_parola"}, "SecretPass3"),
+        ({"id": "user_sifre"}, "SecretPass4"),
+        ({"id": "5", "autocomplete": "current-password"}, "SecretPass5"),
+    ]
+
+    for idx, (act, secret) in enumerate(test_actions, start=1):
+        session._log_trace_step(
+            actor="S1",
+            action=act,
+            operation="TYPE_TEXT",
+            target=act.get("id"),
+            typed_text=secret,
+            step_no=idx,
+        )
+
+    content = trace_file.read_text(encoding="utf-8")
+    for _, secret in test_actions:
+        assert secret not in content
+
+    lines = [json.loads(l) for l in content.strip().splitlines()]
+    assert len(lines) == 5
+    for row in lines:
+        assert row["typed_text"] == "<redacted>"
+
+
+def test_openai_api_key_regex_patterns(tmp_path):
+    """Verify standard OpenAI, project OpenAI, and Bearer patterns are masked without env vars."""
+    trace_file = tmp_path / "api_keys.jsonl"
+    session = _create_mock_session(trace_path=str(trace_file))
+
+    keys_to_test = [
+        "sk-abc1234567890def1234567890abcdef",
+        "sk-proj-abc1234567890def1234567890abcdef",
+        "sk-admin-abc1234567890def1234567890abcdef",
+        "Bearer secret_jwt_token_1234567890",
+    ]
+
+    for idx, k in enumerate(keys_to_test, start=1):
+        session._log_trace_step(
+            actor="S1",
+            action={"id": f"k_{idx}", "label": "Key Input"},
+            operation="TYPE_TEXT",
+            typed_text=f"Auth header: {k}",
+            step_no=idx,
+        )
+
+    content = trace_file.read_text(encoding="utf-8")
+    for k in keys_to_test:
+        assert k not in content
+    assert "secret_jwt_token" not in content
+
+    lines = [json.loads(l) for l in content.strip().splitlines()]
+    assert len(lines) == len(keys_to_test)
+    for row in lines:
+        assert "<redacted>" in row["typed_text"]
+
+
+def test_terminal_status_appended_on_close_if_not_previously_logged(tmp_path):
+    """Verify close() appends a terminal trace record if terminal status was reached without logging."""
+    trace_file = tmp_path / "terminal_append.jsonl"
+    session = _create_mock_session(trace_path=str(trace_file))
+
+    session._log_trace_step(
+        actor="S1",
+        action={"id": "1", "kind": "click", "label": "Click button"},
+        operation="CLICK",
+        task_status=None,
+        step_no=1,
+    )
+    # Session finishes without logging a terminal step
+    session.status = "error"
+    session.close()
+
+    lines = trace_file.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 2
+    row2 = json.loads(lines[1])
+    assert row2["operation"] == "TERMINAL"
+    assert row2["task_status"] == "error"
+    assert row2["status"] == "error"
+
+    # Subsequent close does not duplicate
+    session.close()
+    lines_after_second_close = trace_file.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines_after_second_close) == 2
+
+
+# Aliases for Explorer handoff naming parity
+test_short_user_facts_and_digits_preserve_json_syntax = test_user_facts_digits_and_short_strings_preserve_json_syntax
+test_user_facts_escaped_characters_redacted = test_user_facts_with_quotes_and_backslashes_redacted
+test_password_detection_all_element_attributes = test_password_detection_across_obfuscated_attributes
+test_api_key_regex_expansion = test_openai_api_key_regex_patterns
