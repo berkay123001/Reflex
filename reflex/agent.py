@@ -1242,7 +1242,6 @@ class ReflexSession:
             else:
                 self._stuck_counter = 0
 
-            self.ctx.plan.summarize_completed_results(threshold=2500)
             self.ctx.working_memory = self.ctx.plan.format_for_s2()
         else:
             if sup.memory and isinstance(sup.memory, str):

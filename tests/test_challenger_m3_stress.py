@@ -1247,8 +1247,8 @@ def test_summarization_triggered_during_progress_milestone():
             pre_obs_ms=0,
         )
 
-    # Summarization occurred
-    assert plan.total_results_chars() < 2500
+    # Under R3, TaskLedger preserves raw findings without in-place mutation
+    assert plan.total_results_chars() >= 2500
     # Both sources are strictly preserved
     sources = {r.source_url for r in plan.subgoals[0].results}
     assert "https://source-a.com/data" in sources

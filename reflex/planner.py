@@ -13,6 +13,9 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
+LEDGER_S2_CHAR_LIMIT: int = 6000
+MAX_CANDIDATES_IN_S2_VIEW: int = 30
+
 
 class SubgoalResult(BaseModel):
     """A distilled factual finding associated with a specific subgoal and source."""
@@ -99,6 +102,37 @@ def _extract_domain(url: str) -> str:
             return ""
         clean = clean.split("/")[0].removeprefix("www.")
         return clean.split(":")[0].strip()
+
+
+def _condense_completed_results(results: list[SubgoalResult]) -> list[SubgoalResult]:
+    """Non-destructively condense subgoal results grouped by source URL (max 300 chars per source)."""
+    grouped: dict[str, list[str]] = {}
+    min_step: dict[str, int] = {}
+    for r in results:
+        url = r.source_url.strip()
+        grouped.setdefault(url, []).append(r.fact.strip())
+        if url not in min_step or r.step < min_step[url]:
+            min_step[url] = r.step
+
+    condensed: list[SubgoalResult] = []
+    for url, facts in grouped.items():
+        seen: set[str] = set()
+        uniq_facts: list[str] = []
+        for f in facts:
+            if f and f not in seen:
+                seen.add(f)
+                uniq_facts.append(f)
+        merged = "; ".join(uniq_facts)
+        if len(merged) > 300:
+            merged = merged[:297] + "..."
+        condensed.append(
+            SubgoalResult(
+                fact=merged,
+                source_url=url,
+                step=min_step.get(url, 0),
+            )
+        )
+    return condensed
 
 
 class TaskLedger(BaseModel):
@@ -222,37 +256,21 @@ class TaskLedger(BaseModel):
                 sg.results = summarizer(sg.results)
         else:
             for sg in completed_sgs:
-                grouped: dict[str, list[str]] = {}
-                min_step: dict[str, int] = {}
-                for r in sg.results:
-                    url = r.source_url.strip()
-                    grouped.setdefault(url, []).append(r.fact.strip())
-                    if url not in min_step or r.step < min_step[url]:
-                        min_step[url] = r.step
-
-                condensed: list[SubgoalResult] = []
-                for url, facts in grouped.items():
-                    seen: set[str] = set()
-                    uniq_facts: list[str] = []
-                    for f in facts:
-                        if f and f not in seen:
-                            seen.add(f)
-                            uniq_facts.append(f)
-                    merged = "; ".join(uniq_facts)
-                    if len(merged) > 300:
-                        merged = merged[:297] + "..."
-                    condensed.append(
-                        SubgoalResult(
-                            fact=merged,
-                            source_url=url,
-                            step=min_step.get(url, 0),
-                        )
-                    )
-                sg.results = condensed
+                sg.results = _condense_completed_results(sg.results)
         return True
 
-    def format_for_s2(self) -> str:
-        """Format the task ledger, subgoals, results, and candidate table for System 2."""
+    def format_for_s2(self, max_chars: int = LEDGER_S2_CHAR_LIMIT) -> str:
+        """Format the task ledger, subgoals, results, and candidate table for System 2.
+
+        If standard formatted output length <= max_chars (default 6000), returns standard
+        output unchanged (strictly byte-for-byte identical).
+        If standard output length > max_chars, returns a non-destructive capped view:
+        - Active/pending subgoals results remain in full.
+        - Completed subgoals results are condensed to at most 300 chars per source URL.
+        - Candidates table displays at most MAX_CANDIDATES_IN_S2_VIEW (30) items,
+          appending "+ N candidates omitted" if more candidates exist.
+        The underlying TaskLedger subgoals and candidates are never mutated.
+        """
         lines: list[str] = [
             f"Plan Status: {'Active' if self.needs_plan else 'No Plan'}",
             f"Finish Criteria: {self.finish_criteria or 'Not specified'}",
@@ -272,7 +290,43 @@ class TaskLedger(BaseModel):
                 attr_str = ", ".join(f"{k}: {v}" for k, v in c.attributes.items())
                 src = f" (Source: {c.source_url})" if c.source_url else ""
                 lines.append(f"  - {c.item}: {attr_str}{src}")
-        return "\n".join(lines)
+        standard_output = "\n".join(lines)
+
+        if len(standard_output) <= max_chars:
+            return standard_output
+
+        # Exceeds max_chars: construct non-destructive capped view
+        capped_lines: list[str] = [
+            f"Plan Status: {'Active' if self.needs_plan else 'No Plan'}",
+            f"Finish Criteria: {self.finish_criteria or 'Not specified'}",
+            f"Budget: {self.budget.sources} sources, {self.budget.max_steps} max steps",
+            "Subgoals & Extracted Results:",
+        ]
+        for sg in self.subgoals:
+            status_tag = f"[{sg.status.upper()}]"
+            done_when = f" (Done when: {sg.done_when})" if sg.done_when else ""
+            capped_lines.append(f"  {status_tag} {sg.id}: {sg.text}{done_when}")
+            if sg.status == "completed":
+                condensed = _condense_completed_results(sg.results)
+                for r in condensed:
+                    src = f" (Source: {r.source_url})" if r.source_url else ""
+                    capped_lines.append(f"    - [Step {r.step}] {r.fact}{src}")
+            else:
+                for r in sg.results:
+                    src = f" (Source: {r.source_url})" if r.source_url else ""
+                    capped_lines.append(f"    - [Step {r.step}] {r.fact}{src}")
+
+        if self.candidates:
+            capped_lines.append("Candidates Table:")
+            for c in self.candidates[:MAX_CANDIDATES_IN_S2_VIEW]:
+                attr_str = ", ".join(f"{k}: {v}" for k, v in c.attributes.items())
+                src = f" (Source: {c.source_url})" if c.source_url else ""
+                capped_lines.append(f"  - {c.item}: {attr_str}{src}")
+            if len(self.candidates) > MAX_CANDIDATES_IN_S2_VIEW:
+                omitted = len(self.candidates) - MAX_CANDIDATES_IN_S2_VIEW
+                capped_lines.append(f"  + {omitted} candidates omitted")
+
+        return "\n".join(capped_lines)
 
     def verify_done(
         self,

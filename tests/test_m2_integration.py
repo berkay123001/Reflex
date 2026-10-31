@@ -438,12 +438,14 @@ def test_escalation_triggers_2500_char_summarization():
             s1_decision=None,
         )
 
-    # Completed subgoal was summarized to under 3000 chars while preserving both URLs
+    # Completed subgoal preserves raw data under R3 while working memory receives formatted plan
     completed_sg = session.ctx.plan.subgoals[0]
     surviving_urls = {r.source_url for r in completed_sg.results}
     assert "https://source-a.org/paper1" in surviving_urls
     assert "https://source-b.org/paper2" in surviving_urls
-    assert session.ctx.plan.total_results_chars() < 2500
+    assert session.ctx.plan.total_results_chars() > 2500
+    assert "source-a.org" in session.ctx.working_memory
+    assert "source-b.org" in session.ctx.working_memory
 
 
 # ==============================================================================
