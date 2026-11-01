@@ -211,6 +211,12 @@ _NAVIGATION_CDP_ERRORS = (
     "Inspected target navigated or closed",
     "Cannot find context with specified id",
     "Execution context was destroyed",
+    "Session with given id not found",
+    "Target closed",
+    "Session already detached",
+    "Target with given id not found",
+    "No target with given id found",
+    "Frame was detached",
 )
 
 
@@ -741,8 +747,8 @@ class Browser:
             if frame_index is not None:
                 r = self.evaluate(
                     f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
-                    "return f ? {x: f.getBoundingClientRect().x, y: f.getBoundingClientRect().y, "
-                    "w: f.getBoundingClientRect().width, h: f.getBoundingClientRect().height} : null; }})()"
+                    f"return f ? ({{x: f.getBoundingClientRect().x, y: f.getBoundingClientRect().y, "
+                    f"w: f.getBoundingClientRect().width, h: f.getBoundingClientRect().height}}) : null; }})()"
                 )
                 if r:
                     return {"x": round(r["x"]), "y": round(r["y"]), "w": round(r["w"]), "h": round(r["h"])}
@@ -914,6 +920,7 @@ class Browser:
                         try:
                             frame_state = self.evaluate(READ_STATE, session_id=sid)
                         except Exception:
+                            self._frame_sessions.pop(tid, None)
                             frame_state = None
 
             if not frame_state or not isinstance(frame_state, dict):
@@ -1041,49 +1048,52 @@ class Browser:
 
     def fresh(self, page: dict[str, Any], action: dict[str, Any] | None = None) -> bool:
         """Check whether the page or target node is still fresh."""
-        if action is not None and action.get("kind") in {"click", "select", "fill"}:
-            node = action.get("node")
-            if type(node) is not int:
-                return False
-            is_iframe = bool(action.get("is_iframe"))
-            lookup_node = action.get("orig_node") if is_iframe else node
-            session_id = action.get("frame_session_id")
-            frame_index = action.get("frame_index")
+        try:
+            if action is not None and action.get("kind") in {"click", "select", "fill"}:
+                node = action.get("node")
+                if type(node) is not int:
+                    return False
+                is_iframe = bool(action.get("is_iframe"))
+                lookup_node = action.get("orig_node") if is_iframe else node
+                session_id = action.get("frame_session_id")
+                frame_index = action.get("frame_index")
 
-            if is_iframe and frame_index is not None:
-                current = self.evaluate(
-                    f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
-                    "const c = f?.contentWindow?.__jevFast; "
-                    f"return c ? [c.pageKey(), c.guard(c.nodes.get({lookup_node}))] : null; }})()"
-                )
-            elif is_iframe:
-                current = self.evaluate(
-                    f"(() => {{ const c=window.__jevFast; return c ? [c.pageKey(),c.guard(c.nodes.get({lookup_node}))] : null; }})()",
-                    session_id=session_id,
-                )
-            else:
-                current = self.evaluate(
-                    "(() => { const c=window.__jevFast; "
-                    f"return c ? [c.pageKey(),c.guard(c.nodes.get({node}))] : null; }})()"
-                )
-            if not current or current[1] is None:
-                return False
-            guards = page.get("guards") or {}
-            expected_guard = guards.get(str(node)) or guards.get(node)
-            if not expected_guard:
-                return False
-            expected_pk = (action.get("frame_page_key") if is_iframe else page.get("page_key")) or []
-            current_pk = current[0] or []
-            same_doc = len(expected_pk) >= 2 and len(current_pk) >= 2 and current_pk[:2] == expected_pk[:2]
-            if not same_doc:
-                return False
-            cur_g = current[1]
-            if cur_g[:2] != expected_guard[:2] or cur_g[3:13] != expected_guard[3:13]:
-                return False
-            cur_lbl = re.sub(r"\b\d+\s*(?:s|sn|sec|ms)\b", "", str(cur_g[2] or "")).strip()
-            exp_lbl = re.sub(r"\b\d+\s*(?:s|sn|sec|ms)\b", "", str(expected_guard[2] or "")).strip()
-            return cur_lbl == exp_lbl
-        return self.evaluate(MARKER) == page.get("marker")
+                if is_iframe and frame_index is not None:
+                    current = self.evaluate(
+                        f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
+                        "const c = f?.contentWindow?.__jevFast; "
+                        f"return c ? [c.pageKey(), c.guard(c.nodes.get({lookup_node}))] : null; }})()"
+                    )
+                elif is_iframe:
+                    current = self.evaluate(
+                        f"(() => {{ const c=window.__jevFast; return c ? [c.pageKey(),c.guard(c.nodes.get({lookup_node}))] : null; }})()",
+                        session_id=session_id,
+                    )
+                else:
+                    current = self.evaluate(
+                        "(() => { const c=window.__jevFast; "
+                        f"return c ? [c.pageKey(),c.guard(c.nodes.get({node}))] : null; }})()"
+                    )
+                if not current or current[1] is None:
+                    return False
+                guards = page.get("guards") or {}
+                expected_guard = guards.get(str(node)) or guards.get(node)
+                if not expected_guard:
+                    return False
+                expected_pk = (action.get("frame_page_key") if is_iframe else page.get("page_key")) or []
+                current_pk = current[0] or []
+                same_doc = len(expected_pk) >= 2 and len(current_pk) >= 2 and current_pk[:2] == expected_pk[:2]
+                if not same_doc:
+                    return False
+                cur_g = current[1]
+                if cur_g[:2] != expected_guard[:2] or cur_g[3:13] != expected_guard[3:13]:
+                    return False
+                cur_lbl = re.sub(r"\b\d+\s*(?:s|sn|sec|ms)\b", "", str(cur_g[2] or "")).strip()
+                exp_lbl = re.sub(r"\b\d+\s*(?:s|sn|sec|ms)\b", "", str(expected_guard[2] or "")).strip()
+                return cur_lbl == exp_lbl
+            return self.evaluate(MARKER) == page.get("marker")
+        except StalePage:
+            return False
 
     def accessible_name_matches(self, action: dict[str, Any], page: dict[str, Any] | None = None) -> bool:
         """True when the live name still equals the raw name recorded at decision time.
@@ -1684,6 +1694,8 @@ class Browser:
                 pass
         if hasattr(self, "_owned_targets"):
             self._owned_targets.clear()
+        if hasattr(self, "_frame_sessions"):
+            self._frame_sessions.clear()
         self.target = None
 
     def __enter__(self) -> Browser:

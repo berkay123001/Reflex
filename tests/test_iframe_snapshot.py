@@ -21,7 +21,7 @@ from typing import Any, Generator
 
 import pytest
 
-from reflex.browser.cdp import Browser
+from reflex.browser.cdp import Browser, StalePage
 from reflex.browser.isolated import managed_isolated_browser
 from reflex.verifier import verify_step
 
@@ -140,6 +140,37 @@ class DualOriginHandler(http.server.BaseHTTPRequestHandler):
             idx = path.split("_")[-1]
             body = f"""<!DOCTYPE html><html><body><button id="btn_{idx}">Frame {idx} Button</button></body></html>"""
 
+        elif path == "/scrolled_parent":
+            body = """<!DOCTYPE html>
+<html>
+<head><title>Scrolled Parent Page</title></head>
+<body style="margin: 0; padding: 0; height: 3500px; font-family: sans-serif;">
+  <div style="height: 1200px; background: #eef; padding: 20px;">
+    <h1>Tall Page Top</h1>
+  </div>
+  <iframe id="scrolled_frame" src="/frame_targets"
+          style="position: absolute; left: 80px; top: 1200px; width: 500px; height: 400px; border: 2px solid red;">
+  </iframe>
+  <div style="height: 1900px; background: #fee; padding: 20px;">
+    <h2>Tall Page Bottom</h2>
+  </div>
+</body>
+</html>"""
+
+        elif path == "/frame_targets":
+            body = """<!DOCTYPE html>
+<html>
+<head><title>Frame Target Buttons</title></head>
+<body style="margin: 0; padding: 20px; font-family: sans-serif;">
+  <h3>Frame Target Controls</h3>
+  <button id="btn_target" style="position: absolute; top: 60px; left: 30px; width: 160px; height: 40px;"
+          onclick="window.__clicked=true; document.getElementById('status').textContent='target_clicked'">
+    Target Button
+  </button>
+  <div id="status" style="position: absolute; top: 140px; left: 30px;">status_idle</div>
+</body>
+</html>"""
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -181,6 +212,7 @@ def dual_origin_servers() -> Generator[dict[str, Any], None, None]:
         "cross_origin": f"http://localhost:{p2}",
         "top_url": f"http://127.0.0.1:{p1}/",
         "multi_frames_url": f"http://127.0.0.1:{p1}/multi_frames",
+        "scrolled_url": f"http://127.0.0.1:{p1}/scrolled_parent",
     }
 
     try:
@@ -435,5 +467,115 @@ def test_iframe_verifier_integration(dual_origin_servers: dict[str, Any]) -> Non
             )
             assert v_res.element_state_changed is True, "Verifier must detect value change inside iframe"
             assert v_res.details.get("fill_verified") is True
+        finally:
+            browser.close()
+
+
+def test_iframe_scrolled_parent_live_rect_and_click(dual_origin_servers: dict[str, Any]) -> None:
+    """Verify _get_iframe_rect returns live viewport rect after parent scroll and click hits button."""
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    scrolled_url = dual_origin_servers["scrolled_url"]
+    with managed_isolated_browser(port=0):
+        browser = Browser(scrolled_url)
+        try:
+            # 1. Scroll parent so iframe is in initial view (top: 1200px - scroll: 1000px = viewport y: 200px)
+            browser.evaluate("window.scrollTo(0, 1000)")
+            time.sleep(0.2)
+
+            page = browser.observe()
+            target_act = next(
+                (a for a in page["actions"] if "Target Button" in a.get("label", "")),
+                None,
+            )
+            assert target_act is not None, "Target button inside iframe must be discovered"
+            assert target_act.get("is_iframe") is True
+            assert target_act.get("frame_rect", {}).get("y") == 200
+
+            # 2. Scroll parent by additional 200px down (viewport y becomes 0)
+            browser.evaluate("window.scrollTo(0, 1200)")
+            time.sleep(0.1)
+
+            # Confirm true live DOM position is at y = 0
+            live_dom_y = browser.evaluate("document.querySelectorAll('iframe')[0].getBoundingClientRect().y")
+            assert live_dom_y == 0
+
+            # 3. Verify _get_iframe_rect returns live rect (y=0) without syntax error, NOT stale fallback (y=200)
+            live_rect = browser._get_iframe_rect(target_act)
+            assert live_rect.get("y") == 0, f"Expected live iframe rect y=0, got {live_rect.get('y')} (stale fallback)"
+
+            # 4. Execute click action on the button inside scrolled iframe
+            res = browser.act(target_act, page=page)
+            assert res.get("executed") == target_act["id"]
+
+            time.sleep(0.2)
+            # 5. Verify click reached button inside iframe
+            after_page = browser.observe()
+            assert "target_clicked" in after_page.get("text", "") or browser.evaluate(
+                "document.getElementById('scrolled_frame').contentWindow.__clicked"
+            ) is True
+        finally:
+            browser.close()
+
+
+def test_iframe_dynamic_removal_raises_stalepage(dual_origin_servers: dict[str, Any]) -> None:
+    """Verify removing an iframe causes subsequent action on its element to raise StalePage."""
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    top_url = dual_origin_servers["top_url"]
+    with managed_isolated_browser(port=0):
+        browser = Browser(top_url)
+        try:
+            page = browser.observe()
+            actions = page.get("actions", [])
+
+            # 1. Test cross-origin OOPIF iframe removal
+            cross_act = next(
+                (a for a in actions if a.get("label") == "Cross Frame Click"),
+                None,
+            )
+            assert cross_act is not None, "Cross Frame Click must be discovered"
+
+            # Remove cross-origin iframe from DOM (destroys OOPIF target session)
+            browser.evaluate("document.getElementById('cross_frame').remove()")
+            time.sleep(0.1)
+
+            # fresh() must return False or raise StalePage without unhandled RuntimeError
+            try:
+                assert browser.fresh(page, cross_act) is False, "fresh() must return False for removed OOPIF"
+            except StalePage:
+                pass
+
+            # act() must raise StalePage gracefully (not unhandled RuntimeError)
+            with pytest.raises(StalePage):
+                browser.act(cross_act, page=page)
+
+            # 2. Test same-origin iframe removal
+            page_current = browser.observe()
+            same_act = next(
+                (a for a in page_current.get("actions", []) if a.get("label") == "Same Frame Click"),
+                None,
+            )
+            assert same_act is not None, "Same Frame Click must be discovered"
+
+            browser.evaluate("document.getElementById('same_frame').remove()")
+            time.sleep(0.1)
+
+            try:
+                assert browser.fresh(page_current, same_act) is False, "fresh() must return False for removed frame"
+            except StalePage:
+                pass
+
+            with pytest.raises(StalePage):
+                browser.act(same_act, page=page_current)
+
+            # 3. Verify surviving top-level page elements remain observable and actionable
+            final_page = browser.observe()
+            final_labels = [a.get("label") for a in final_page.get("actions", [])]
+            assert "Top Action Button" in final_labels
+            assert "Cross Frame Click" not in final_labels
+            assert "Same Frame Click" not in final_labels
         finally:
             browser.close()
