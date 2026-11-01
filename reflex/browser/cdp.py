@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 READ_STATE = Path(__file__).with_name("snapshot.js").read_text(encoding="utf-8")
 MARKER = f"(() => {{ const state={READ_STATE}; return state?.marker ?? null; }})()"
 DEFAULT_CDP_PORT = 9333
+IFRAME_MIN_WIDTH = 200
+IFRAME_MIN_HEIGHT = 100
+MAX_IFRAMES = 5
 # Page.navigate only answers once the server responds; slow or dead sites exceed the 5 s IPC default.
 NAVIGATE_RESPONSE_TIMEOUT_S = 15.0
 _AD_BLOCK_URLS = [
@@ -309,6 +312,12 @@ class Browser:
         self.target: str | None = cdp("Target.createTarget", url="about:blank", background=False)["targetId"]
         self._owned_targets: set[str] = {self.target} if self.target else set()
         self.session: str = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
+        self._frame_sessions: dict[str, str] = {}
+        self._iframe_node_map: dict[int, dict[str, Any]] = {}
+        try:
+            cdp("Target.setAutoAttach", autoAttach=True, waitForDebuggerOnStart=False, flatten=True)
+        except Exception:
+            pass
         self.after_input: dict[str, Any] | None = None
         self._native_dialogs: list[str] = []
         try:
@@ -452,16 +461,17 @@ class Browser:
                 del dialogs[:-5]
         return summary
 
-    def call(self, method: str, **params: Any) -> dict[str, Any]:
+    def call(self, method: str, session_id: str | None = None, **params: Any) -> dict[str, Any]:
+        sid = session_id or self.session
         with self._cdp_lock:
             try:
-                return cdp(method, session_id=self.session, **params)
+                return cdp(method, session_id=sid, **params)
             except StalePage:
                 raise
             except TimeoutError:
                 if method != "Page.handleJavaScriptDialog" and self._dismiss_js_dialog() is not None:
                     try:
-                        return cdp(method, session_id=self.session, **params)
+                        return cdp(method, session_id=sid, **params)
                     except Exception as retry_exc:
                         if _is_navigation_cdp_error(retry_exc):
                             raise StalePage(str(retry_exc)) from retry_exc
@@ -502,9 +512,9 @@ class Browser:
             self.call("Input.dispatchMouseEvent", type=event, x=x, y=y, button="left", clickCount=1)
         time.sleep(0.25)
 
-    def evaluate(self, expression: str) -> Any:
+    def evaluate(self, expression: str, session_id: str | None = None) -> Any:
         try:
-            response = self.call("Runtime.evaluate", expression=expression, returnByValue=True)
+            response = self.call("Runtime.evaluate", session_id=session_id, expression=expression, returnByValue=True)
         except StalePage:
             raise
         except TimeoutError as exc:
@@ -685,6 +695,7 @@ class Browser:
                 if self._try_pierce_cloudflare(info):
                     time.sleep(1.2)
                     info = self.evaluate(READ_STATE) or info
+                self._supplement_iframes(info)
                 native_dlgs = getattr(self, "_native_dialogs", None)
                 if isinstance(native_dlgs, list) and native_dlgs:
                     prefix = "\n".join(native_dlgs) + "\n"
@@ -717,6 +728,284 @@ class Browser:
                     raise
                 time.sleep(stale_wait)
         raise StalePage("Page did not settle")
+
+    def _get_iframe_rect(self, action: dict[str, Any]) -> dict[str, Any]:
+        """Retrieve current top-level bounding rect of the iframe holding this action."""
+        frame_index = action.get("frame_index")
+        fallback = action.get("frame_rect") or {"x": 0, "y": 0, "w": 0, "h": 0}
+        try:
+            if frame_index is not None:
+                r = self.evaluate(
+                    f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
+                    "return f ? {x: f.getBoundingClientRect().x, y: f.getBoundingClientRect().y, "
+                    "w: f.getBoundingClientRect().width, h: f.getBoundingClientRect().height} : null; }})()"
+                )
+                if r:
+                    return {"x": round(r["x"]), "y": round(r["y"]), "w": round(r["w"]), "h": round(r["h"])}
+            else:
+                f_x = fallback.get("x", 0)
+                f_y = fallback.get("y", 0)
+                r = self.evaluate(f"""(() => {{
+                    const frames = document.querySelectorAll('iframe');
+                    for (const f of frames) {{
+                        const rect = f.getBoundingClientRect();
+                        if (Math.abs(rect.x - {f_x}) < 15 && Math.abs(rect.y - {f_y}) < 15) {{
+                            return {{x: rect.x, y: rect.y, w: rect.width, h: rect.height}};
+                        }}
+                    }}
+                    return null;
+                }})()""")
+                if r:
+                    return {"x": round(r["x"]), "y": round(r["y"]), "w": round(r["w"]), "h": round(r["h"])}
+        except Exception:
+            pass
+        return fallback
+
+    def _supplement_iframes(self, info: dict[str, Any]) -> None:
+        """Discover visible iframes (>=200x100, max 5) and merge their interactive actions."""
+        try:
+            candidates = self.evaluate(f"""(() => {{
+                const minW = {IFRAME_MIN_WIDTH}, minH = {IFRAME_MIN_HEIGHT}, maxFrames = {MAX_IFRAMES};
+                const frames = Array.from(document.querySelectorAll('iframe'));
+                const res = [];
+                for (let i = 0; i < frames.length; i++) {{
+                    const f = frames[i];
+                    try {{
+                        const r = f.getBoundingClientRect();
+                        if (r.width < minW || r.height < minH) continue;
+                        if (f.checkVisibility && !f.checkVisibility({{checkOpacity: true, checkVisibilityCSS: true}})) continue;
+                        const st = window.getComputedStyle(f);
+                        if (st.display === 'none' || st.visibility === 'hidden' || st.opacity === '0') continue;
+                        let sameOrigin = false;
+                        try {{
+                            if (f.contentDocument && f.contentWindow && f.contentDocument.body) {{
+                                sameOrigin = true;
+                            }}
+                        }} catch (_) {{
+                            sameOrigin = false;
+                        }}
+                        res.push({{
+                            index: i,
+                            src: f.src || f.getAttribute('src') || '',
+                            sameOrigin: sameOrigin,
+                            rect: {{
+                                x: Math.round(r.x),
+                                y: Math.round(r.y),
+                                w: Math.round(r.width),
+                                h: Math.round(r.height),
+                                left: Math.round(r.left),
+                                top: Math.round(r.top),
+                                right: Math.round(r.right),
+                                bottom: Math.round(r.bottom)
+                            }}
+                        }});
+                        if (res.length >= maxFrames) break;
+                    }} catch (_) {{}}
+                }}
+                return res;
+            }})()""")
+        except Exception:
+            candidates = None
+
+        if not candidates or not isinstance(candidates, list):
+            return
+
+        has_cross = any(not c.get("sameOrigin") for c in candidates)
+        child_targets: list[dict[str, Any]] = []
+        if has_cross:
+            try:
+                raw_targets = cdp("Target.getTargets").get("targetInfos", [])
+                child_targets = [
+                    t for t in raw_targets
+                    if t.get("parentId") == self.target and t.get("type") == "iframe"
+                ]
+            except Exception:
+                child_targets = []
+
+        main_actions = [a for a in info.get("actions", []) if a.get("kind") != "wait"]
+        wait_action = next((a for a in info.get("actions", []) if a.get("kind") == "wait"), None)
+
+        max_node = 0
+        max_id_num = 0
+        for a in main_actions:
+            n = a.get("node")
+            if isinstance(n, int) and n > max_node:
+                max_node = n
+            aid = str(a.get("id", ""))
+            if aid.startswith("e") and aid[1:].isdigit():
+                max_id_num = max(max_id_num, int(aid[1:]))
+
+        next_node = max(max_node + 1, len(main_actions) + 1)
+        next_id_num = max(max_id_num + 1, len(main_actions) + 1)
+
+        vw = int(info.get("w") or 1120)
+        vh = int(info.get("h") or 780)
+        guards = info.setdefault("guards", {})
+
+        iframe_actions: list[dict[str, Any]] = []
+        extra_texts: list[str] = []
+        unmatched_targets = list(child_targets)
+
+        for candidate in candidates:
+            f_rect = candidate.get("rect") or {}
+            fx = f_rect.get("x", 0)
+            fy = f_rect.get("y", 0)
+            f_left = f_rect.get("left", fx)
+            f_top = f_rect.get("top", fy)
+            f_right = f_rect.get("right", fx + f_rect.get("w", 0))
+            f_bottom = f_rect.get("bottom", fy + f_rect.get("h", 0))
+
+            clip_left = max(0, f_left)
+            clip_top = max(0, f_top)
+            clip_right = min(vw, f_right)
+            clip_bottom = min(vh, f_bottom)
+            if clip_right <= clip_left or clip_bottom <= clip_top:
+                continue
+
+            frame_state: dict[str, Any] | None = None
+            sid: str | None = None
+            frame_index: int | None = None
+
+            if candidate.get("sameOrigin"):
+                frame_index = candidate.get("index")
+                try:
+                    eval_expr = f"""(() => {{
+                        const f = document.querySelectorAll('iframe')[{frame_index}];
+                        if (!f || !f.contentWindow) return null;
+                        return f.contentWindow.eval({json.dumps(READ_STATE)});
+                    }})()"""
+                    frame_state = self.evaluate(eval_expr)
+                except Exception:
+                    frame_state = None
+            else:
+                matched_target: dict[str, Any] | None = None
+                c_src = (candidate.get("src") or "").strip()
+                c_canon = canonical_url(c_src)
+                for t in unmatched_targets:
+                    t_url = (t.get("url") or "").strip()
+                    t_canon = canonical_url(t_url)
+                    if c_canon and t_canon and c_canon == t_canon:
+                        matched_target = t
+                        break
+                    if c_src and t_url and (c_src in t_url or t_url in c_src):
+                        matched_target = t
+                        break
+                if not matched_target and unmatched_targets:
+                    matched_target = unmatched_targets[0]
+
+                if matched_target:
+                    unmatched_targets.remove(matched_target)
+                    tid = matched_target["targetId"]
+                    sid = self._frame_sessions.get(tid)
+                    if not sid:
+                        try:
+                            att = cdp("Target.attachToTarget", targetId=tid, flatten=True)
+                            sid = att.get("sessionId")
+                            if sid:
+                                self._frame_sessions[tid] = sid
+                                self._owned_targets.add(tid)
+                        except Exception:
+                            sid = None
+                    if sid:
+                        try:
+                            frame_state = self.evaluate(READ_STATE, session_id=sid)
+                        except Exception:
+                            frame_state = None
+
+            if not frame_state or not isinstance(frame_state, dict):
+                continue
+
+            ftxt = str(frame_state.get("text", "")).strip()
+            if ftxt and ftxt not in info.get("text", ""):
+                extra_texts.append(ftxt)
+
+            frame_guards = frame_state.get("guards") or {}
+            frame_pk = frame_state.get("page_key")
+
+            for child_act in frame_state.get("actions", []):
+                if child_act.get("kind") == "wait":
+                    continue
+                c_rect = child_act.get("rect")
+                if not c_rect or not isinstance(c_rect, dict):
+                    continue
+
+                cx = c_rect.get("x", 0)
+                cy = c_rect.get("y", 0)
+                cw = c_rect.get("w", 0)
+                ch = c_rect.get("h", 0)
+
+                trans_x = fx + cx
+                trans_y = fy + cy
+                trans_w = cw
+                trans_h = ch
+
+                el_left = trans_x
+                el_top = trans_y
+                el_right = trans_x + trans_w
+                el_bottom = trans_y + trans_h
+
+                vis_left = max(clip_left, el_left)
+                vis_top = max(clip_top, el_top)
+                vis_right = min(clip_right, el_right)
+                vis_bottom = min(clip_bottom, el_bottom)
+                vis_w = vis_right - vis_left
+                vis_h = vis_bottom - vis_top
+
+                if vis_w <= 0 or vis_h <= 0:
+                    continue
+                if vis_w < min(16, trans_w * 0.5) or vis_h < min(20, trans_h * 0.35):
+                    continue
+
+                orig_node = child_act.get("node")
+                unified_node = next_node
+                next_node += 1
+
+                unified_id = f"e{next_id_num}"
+                next_id_num += 1
+
+                merged_act = dict(child_act)
+                merged_act["id"] = unified_id
+                merged_act["node"] = unified_node
+                merged_act["orig_node"] = orig_node
+                merged_act["is_iframe"] = True
+                merged_act["frame_rect"] = f_rect
+                merged_act["frame_session_id"] = sid
+                merged_act["frame_index"] = frame_index
+                merged_act["frame_page_key"] = frame_pk
+                merged_act["rect"] = {
+                    "x": round(trans_x),
+                    "y": round(trans_y),
+                    "w": round(trans_w),
+                    "h": round(trans_h),
+                }
+
+                iframe_actions.append(merged_act)
+
+                self._iframe_node_map[unified_node] = {
+                    "session_id": sid,
+                    "frame_index": frame_index,
+                    "orig_node": orig_node,
+                    "frame_rect": f_rect,
+                    "frame_page_key": frame_pk,
+                }
+
+                if orig_node is not None:
+                    orig_guard = frame_guards.get(str(orig_node)) or frame_guards.get(orig_node)
+                    if orig_guard:
+                        guards[str(unified_node)] = orig_guard
+                        guards[unified_node] = orig_guard
+
+        if extra_texts:
+            combo = "\n".join(extra_texts)
+            cur_txt = str(info.get("text", "")).strip()
+            cur_full = str(info.get("full_text", "")).strip()
+            info["text"] = f"{cur_txt}\n{combo}"[:6000] if cur_txt else combo[:6000]
+            info["full_text"] = f"{cur_full}\n{combo}"[:30000] if cur_full else combo[:30000]
+
+        all_actions = main_actions + iframe_actions
+        if wait_action:
+            all_actions.append(wait_action)
+        info["actions"] = all_actions
 
     def _try_pierce_cloudflare(self, info: dict[str, Any]) -> bool:
         """Pierce closed shadow DOM via CDP `DOM.getFlattenedDocument(pierce=True)` to click Cloudflare Turnstile."""
@@ -752,17 +1041,34 @@ class Browser:
             node = action.get("node")
             if type(node) is not int:
                 return False
-            current = self.evaluate(
-                "(() => { const c=window.__jevFast; "
-                f"return c ? [c.pageKey(),c.guard(c.nodes.get({node}))] : null; }})()"
-            )
+            is_iframe = bool(action.get("is_iframe"))
+            lookup_node = action.get("orig_node") if is_iframe else node
+            session_id = action.get("frame_session_id")
+            frame_index = action.get("frame_index")
+
+            if is_iframe and frame_index is not None:
+                current = self.evaluate(
+                    f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
+                    "const c = f?.contentWindow?.__jevFast; "
+                    f"return c ? [c.pageKey(), c.guard(c.nodes.get({lookup_node}))] : null; }})()"
+                )
+            elif is_iframe:
+                current = self.evaluate(
+                    f"(() => {{ const c=window.__jevFast; return c ? [c.pageKey(),c.guard(c.nodes.get({lookup_node}))] : null; }})()",
+                    session_id=session_id,
+                )
+            else:
+                current = self.evaluate(
+                    "(() => { const c=window.__jevFast; "
+                    f"return c ? [c.pageKey(),c.guard(c.nodes.get({node}))] : null; }})()"
+                )
             if not current or current[1] is None:
                 return False
             guards = page.get("guards") or {}
             expected_guard = guards.get(str(node)) or guards.get(node)
             if not expected_guard:
                 return False
-            expected_pk = page.get("page_key") or []
+            expected_pk = (action.get("frame_page_key") if is_iframe else page.get("page_key")) or []
             current_pk = current[0] or []
             same_doc = len(expected_pk) >= 2 and len(current_pk) >= 2 and current_pk[:2] == expected_pk[:2]
             if not same_doc:
@@ -789,8 +1095,21 @@ class Browser:
         recorded = _recorded_accessible_name(action, page)
         if not recorded:
             return True
+        is_iframe = bool(action.get("is_iframe"))
+        lookup_node = action.get("orig_node") if is_iframe else node
+        session_id = action.get("frame_session_id")
+        frame_index = action.get("frame_index")
         try:
-            current = self.evaluate(_ACCESSIBLE_NAME + "(" + json.dumps(node) + ")")
+            if is_iframe and frame_index is not None:
+                current = self.evaluate(
+                    f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
+                    f"return f?.contentWindow ? f.contentWindow.eval({json.dumps(_ACCESSIBLE_NAME)})({json.dumps(lookup_node)}) : null; }})()"
+                )
+            else:
+                current = self.evaluate(
+                    _ACCESSIBLE_NAME + "(" + json.dumps(lookup_node) + ")",
+                    session_id=session_id,
+                )
         except Exception:
             return True
         if not isinstance(current, str) or not current.strip():
@@ -802,8 +1121,10 @@ class Browser:
         if not self.accessible_name_matches(action, page):
             raise StalePage("Accessible name changed since this decision. Observe again.")
 
-    def act(self, action: dict[str, Any], page: dict[str, Any], text: str | None = None) -> dict[str, Any]:
+    def act(self, action: dict[str, Any], page: dict[str, Any], text: str | None = None, value: str | None = None) -> dict[str, Any]:
         """Execute a low-level action on the observed page."""
+        if value is not None:
+            action = dict(action, value=value)
         kind = action["kind"]
         native_dlgs = getattr(self, "_native_dialogs", None)
         if kind != "wait" and isinstance(native_dlgs, list):
@@ -883,89 +1204,207 @@ class Browser:
         if type(action.get("node")) is not int:
             raise ValueError("Invalid observed node")
 
-        target = self.evaluate(
-            """(action => {
-              const node=window.__jevFast?.nodes.get(action.node);
-              if (!node?.isConnected || node.matches(':disabled') || node.closest('[aria-disabled="true"],[inert]')) return null;
-              const shown=el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
-              let e=node;
-              const isChoiceInput=node.tagName==='INPUT' && ['radio','checkbox'].includes(node.type);
-              // Custom-styled radio/checkbox: the native input is hidden, its visible <label> takes the click.
-              if (!shown(node) && isChoiceInput) {
-                e=[...(node.labels||[]), node.closest('label')].find(l=>l && shown(l)) || node;
-              }
-              const overlayChoice=!shown(e) && e===node && isChoiceInput;
-              if (!shown(e) && !overlayChoice) return null;
-              if (action.kind==='fill' && (e.readOnly || e.getAttribute('aria-readonly')==='true')) return null;
-              if (action.kind==='click') {
-                const link=e.tagName==='A'?e:e.closest('a[href]');
-                if (link) link.removeAttribute('target');
-                if (e.removeAttribute) e.removeAttribute('target');
-                document.querySelectorAll('base[target]').forEach(b=>b.removeAttribute('target'));
-              }
-              let r=e.getBoundingClientRect();
-              if (overlayChoice && (r.width<=0 || r.height<=0)) return null;
-              if (r.top<0 || r.bottom>innerHeight || r.left<0 || r.right>innerWidth) {
-                e.scrollIntoView({behavior:'instant',block:'center',inline:'nearest'});
-                r=e.getBoundingClientRect();
-              }
-              const visLeft=Math.max(4,r.left), visRight=Math.min(innerWidth-4,r.right);
-              const visTop=Math.max(4,r.top), visBottom=Math.min(innerHeight-4,r.bottom);
-              if (visRight<=visLeft || visBottom<=visTop) return null;
-              const isIframe=e.tagName==='IFRAME';
-              const x=isIframe ? r.x+Math.min(28, r.width/2) : (visLeft+visRight)/2;
-              const y=(visTop+visBottom)/2;
-              if (!r.width || !r.height || x<0 || y<0 || x>=innerWidth || y>=innerHeight) return null;
-              const rx=Math.round(r.x), ry=Math.round(r.y), rw=Math.round(r.width), rh=Math.round(r.height);
-              const hit=document.elementFromPoint(x,y);
-              if (overlayChoice && hit!==node) return null;
-              const interactiveSel='button,a,[role="button"],[role="link"],[role="option"],[role="menuitem"],[role="tab"]';
-              const hitOk=hit && (
-                e.contains(hit) ||
-                hit===e ||
-                (hit.tagName==='LABEL' && hit.control===e) ||
-                (e.labels && [...e.labels].some(l=>l.contains(hit))) ||
-                (e.closest(interactiveSel) && e.closest(interactiveSel)===hit.closest(interactiveSel))
-              );
-              if (!hitOk) {
-                const modalSel='dialog[open],[role="dialog"],[aria-modal="true"]';
-                const blockingModal=hit?.closest(modalSel);
-                if (blockingModal && !e.closest(modalSel)) return null;
-                if (action.kind==='click') {
-                  try {
-                    if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
-                    if (document.activeElement && document.activeElement!==document.body) document.activeElement.blur();
-                    const prevOrigin = performance.timeOrigin;
-                    e.click();
-                    return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:true,prevOrigin};
-                  } catch (_) {
-                    return null;
-                  }
-                }
+        is_iframe = bool(action.get("is_iframe"))
+        lookup_node = action.get("orig_node") if is_iframe else action["node"]
+        session_id = action.get("frame_session_id")
+        frame_index = action.get("frame_index")
+        action_param = dict(action, node=lookup_node)
+
+        if is_iframe:
+            try:
+                if frame_index is not None:
+                    self.evaluate(f"document.querySelectorAll('iframe')[{frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
+                else:
+                    self.evaluate(f"""(() => {{
+                        const frames = document.querySelectorAll('iframe');
+                        for (const f of frames) {{
+                            const r = f.getBoundingClientRect();
+                            if (Math.abs(r.x - {action.get('frame_rect', {}).get('x', 0)}) < 10) {{
+                                f.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                                break;
+                            }}
+                        }}
+                    }})()""")
+            except Exception:
+                pass
+
+        target_fn = """(action => {
+          const node=window.__jevFast?.nodes.get(action.node);
+          if (!node?.isConnected || node.matches(':disabled') || node.closest('[aria-disabled="true"],[inert]')) return null;
+          const shown=el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+          let e=node;
+          const isChoiceInput=node.tagName==='INPUT' && ['radio','checkbox'].includes(node.type);
+          // Custom-styled radio/checkbox: the native input is hidden, its visible <label> takes the click.
+          if (!shown(node) && isChoiceInput) {
+            e=[...(node.labels||[]), node.closest('label')].find(l=>l && shown(l)) || node;
+          }
+          const overlayChoice=!shown(e) && e===node && isChoiceInput;
+          if (!shown(e) && !overlayChoice) return null;
+          if (action.kind==='fill' && (e.readOnly || e.getAttribute('aria-readonly')==='true')) return null;
+          if (action.kind==='click') {
+            const link=e.tagName==='A'?e:e.closest('a[href]');
+            if (link) link.removeAttribute('target');
+            if (e.removeAttribute) e.removeAttribute('target');
+            document.querySelectorAll('base[target]').forEach(b=>b.removeAttribute('target'));
+          }
+          let r=e.getBoundingClientRect();
+          if (overlayChoice && (r.width<=0 || r.height<=0)) return null;
+          if (r.top<0 || r.bottom>innerHeight || r.left<0 || r.right>innerWidth) {
+            e.scrollIntoView({behavior:'instant',block:'center',inline:'nearest'});
+            r=e.getBoundingClientRect();
+          }
+          const visLeft=Math.max(4,r.left), visRight=Math.min(innerWidth-4,r.right);
+          const visTop=Math.max(4,r.top), visBottom=Math.min(innerHeight-4,r.bottom);
+          if (visRight<=visLeft || visBottom<=visTop) return null;
+          const isIframe=e.tagName==='IFRAME';
+          const x=isIframe ? r.x+Math.min(28, r.width/2) : (visLeft+visRight)/2;
+          const y=(visTop+visBottom)/2;
+          if (!r.width || !r.height || x<0 || y<0 || x>=innerWidth || y>=innerHeight) return null;
+          const rx=Math.round(r.x), ry=Math.round(r.y), rw=Math.round(r.width), rh=Math.round(r.height);
+          const hit=document.elementFromPoint(x,y);
+          if (overlayChoice && hit!==node) return null;
+          const interactiveSel='button,a,[role="button"],[role="link"],[role="option"],[role="menuitem"],[role="tab"]';
+          const hitOk=hit && (
+            e.contains(hit) ||
+            hit===e ||
+            (hit.tagName==='LABEL' && hit.control===e) ||
+            (e.labels && [...e.labels].some(l=>l.contains(hit))) ||
+            (e.closest(interactiveSel) && e.closest(interactiveSel)===hit.closest(interactiveSel))
+          );
+          if (!hitOk) {
+            const modalSel='dialog[open],[role="dialog"],[aria-modal="true"]';
+            const blockingModal=hit?.closest(modalSel);
+            if (blockingModal && !e.closest(modalSel)) return null;
+            if (action.kind==='click') {
+              try {
+                if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
+                if (document.activeElement && document.activeElement!==document.body) document.activeElement.blur();
+                const prevOrigin = performance.timeOrigin;
+                e.click();
+                return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:true,prevOrigin};
+              } catch (_) {
                 return null;
               }
-              if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
-              if (action.kind==='fill') {
-                try { e.focus(); } catch (_) {}
-              }
-              if (action.kind==='select') {
-                if (e.tagName!=='SELECT' || ![...e.options].some(o=>o.value===action.value &&
-                    !o.disabled && !o.closest('optgroup[disabled]'))) return null;
-                e.value=action.value;
-                e.dispatchEvent(new Event('input',{bubbles:true}));
-                e.dispatchEvent(new Event('change',{bubbles:true}));
-              }
-              return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:false,prevOrigin:performance.timeOrigin};
-            })("""
-            + json.dumps(action)
-            + ")"
-        )
+            }
+            return null;
+          }
+          if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
+          if (action.kind==='fill') {
+            try { e.focus(); } catch (_) {}
+          }
+          if (action.kind==='select') {
+            if (e.tagName!=='SELECT' || ![...e.options].some(o=>o.value===action.value &&
+                !o.disabled && !o.closest('optgroup[disabled]'))) return null;
+            e.value=action.value;
+            e.dispatchEvent(new Event('input',{bubbles:true}));
+            e.dispatchEvent(new Event('change',{bubbles:true}));
+          }
+          return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:false,prevOrigin:performance.timeOrigin};
+        })"""
+
+        if is_iframe and frame_index is not None:
+            target = self.evaluate(
+                f"document.querySelectorAll('iframe')[{frame_index}].contentWindow.eval({json.dumps(target_fn + '(' + json.dumps(action_param) + ')')})"
+            )
+        elif is_iframe:
+            target = self.evaluate(
+                target_fn + "(" + json.dumps(action_param) + ")",
+                session_id=session_id,
+            )
+        else:
+            target = self.evaluate(
+                """(action => {
+                  const node=window.__jevFast?.nodes.get(action.node);
+                  if (!node?.isConnected || node.matches(':disabled') || node.closest('[aria-disabled="true"],[inert]')) return null;
+                  const shown=el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+                  let e=node;
+                  const isChoiceInput=node.tagName==='INPUT' && ['radio','checkbox'].includes(node.type);
+                  // Custom-styled radio/checkbox: the native input is hidden, its visible <label> takes the click.
+                  if (!shown(node) && isChoiceInput) {
+                    e=[...(node.labels||[]), node.closest('label')].find(l=>l && shown(l)) || node;
+                  }
+                  const overlayChoice=!shown(e) && e===node && isChoiceInput;
+                  if (!shown(e) && !overlayChoice) return null;
+                  if (action.kind==='fill' && (e.readOnly || e.getAttribute('aria-readonly')==='true')) return null;
+                  if (action.kind==='click') {
+                    const link=e.tagName==='A'?e:e.closest('a[href]');
+                    if (link) link.removeAttribute('target');
+                    if (e.removeAttribute) e.removeAttribute('target');
+                    document.querySelectorAll('base[target]').forEach(b=>b.removeAttribute('target'));
+                  }
+                  let r=e.getBoundingClientRect();
+                  if (overlayChoice && (r.width<=0 || r.height<=0)) return null;
+                  if (r.top<0 || r.bottom>innerHeight || r.left<0 || r.right>innerWidth) {
+                    e.scrollIntoView({behavior:'instant',block:'center',inline:'nearest'});
+                    r=e.getBoundingClientRect();
+                  }
+                  const visLeft=Math.max(4,r.left), visRight=Math.min(innerWidth-4,r.right);
+                  const visTop=Math.max(4,r.top), visBottom=Math.min(innerHeight-4,r.bottom);
+                  if (visRight<=visLeft || visBottom<=visTop) return null;
+                  const isIframe=e.tagName==='IFRAME';
+                  const x=isIframe ? r.x+Math.min(28, r.width/2) : (visLeft+visRight)/2;
+                  const y=(visTop+visBottom)/2;
+                  if (!r.width || !r.height || x<0 || y<0 || x>=innerWidth || y>=innerHeight) return null;
+                  const rx=Math.round(r.x), ry=Math.round(r.y), rw=Math.round(r.width), rh=Math.round(r.height);
+                  const hit=document.elementFromPoint(x,y);
+                  if (overlayChoice && hit!==node) return null;
+                  const interactiveSel='button,a,[role="button"],[role="link"],[role="option"],[role="menuitem"],[role="tab"]';
+                  const hitOk=hit && (
+                    e.contains(hit) ||
+                    hit===e ||
+                    (hit.tagName==='LABEL' && hit.control===e) ||
+                    (e.labels && [...e.labels].some(l=>l.contains(hit))) ||
+                    (e.closest(interactiveSel) && e.closest(interactiveSel)===hit.closest(interactiveSel))
+                  );
+                  if (!hitOk) {
+                    const modalSel='dialog[open],[role="dialog"],[aria-modal="true"]';
+                    const blockingModal=hit?.closest(modalSel);
+                    if (blockingModal && !e.closest(modalSel)) return null;
+                    if (action.kind==='click') {
+                      try {
+                        if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
+                        if (document.activeElement && document.activeElement!==document.body) document.activeElement.blur();
+                        const prevOrigin = performance.timeOrigin;
+                        e.click();
+                        return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:true,prevOrigin};
+                      } catch (_) {
+                        return null;
+                      }
+                    }
+                    return null;
+                  }
+                  if (Array.isArray(window.__reflexDialogs)) window.__reflexDialogs.length = 0;
+                  if (action.kind==='fill') {
+                    try { e.focus(); } catch (_) {}
+                  }
+                  if (action.kind==='select') {
+                    if (e.tagName!=='SELECT' || ![...e.options].some(o=>o.value===action.value &&
+                        !o.disabled && !o.closest('optgroup[disabled]'))) return null;
+                    e.value=action.value;
+                    e.dispatchEvent(new Event('input',{bubbles:true}));
+                    e.dispatchEvent(new Event('change',{bubbles:true}));
+                  }
+                  return {x:Math.round(x),y:Math.round(y),rx,ry,rw,rh,jsClicked:false,prevOrigin:performance.timeOrigin};
+                })("""
+                + json.dumps(action)
+                + ")"
+            )
+
         if target is None:
             if kind == "select":
                 raise RuntimeError("Dropdown execution was not confirmed; inspect before retrying.")
             raise TargetCoveredError(
                 f"Target '{action.get('label', '')}' is covered by an overlay/modal or offscreen. Dismiss the overlay first."
             )
+
+        if is_iframe:
+            cur_f_rect = self._get_iframe_rect(action)
+            fx = cur_f_rect.get("x", 0)
+            fy = cur_f_rect.get("y", 0)
+            target["x"] = round(fx + target["x"])
+            target["y"] = round(fy + target["y"])
+            target["rx"] = round(fx + target.get("rx", target["x"] - 20))
+            target["ry"] = round(fy + target.get("ry", target["y"] - 12))
 
         self.last_action_rect = {
             "x": target.get("rx", target["x"] - 20),
@@ -985,49 +1424,92 @@ class Browser:
             if kind == "fill":
                 if text is None:
                     raise ValueError("fill action requires non-null text")
+                clear_js = """(nodeId => {
+                  const e = window.__jevFast?.nodes.get(nodeId);
+                  if (!e) return;
+                  try { e.focus(); } catch (_) {}
+                  if ('value' in e) {
+                    const proto = e.tagName === 'TEXTAREA'
+                      ? window.HTMLTextAreaElement?.prototype
+                      : window.HTMLInputElement?.prototype;
+                    const nativeSetter = proto ? Object.getOwnPropertyDescriptor(proto, 'value')?.set : null;
+                    if (nativeSetter) nativeSetter.call(e, '');
+                    else e.value = '';
+                  } else if (e.isContentEditable) {
+                    e.innerText = '';
+                  }
+                  e.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'deleteContentBackward'}));
+                  e.dispatchEvent(new Event('change', {bubbles: true}));
+                })"""
                 try:
-                    self.evaluate(
-                        """(nodeId => {
-                          const e = window.__jevFast?.nodes.get(nodeId);
-                          if (!e) return;
-                          try { e.focus(); } catch (_) {}
-                          if ('value' in e) {
-                            const proto = e.tagName === 'TEXTAREA'
-                              ? window.HTMLTextAreaElement?.prototype
-                              : window.HTMLInputElement?.prototype;
-                            const nativeSetter = proto ? Object.getOwnPropertyDescriptor(proto, 'value')?.set : null;
-                            if (nativeSetter) nativeSetter.call(e, '');
-                            else e.value = '';
-                          } else if (e.isContentEditable) {
-                            e.innerText = '';
-                          }
-                          e.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'deleteContentBackward'}));
-                          e.dispatchEvent(new Event('change', {bubbles: true}));
-                        })(""" + json.dumps(action.get("node")) + ")"
-                    )
-                except Exception:
-                    pass
-                self.call("Input.insertText", text=text)
-                try:
-                    is_search = bool(
+                    if is_iframe and frame_index is not None:
+                        self.evaluate(
+                            f"document.querySelectorAll('iframe')[{frame_index}].contentWindow.eval({json.dumps(clear_js + '(' + json.dumps(lookup_node) + ')')})"
+                        )
+                    elif is_iframe:
+                        self.evaluate(clear_js + "(" + json.dumps(lookup_node) + ")", session_id=session_id)
+                    else:
                         self.evaluate(
                             """(nodeId => {
                               const e = window.__jevFast?.nodes.get(nodeId);
-                              if (!e) return false;
-                              try {
-                                e.dispatchEvent(new Event('input', {bubbles: true}));
-                                e.dispatchEvent(new Event('change', {bubbles: true}));
-                              } catch (_) {}
-                              if (e.getAttribute('role') === 'combobox' || e.getAttribute('aria-autocomplete') || e.getAttribute('aria-haspopup') === 'listbox') {
-                                return false;
+                              if (!e) return;
+                              try { e.focus(); } catch (_) {}
+                              if ('value' in e) {
+                                const proto = e.tagName === 'TEXTAREA'
+                                  ? window.HTMLTextAreaElement?.prototype
+                                  : window.HTMLInputElement?.prototype;
+                                const nativeSetter = proto ? Object.getOwnPropertyDescriptor(proto, 'value')?.set : null;
+                                if (nativeSetter) nativeSetter.call(e, '');
+                                else e.value = '';
+                              } else if (e.isContentEditable) {
+                                e.innerText = '';
                               }
-                              return e.type === 'search' || e.getAttribute('role') === 'searchbox' || Boolean(e.closest('form[role="search"]'));
+                              e.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'deleteContentBackward'}));
+                              e.dispatchEvent(new Event('change', {bubbles: true}));
                             })(""" + json.dumps(action.get("node")) + ")"
                         )
-                    )
+                except Exception:
+                    pass
+                self.call("Input.insertText", text=text)
+                search_js = """(nodeId => {
+                  const e = window.__jevFast?.nodes.get(nodeId);
+                  if (!e) return false;
+                  try {
+                    e.dispatchEvent(new Event('input', {bubbles: true}));
+                    e.dispatchEvent(new Event('change', {bubbles: true}));
+                  } catch (_) {}
+                  if (e.getAttribute('role') === 'combobox' || e.getAttribute('aria-autocomplete') || e.getAttribute('aria-haspopup') === 'listbox') {
+                    return false;
+                  }
+                  return e.type === 'search' || e.getAttribute('role') === 'searchbox' || Boolean(e.closest('form[role="search"]'));
+                })"""
+                try:
+                    if is_iframe and frame_index is not None:
+                        is_search = bool(self.evaluate(
+                            f"document.querySelectorAll('iframe')[{frame_index}].contentWindow.eval({json.dumps(search_js + '(' + json.dumps(lookup_node) + ')')})"
+                        ))
+                    elif is_iframe:
+                        is_search = bool(self.evaluate(search_js + "(" + json.dumps(lookup_node) + ")", session_id=session_id))
+                    else:
+                        is_search = bool(
+                            self.evaluate(
+                                """(nodeId => {
+                                  const e = window.__jevFast?.nodes.get(nodeId);
+                                  if (!e) return false;
+                                  try {
+                                    e.dispatchEvent(new Event('input', {bubbles: true}));
+                                    e.dispatchEvent(new Event('change', {bubbles: true}));
+                                  } catch (_) {}
+                                  if (e.getAttribute('role') === 'combobox' || e.getAttribute('aria-autocomplete') || e.getAttribute('aria-haspopup') === 'listbox') {
+                                    return false;
+                                  }
+                                  return e.type === 'search' || e.getAttribute('role') === 'searchbox' || Boolean(e.closest('form[role="search"]'));
+                                })(""" + json.dumps(action.get("node")) + ")"
+                            )
+                        )
                     if is_search:
                         try:
-                            prev_origin = self.evaluate("performance.timeOrigin")
+                            prev_origin = self.evaluate("performance.timeOrigin", session_id=session_id)
                         except Exception:
                             prev_origin = None
                         time.sleep(0.05)
@@ -1056,6 +1538,49 @@ class Browser:
         """Scroll a specific DOM node into view deterministically using instant center alignment."""
         if not isinstance(node, int):
             return False
+        iframe_info = self._iframe_node_map.get(node)
+        if iframe_info:
+            session_id = iframe_info.get("session_id")
+            frame_index = iframe_info.get("frame_index")
+            orig_node = iframe_info.get("orig_node", node)
+            try:
+                if frame_index is not None:
+                    self.evaluate(f"document.querySelectorAll('iframe')[{frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
+                    res = self.evaluate(
+                        f"""(() => {{
+                          const f = document.querySelectorAll('iframe')[{frame_index}];
+                          const el = f?.contentWindow?.__jevFast?.nodes?.get({orig_node});
+                          if (!el || !el.isConnected) return false;
+                          el.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                          return true;
+                        }})()"""
+                    )
+                    return bool(res)
+                else:
+                    f_rect = iframe_info.get("frame_rect") or {}
+                    self.evaluate(f"""(() => {{
+                        const frames = document.querySelectorAll('iframe');
+                        for (const f of frames) {{
+                            const r = f.getBoundingClientRect();
+                            if (Math.abs(r.x - {f_rect.get('x', 0)}) < 10) {{
+                                f.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                                break;
+                            }}
+                        }}
+                    }})()""")
+                    res = self.evaluate(
+                        f"""(() => {{
+                          const el = window.__jevFast?.nodes?.get({orig_node});
+                          if (!el || !el.isConnected) return false;
+                          el.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                          return true;
+                        }})()""",
+                        session_id=session_id,
+                    )
+                    return bool(res)
+            except Exception:
+                return False
+
         try:
             res = self.evaluate(
                 f"""(() => {{
