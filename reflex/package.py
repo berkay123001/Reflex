@@ -19,6 +19,8 @@ class ExpectedElement:
     label: str
     role: str
     operation: str
+    checked: str | None = None
+    value: str | None = None
 
 
 @dataclass
@@ -100,12 +102,12 @@ def create_action_package(
     for raw in raw_actions[:MAX_PACKAGE_ACTIONS]:
         if hasattr(raw, "get"):
             op = str(raw.get("operation") or "").upper().strip()
-            target_idx = str(raw.get("target") or "").strip()
+            target_idx = str(raw.get("target") or "").strip().strip("[]").strip()
             instruction = str(raw.get("instruction") or "").strip()
             text_val = raw.get("text")
         elif hasattr(raw, "operation"):
             op = str(getattr(raw, "operation") or "").upper().strip()
-            target_idx = str(getattr(raw, "target") or "").strip()
+            target_idx = str(getattr(raw, "target") or "").strip().strip("[]").strip()
             instruction = str(getattr(raw, "instruction") or "").strip()
             text_val = getattr(raw, "text", None)
         else:
@@ -121,13 +123,15 @@ def create_action_package(
             continue
 
         target_act = targets[op][target_idx]
-        text_str = str(text_val).strip() if (op == "TYPE_TEXT" and text_val is not None) else None
+        text_str = str(text_val).strip() if (op in {"TYPE_TEXT", "SELECT"} and text_val is not None) else None
 
         expected = ExpectedElement(
             node=target_act.get("node"),
             label=str(target_act.get("label") or ""),
             role=str(target_act.get("role") or ""),
             operation=op,
+            checked=str(target_act.get("checked")) if target_act.get("checked") is not None else None,
+            value=str(target_act.get("value")) if target_act.get("value") is not None else None,
         )
 
         step = PackageStep(

@@ -976,7 +976,7 @@ def resolve_escalation(
         f"{ctx.build_supervisor_context_block(history)}\n\n"
         f"Escalation Trigger: {trigger_type} — {escalation_reason}\n"
         f"System 1 Candidate Decision: {s1_summary}\n\n"
-        f"{wrap_untrusted_dom(page, elements, focus=focus)}"
+        f"{wrap_untrusted_dom(page, elements, focus=focus, package_mode=package_mode)}"
     )
 
     system_prompt = get_escalation_system_prompt(package_mode=package_mode)
@@ -996,7 +996,7 @@ def resolve_escalation(
     usage_info = getattr(comp, "usage", getattr(parsed, "usage", {}))
 
     valid_targets: set[str] | None = None
-    if elements:
+    if elements or (package_mode and page.get("page_controls")):
         valid_targets = set()
         for el in elements:
             idx = el.get("index")
@@ -1006,6 +1006,9 @@ def resolve_escalation(
                 opt_idx = opt.get("index")
                 if opt_idx is not None:
                     valid_targets.add(str(opt_idx).strip())
+        if package_mode and page.get("page_controls"):
+            for i in range(len(page.get("page_controls"))):
+                valid_targets.add(f"f{i + 1}")
 
     return parse_supervisor_decision(
         parsed,

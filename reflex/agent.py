@@ -1445,6 +1445,29 @@ class ReflexSession:
                 "url": pl_href,
                 "href": pl_href,
             }
+        if self.config.s2_action_packages:
+            for i, ctrl in enumerate(self.page.get("page_controls") or []):
+                f_idx = f"f{i + 1}"
+                node = ctrl.get("node")
+                if not isinstance(node, int):
+                    continue
+                kind = ctrl.get("kind", "click")
+                role = ctrl.get("role", "radio")
+                label = ctrl.get("label", "")
+                op = "TYPE_TEXT" if kind == "fill" else ("SELECT" if kind == "select" else "CLICK")
+                action_dict = {
+                    "id": f_idx,
+                    "node": node,
+                    "kind": kind,
+                    "role": role,
+                    "label": label,
+                    "checked": ctrl.get("checked"),
+                    "selected": ctrl.get("selected"),
+                    "value": ctrl.get("value", ""),
+                }
+                targets.setdefault(op, {})[f_idx] = action_dict
+                if op != "CLICK" and role in {"combobox", "textbox"}:
+                    targets.setdefault("CLICK", {})[f_idx] = {**action_dict, "kind": "click"}
         s2_t0 = time.perf_counter()
         try:
             sup: SupervisorDecision = resolve_escalation(
@@ -1859,6 +1882,8 @@ class ReflexSession:
             op = "TYPE_TEXT"
             sup.operation = "TYPE_TEXT"
         target = sup.target
+        if target:
+            target = target.strip("[]").strip()
         cur_url = str(self.page.get("url", ""))
 
         if op in {"GOTO_URL", "NAVIGATE", "OPEN_URL"}:
@@ -1886,6 +1911,8 @@ class ReflexSession:
         if op in targets and target:
             cand = targets[op].get(target)
             if cand:
+                if cand.get("kind") == "select" and sup.text:
+                    cand = {**cand, "value": sup.text.strip()}
                 if op == "CLICK" and (
                     self._is_rejected_target(cand, cur_url)
                     or self._is_ineffective_click(cand, cur_url)

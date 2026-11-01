@@ -10,6 +10,9 @@ from pydantic import BaseModel
 
 from .config import MAX_SUPERVISOR_ELEMENTS
 
+MAX_PAGE_CONTROLS = 150
+MAX_CONTROL_LABEL_LENGTH = 140
+
 
 def extract_origin(url: str | None) -> str:
     """Extract scheme + netloc (e.g. 'https://example.com' or 'http://localhost:3000') from a URL.
@@ -460,6 +463,8 @@ def wrap_untrusted_dom(
     focus: str = "",
     max_elements: int = MAX_SUPERVISOR_ELEMENTS,
     total_elements: int | None = None,
+    *,
+    package_mode: bool = False,
 ) -> str:
     """Format observed DOM elements and page text inside explicit untrusted delimiters."""
     url = sanitize_untrusted_text(str(page.get("url", "")), 500)
@@ -516,6 +521,26 @@ def wrap_untrusted_dom(
         elem_lines.append(f"+{omitted} more interactive elements omitted (scroll or use GOTO_URL)")
 
     elements_block = "\n".join(elem_lines) if elem_lines else "(no interactive elements observed)"
+
+    page_controls_block = ""
+    raw_page_controls = page.get("page_controls") or []
+    if package_mode and raw_page_controls:
+        ctrl_lines: list[str] = []
+        for i, ctrl in enumerate(raw_page_controls[:MAX_PAGE_CONTROLS]):
+            idx = f"f{i + 1}"
+            role = ctrl.get("role", "")
+            lbl = sanitize_untrusted_text(str(ctrl.get("label", "")), MAX_CONTROL_LABEL_LENGTH)
+            kind = ctrl.get("kind", "click")
+            op = "TYPE_TEXT" if kind == "fill" else ("SELECT" if kind == "select" else "CLICK")
+            extras = []
+            for k in ("value", "checked", "selected"):
+                if ctrl.get(k) not in (None, ""):
+                    extras.append(f"{k}={sanitize_untrusted_text(str(ctrl[k]), 80)}")
+            extra_str = (" | " + ", ".join(extras)) if extras else ""
+            ctrl_lines.append(f"[{idx}] ({role}) {lbl}{extra_str} | ops: {op}")
+        if ctrl_lines:
+            page_controls_block = "\n\nPage-wide form controls (also off-screen):\n" + "\n".join(ctrl_lines)
+
     extra_full_block = ""
     if full_text and len(full_text) > len(text) + 40:
         extra_full_block = f"\n\nFull Page Text (Entire Document From Top to Bottom):\n{full_text}"
@@ -526,7 +551,8 @@ def wrap_untrusted_dom(
         f"URL: {url}\n"
         f"Title: {title}\n"
         f"Scroll Position: {scroll_line}{headings_block}\n"
-        f"Interactive Elements:\n{elements_block}\n\n"
+        f"Interactive Elements:\n{elements_block}"
+        f"{page_controls_block}\n\n"
         f"Visible Viewport Text:\n{text}{extra_full_block}\n"
         "</untrusted_page_data>"
     )

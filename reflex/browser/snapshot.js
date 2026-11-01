@@ -55,6 +55,8 @@
     if (top && nameCache) nameCache.set(e, res);
     return res;
   };
+  const MAX_PAGE_CONTROLS = 150;
+  const MAX_CONTROL_LABEL_LEN = 140;
   const roles=['button','link','checkbox','radio','switch','tab','menuitem','menuitemradio',
     'option','gridcell','combobox','textbox','searchbox','spinbutton'];
   const challengeIframeSel='iframe[src*="challenges.cloudflare.com"],iframe[title*="Cloudflare"],iframe[title*="challenge" i],iframe[src*="recaptcha"],iframe[src*="hcaptcha"]';
@@ -208,6 +210,33 @@
     if (!text) text=cleanQuestion(choiceQuestion(el));
     return internalGroupName(text) ? '' : text;
   };
+  const computeGroupLabel = (e, rname) => {
+    if (rname === 'radio') return groupQuestion(e);
+    if (['checkbox', 'textbox', 'switch'].includes(rname)) {
+      const qItem = e.closest('[role="listitem"],[role="group"],[role="radiogroup"],fieldset');
+      const qHead = qItem?.querySelector('[role="heading"],legend,h2,h3,h4');
+      let qTxt = cleanQuestion(qHead?.innerText);
+      if (!qTxt && rname !== 'textbox') qTxt = cleanQuestion(choiceQuestion(e));
+      return internalGroupName(qTxt) ? '' : qTxt;
+    }
+    return '';
+  };
+  const computeControlLabel = (e, rname) => {
+    const accessibleName = name(e) || '';
+    let lbl = (e.tagName === 'IFRAME' ? 'Verify you are human (Security Challenge)' : accessibleName) || rname;
+    if (rname === 'link' && lbl.length > 35) {
+      const hEl = e.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
+      const hTxt = hEl?.innerText?.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+      if (hTxt && hTxt.length >= 4 && !lbl.toLowerCase().startsWith(hTxt.toLowerCase())) {
+        lbl = `${hTxt} · ${lbl}`;
+      }
+    }
+    const groupLabel = computeGroupLabel(e, rname);
+    if (groupLabel && !lbl.toLowerCase().includes(groupLabel.slice(0, 25).toLowerCase())) {
+      lbl = `${groupLabel.slice(0, 75)} → ${lbl.trim()}`;
+    }
+    return { label: lbl, accessibleName, groupLabel };
+  };
   const seenCardLinks=new Set();
   const actions=[];
   for (const e of document.querySelectorAll(selector)) {
@@ -224,28 +253,7 @@
     const visW=visRight-visLeft, visH=visBottom-visTop;
     if (!rname || r.width<=0 || r.height<=0 || visW<Math.min(16,r.width*0.5) || visH<Math.min(20,r.height*0.35)) continue;
     if (rname==='gridcell' && e.querySelector('button,[role="button"]')) continue;
-    const accessibleName=name(e)||'';
-    let lbl=(e.tagName==='IFRAME'?'Verify you are human (Security Challenge)':accessibleName)||rname;
-    if (rname==='link' && lbl.length>35) {
-      const hEl=e.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
-      const hTxt=hEl?.innerText?.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g,'').replace(/\s+/g,' ').trim();
-      if (hTxt && hTxt.length>=4 && !lbl.toLowerCase().startsWith(hTxt.toLowerCase())) {
-        lbl=`${hTxt} · ${lbl}`;
-      }
-    }
-    let groupLabel='';
-    if (rname==='radio') {
-      groupLabel=groupQuestion(e);
-    } else if (['checkbox','textbox'].includes(rname)) {
-      const qItem=e.closest('[role="listitem"],[role="group"],[role="radiogroup"],fieldset');
-      const qHead=qItem?.querySelector('[role="heading"],legend,h2,h3,h4');
-      let qTxt=cleanQuestion(qHead?.innerText);
-      if (!qTxt && rname!=='textbox') qTxt=cleanQuestion(choiceQuestion(e));
-      groupLabel=internalGroupName(qTxt) ? '' : qTxt;
-    }
-    if (groupLabel && !lbl.toLowerCase().includes(groupLabel.slice(0,25).toLowerCase())) {
-      lbl=`${groupLabel.slice(0,75)} → ${lbl.trim()}`;
-    }
+    const { label: lbl, accessibleName, groupLabel } = computeControlLabel(e, rname);
     const linkEl=e.tagName==='A'?e:e.closest('a[href]');
     const attrHref=linkEl?.getAttribute('href')?.trim() ?? '';
     const isPseudoHref=attrHref==='' || attrHref==='#' || /^javascript:/i.test(attrHref);
@@ -441,11 +449,71 @@
     }
   }
   const page_links=[...pageLinksByHref.values()];
+  const page_controls = [];
+  const seenActionNodes = new Set(actions.map(a => a.node).filter(n => typeof n === 'number'));
+  const seenControlNodes = new Set();
+  const formControlSel = 'input,select,textarea,[role="radio"],[role="checkbox"],[role="option"],[role="switch"]';
+  const FORM_CONTROL_ROLES = new Set(['radio', 'checkbox', 'switch', 'option', 'combobox', 'textbox', 'searchbox', 'spinbutton']);
+
+  for (const e of document.querySelectorAll(formControlSel)) {
+    if (page_controls.length >= MAX_PAGE_CONTROLS) break;
+    if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"],[inert]')) continue;
+    const rname = role(e);
+    if (!rname || !FORM_CONTROL_ROLES.has(rname)) continue;
+
+    const proxy = visible(e) ? null : choiceProxy(e);
+    const box = proxy || e;
+    if (!isUnclipped(box)) continue;
+
+    if (cache.ids.has(e) && seenActionNodes.has(cache.ids.get(e))) continue;
+
+    const nodeId = identity(e);
+    if (seenControlNodes.has(nodeId)) continue;
+    seenControlNodes.add(nodeId);
+
+    let { label: ctrlLabel } = computeControlLabel(e, rname);
+    if (ctrlLabel.length > MAX_CONTROL_LABEL_LEN) {
+      ctrlLabel = ctrlLabel.slice(0, MAX_CONTROL_LABEL_LEN);
+    }
+
+    const kind = ['textbox', 'searchbox', 'spinbutton'].includes(rname) ||
+                 (['INPUT', 'TEXTAREA'].includes(e.tagName) && !['checkbox', 'radio'].includes(e.type)) ? 'fill' :
+                 (e.tagName === 'SELECT' ? 'select' : 'click');
+
+    const ctrlObj = {
+      node: nodeId,
+      role: rname,
+      kind,
+      label: ctrlLabel,
+    };
+
+    if (['checkbox', 'radio'].includes(e.type)) {
+      ctrlObj.checked = String(e.checked);
+    } else if (e.hasAttribute('aria-checked')) {
+      ctrlObj.checked = e.getAttribute('aria-checked');
+    }
+
+    if (e.hasAttribute('aria-selected')) {
+      ctrlObj.selected = e.getAttribute('aria-selected');
+    } else if ('selected' in e && e.selected !== undefined) {
+      ctrlObj.selected = String(e.selected);
+    }
+
+    if (e.tagName === 'SELECT') {
+      const selVal = [...e.selectedOptions].map(o => o.label || o.value).join(', ');
+      if (selVal) ctrlObj.value = selVal.slice(0, 80);
+    } else if ('value' in e && e.value) {
+      ctrlObj.value = String(e.value).slice(0, 80);
+    }
+
+    page_controls.push(ctrlObj);
+  }
   const dialogs=Array.isArray(window.__reflexDialogs)?window.__reflexDialogs.slice(0,5):[];
   const dlgPrefix=dialogs.length?dialogs.join('\n')+'\n':'';
   const text=(dlgPrefix+words.join('\n')).slice(0,6000), full_text=(dlgPrefix+fullWords.join('\n')).slice(0,30000), height=document.documentElement.scrollHeight;
   const page_key=cache.pageKey(), guards={};
   for (const a of actions) if (!(a.node in guards)) guards[a.node]=cache.guard(cache.nodes.get(a.node));
+  for (const c of page_controls) if (!(c.node in guards)) guards[c.node]=cache.guard(cache.nodes.get(c.node));
   nameCache=null;
   const semantics=actions.map(({rect,...action})=>action);
   const marker=[performance.timeOrigin,location.href,scrollX,scrollY,innerWidth,innerHeight,
@@ -456,6 +524,6 @@
   if (scrollY+innerHeight<height-2) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
   if (scrollY>0) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
   actions.push({id:'wait',kind:'wait',label:'Wait for the page to update'});
-  return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,page_links,
+  return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,page_links,page_controls,
     scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions};
 })()
