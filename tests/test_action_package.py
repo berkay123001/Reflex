@@ -599,7 +599,7 @@ def test_executor_4_step_all_agree_single_s2_call() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", return_value=decision) as mock_sup,
-        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.ground_target", side_effect=s1_responses),
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):
         session = ReflexSession(url="https://example.com/quiz", goal="Complete quiz", config=cfg)
@@ -607,7 +607,7 @@ def test_executor_4_step_all_agree_single_s2_call() -> None:
         # Step 1: Initial escalation to S2, which plans package and runs Step 1
         snap1 = session.step()
         assert len(session.history) == 1
-        assert session.history[0]["actor"] == "S1"
+        assert session.history[0]["actor"] == "S2"  # step 1 is the Supervisor's own action
         assert session.history[0]["package"]["step"] == 1
         assert session.history[0]["package"]["of"] == 4
         assert session.history[0]["package"]["agreed"] is True
@@ -692,7 +692,7 @@ def test_executor_step2_mismatch_aborts_and_escalates_to_s2() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
-        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.ground_target", side_effect=s1_responses),
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):
         session = ReflexSession(url="https://example.com/quiz", goal="Complete quiz", config=cfg)
@@ -757,7 +757,7 @@ def test_executor_missing_node_re_render_label_match_executes() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", return_value=decision) as mock_sup,
-        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.ground_target", side_effect=s1_responses),
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):
         session = ReflexSession(url="https://example.com/form", goal="Agree and proceed", config=cfg)
@@ -821,7 +821,7 @@ def test_executor_missing_node_label_mismatch_aborts() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
-        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.ground_target", side_effect=s1_responses),
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):
         session = ReflexSession(url="https://example.com/form", goal="Form", config=cfg)
@@ -892,7 +892,7 @@ def test_executor_url_change_aborts_package() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
-        patch("reflex.agent.choose_action", return_value=s1_resp),
+        patch("reflex.agent.ground_target", return_value=s1_resp),
         patch("reflex.agent.verify_step", return_value=url_change_verify),
     ):
         session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
@@ -964,7 +964,7 @@ def test_executor_no_progress_aborts_package() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
-        patch("reflex.agent.choose_action", return_value=s1_resp),
+        patch("reflex.agent.ground_target", return_value=s1_resp),
         patch("reflex.agent.verify_step", return_value=fake_verify),
     ):
         session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
@@ -1020,7 +1020,7 @@ def test_executor_s1_error_shields_session_from_crash() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
-        patch("reflex.agent.choose_action", side_effect=s1_effects),
+        patch("reflex.agent.ground_target", side_effect=s1_effects),
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):
         session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
@@ -1068,7 +1068,7 @@ def test_executor_type_text_uses_s2_preset_text() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", return_value=decision),
-        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.ground_target", side_effect=s1_responses),
         patch("reflex.agent.generate_field_text") as mock_field_text,
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):

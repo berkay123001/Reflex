@@ -237,6 +237,84 @@ def build_system1_request(
     return body, targets, controls
 
 
+def _decision_endpoint(config: ReflexConfig) -> tuple[str, dict[str, str]]:
+    """Return the System 1 decision URL and auth headers for the configured backend."""
+    if config.decision_backend == "local_turnike":
+        return config.local_turnike_url, {"Authorization": "Bearer local"}
+    return OPENROUTER_DECISIONS_URL, {"Authorization": f"Bearer {get_openrouter_api_key()}"}
+
+
+def _post_decision(body: dict[str, Any], config: ReflexConfig) -> tuple[dict[str, Any], str | None]:
+    """POST a System 1 request; one retry for remote transient failures. Returns (result, retry_reason)."""
+    url, headers = _decision_endpoint(config)
+    last_err: Exception | None = None
+    retry_reason: str | None = None
+    for attempt in range(2):
+        try:
+            resp = _HTTP_CLIENT.post(url, json=body, headers=headers)
+            if (
+                config.decision_backend != "local_turnike"
+                and _retryable_http_status(resp.status_code)
+                and attempt == 0
+            ):
+                retry_reason = f"http_{resp.status_code}"
+                time.sleep(HTTP_RETRY_DELAY_S)
+                continue
+            resp.raise_for_status()
+            return resp.json(), retry_reason
+        except Exception as exc:
+            last_err = exc
+            if config.decision_backend == "local_turnike" and isinstance(exc, httpx.TransportError):
+                raise RuntimeError(
+                    f"System 1 ({config.decision_backend}) transport failed: {exc}"
+                ) from exc
+            transport_error = isinstance(exc, (httpx.TransportError, httpx.TimeoutException))
+            if config.decision_backend != "local_turnike" and transport_error and attempt == 0:
+                retry_reason = "transport"
+                time.sleep(HTTP_RETRY_DELAY_S)
+                continue
+            break
+    raise RuntimeError(f"System 1 ({config.decision_backend}) request failed: {last_err}")
+
+
+def ground_target(
+    page: dict[str, Any],
+    instruction: str,
+    operation: str,
+    history: list[dict[str, Any]],
+    config: ReflexConfig,
+) -> dict[str, Any]:
+    """Ask System 1 which element matches `instruction` for a fixed `operation` (action-package grounding).
+
+    Sends the regular System 1 request with the instruction as goal, restricted to the
+    `<operation>_target` question. Turnike scores a target question only for the operation it picks
+    itself, so a full request could return no target when it prefers e.g. scrolling.
+    """
+    body, targets, _ = build_system1_request(page, instruction, history, config)
+    op = operation.upper()
+    key = op.lower() + "_target"
+    if key not in body["questions"] or op not in targets:
+        return {"target": None, "choice": None, "raw_answers": {}, "targets": targets, "latency_ms": 0}
+    body["questions"] = {key: body["questions"][key]}
+    started = time.perf_counter()
+    result, retry_reason = _post_decision(body, config)
+    answer = _normalize_answer((result.get("answers") or {}).get(key, {}), targets[op])
+    return {
+        "target": answer["choice"],
+        "choice": targets[op][answer["choice"]]["id"],
+        "confidence": answer["confidence"],
+        "target_confidence": answer["confidence"],
+        "target_probabilities": answer["probabilities"],
+        "raw_answers": {key: answer},
+        "targets": targets,
+        "model": result.get("model", config.jev_model),
+        "backend": config.decision_backend,
+        "usage": result.get("usage", {}),
+        "retry_reason": retry_reason,
+        "latency_ms": round((time.perf_counter() - started) * 1000),
+    }
+
+
 def choose_action(
     page: dict[str, Any],
     compiled_goal: str,
@@ -261,46 +339,8 @@ def choose_action(
     operations = dict(body["questions"]["operation"]["criteria"])
 
     started = time.perf_counter()
-    if config.decision_backend == "local_turnike":
-        url = config.local_turnike_url
-        headers = {"Authorization": "Bearer local"}
-    else:
-        url = OPENROUTER_DECISIONS_URL
-        headers = {"Authorization": f"Bearer {get_openrouter_api_key()}"}
-
-    last_err: Exception | None = None
-    result: dict[str, Any] = {}
-    retry_reason: str | None = None
-    succeeded = False
-    for attempt in range(2):
-        try:
-            resp = _HTTP_CLIENT.post(url, json=body, headers=headers)
-            if (
-                config.decision_backend != "local_turnike"
-                and _retryable_http_status(resp.status_code)
-                and attempt == 0
-            ):
-                retry_reason = f"http_{resp.status_code}"
-                time.sleep(HTTP_RETRY_DELAY_S)
-                continue
-            resp.raise_for_status()
-            result = resp.json()
-            succeeded = True
-            break
-        except Exception as exc:
-            last_err = exc
-            if config.decision_backend == "local_turnike" and isinstance(exc, httpx.TransportError):
-                raise RuntimeError(
-                    f"System 1 ({config.decision_backend}) transport failed: {exc}"
-                ) from exc
-            transport_error = isinstance(exc, (httpx.TransportError, httpx.TimeoutException))
-            if config.decision_backend != "local_turnike" and transport_error and attempt == 0:
-                retry_reason = "transport"
-                time.sleep(HTTP_RETRY_DELAY_S)
-                continue
-            break
-    if not succeeded:
-        raise RuntimeError(f"System 1 ({config.decision_backend}) request failed: {last_err}")
+    url, headers = _decision_endpoint(config)
+    result, retry_reason = _post_decision(body, config)
 
     answers = result.get("answers") or {}
     op_answer = _normalize_answer(answers.get("operation", {}), operations)

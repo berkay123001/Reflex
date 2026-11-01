@@ -55,7 +55,7 @@ from .supervisor import (
     interpret_user_message,
     resolve_escalation,
 )
-from .system1 import MAX_SUPERVISOR_ELEMENTS, MAX_SYSTEM1_ELEMENTS, action_space, choose_action
+from .system1 import MAX_SUPERVISOR_ELEMENTS, MAX_SYSTEM1_ELEMENTS, action_space, choose_action, ground_target
 from .verifier import VerificationResult, verify_step
 
 
@@ -183,6 +183,7 @@ class ReflexSession:
         # Action package execution state (G10 R3 & R4)
         self.active_package: ActionPackage | None = None
         self.packages_started: int = 0
+        self.packages_completed: int = 0
         self.package_steps_executed: int = 0
         self.package_aborts: Counter[str] = Counter()
         self.s1_pkg_step1_agreed: int = 0
@@ -448,6 +449,7 @@ class ReflexSession:
                 "s2_escalations": s2_calls,
                 "s2_calls": s2_calls,
                 "packages_started": self.packages_started,
+                "packages_completed": self.packages_completed,
                 "package_steps_executed": self.package_steps_executed,
                 "package_aborts": dict(self.package_aborts),
                 "s1_package_agreement": {
@@ -1094,6 +1096,68 @@ class ReflexSession:
         )
         return self.snapshot()
 
+    def _abort_package(
+        self,
+        pkg: ActionPackage,
+        trigger: str,
+        detail: str,
+        *,
+        step_t0: float,
+        pre_obs_ms: int = 0,
+    ) -> dict[str, Any]:
+        """Abort the active package before its current step runs and hand the page back to System 2."""
+        self.package_aborts[trigger] += 1
+        pkg.aborted = True
+        pkg.abort_trigger = trigger
+        pkg.abort_reason = detail
+        reason = format_package_abort_reason(
+            pkg.current_step_index, pkg.total_steps, trigger, detail, pkg.remaining_instructions()
+        )
+        self.active_package = None
+        return self._handle_escalation(
+            trigger_type=trigger, reason=reason, s1_decision=None, step_t0=step_t0, pre_obs_ms=pre_obs_ms
+        )
+
+    def _finish_package_step(self, pkg: ActionPackage) -> None:
+        """Advance, complete or abort the package after one executed step (step 1 and step k alike)."""
+        last_h = self.history[-1] if self.history else {}
+        v = last_h.get("verification", {})
+        trigger: str | None = None
+        detail = ""
+        if last_h.get("url_changed"):
+            trigger, detail = "url_changed", f"URL changed to {last_h.get('url')}"
+        elif not v.get("effective_progress", True):
+            trigger, detail = "no_progress", "Validator observed no effective progress"
+        elif v.get("loop_detected"):
+            trigger, detail = "loop_detected", "Validator detected loop"
+        elif v.get("oscillation_detected"):
+            trigger, detail = "oscillation_detected", "Validator detected oscillation"
+        elif self.pending_escalation_reason is not None:
+            trigger, detail = "pending_escalation", f"Pending escalation: {self.pending_escalation_reason}"
+        elif self.status != "ready":
+            trigger, detail = "status_not_ready", f"Status changed to {self.status}"
+
+        is_last = pkg.current_step_index >= pkg.total_steps
+        # A page change after the final step (typically submit/next) is the expected end, not an abort.
+        if trigger is None or (is_last and trigger == "url_changed"):
+            pkg.current_step_index += 1
+            if pkg.current_step_index > pkg.total_steps:
+                self.packages_completed += 1
+                self.active_package = None
+            return
+
+        self.package_aborts[trigger] += 1
+        pkg.aborted = True
+        pkg.abort_trigger = trigger
+        pkg.abort_reason = detail
+        if "package" in last_h:
+            last_h["package"]["abort_reason"] = detail
+        reason = format_package_abort_reason(
+            pkg.current_step_index, pkg.total_steps, trigger, detail, pkg.remaining_instructions()[1:]
+        )
+        self.pending_escalation_reason = (trigger, reason)
+        self.active_package = None
+
     def _execute_package_step(self, step_t0: float) -> dict[str, Any]:
         """Execute step k (k >= 2) of an active action package."""
         pkg = self.active_package
@@ -1189,13 +1253,29 @@ class ReflexSession:
             self.active_package = None
             return self.snapshot()
 
-        # 3. Query System 1 with error shielding
+        # 3. System 1 sees at most MAX_SYSTEM1_ELEMENTS; a target System 2 picked beyond that window
+        # cannot be confirmed, so hand the step back instead of counting a false disagreement.
+        page_actions = self.page.get("actions", [])
+        expected_node = step.expected.node
+        if expected_node is not None and any(a.get("node") == expected_node for a in page_actions):
+            _, s1_window, _ = action_space(page_actions)
+            if not any(a.get("node") == expected_node for a in s1_window.get(step.operation, {}).values()):
+                return self._abort_package(
+                    pkg,
+                    "package_target_out_of_window",
+                    f"Expected node {expected_node} is outside System 1's {MAX_SYSTEM1_ELEMENTS}-element window",
+                    step_t0=step_t0,
+                    pre_obs_ms=pre_obs_ms,
+                )
+
+        # 4. Query System 1 (target question only) with error shielding
         compiled_instruction = compile_system1_instruction(step.instruction)
         s1_t0 = time.perf_counter()
         try:
-            s1_decision = choose_action(
+            s1_decision = ground_target(
                 self.page,
                 compiled_instruction,
+                step.operation,
                 self.history,
                 self.config,
             )
@@ -1285,7 +1365,7 @@ class ReflexSession:
             "abort_reason": None,
         }
         self.package_steps_executed += 1
-        snap = self._execute_and_verify(
+        self._execute_and_verify(
             action=chosen_act,
             actor="S1",
             operation=step.operation,
@@ -1306,52 +1386,8 @@ class ReflexSession:
             package_meta=pkg_history_meta,
         )
 
-        # 8. Post-step verification checks
-        last_h = self.history[-1] if self.history else {}
-        v = last_h.get("verification", {})
-        post_abort_trig: str | None = None
-        post_abort_detail: str | None = None
-        if last_h.get("url_changed"):
-            post_abort_trig = "url_changed"
-            post_abort_detail = f"URL changed to {last_h.get('url')}"
-        elif not v.get("effective_progress", True):
-            post_abort_trig = "no_progress"
-            post_abort_detail = "Validator observed no effective progress"
-        elif v.get("loop_detected"):
-            post_abort_trig = "loop_detected"
-            post_abort_detail = "Validator detected loop"
-        elif v.get("oscillation_detected"):
-            post_abort_trig = "oscillation_detected"
-            post_abort_detail = "Validator detected oscillation"
-        elif self.pending_escalation_reason is not None:
-            post_abort_trig = "pending_escalation"
-            post_abort_detail = f"Pending escalation: {self.pending_escalation_reason}"
-        elif self.status != "ready":
-            post_abort_trig = "status_not_ready"
-            post_abort_detail = f"Status changed to {self.status}"
-
-        if post_abort_trig is not None:
-            self.package_aborts[post_abort_trig] += 1
-            pkg.aborted = True
-            pkg.abort_trigger = post_abort_trig
-            pkg.abort_reason = post_abort_detail
-            if "package" in last_h:
-                last_h["package"]["abort_reason"] = post_abort_detail
-            reason = format_package_abort_reason(
-                pkg.current_step_index,
-                pkg.total_steps,
-                post_abort_trig,
-                post_abort_detail or "",
-                pkg.remaining_instructions()[1:],
-            )
-            self.pending_escalation_reason = (post_abort_trig, reason)
-            self.active_package = None
-        else:
-            pkg.current_step_index += 1
-            if pkg.current_step_index > pkg.total_steps:
-                self.active_package = None
-
-        return snap
+        self._finish_package_step(pkg)
+        return self.snapshot()  # reflects the package bookkeeping above
 
     def _handle_escalation(
         self,
@@ -1735,32 +1771,29 @@ class ReflexSession:
                 self.packages_started += 1
                 step_1 = package.steps[0]
 
-                # Non-blocking S1 agreement query on step 1 for metrics
-                agreed = False
+                # Step 1 is the Supervisor's own action. System 1 is asked the same grounding question
+                # only to measure agreement; the probe never blocks the step. A failed probe or a target
+                # outside System 1's window is not counted.
+                agreed: bool | None = None
                 try:
-                    s1_resp = choose_action(
+                    s1_resp = ground_target(
                         self.page,
                         compile_system1_instruction(step_1.instruction),
+                        step_1.operation,
                         self.history,
                         self.config,
                     )
-                    s1_t_idx = extract_s1_target_index(
-                        s1_resp.get("raw_answers", {}), step_1.operation
-                    )
-                    if (
-                        s1_t_idx
-                        and targets.get(step_1.operation, {})
-                        .get(s1_t_idx, {})
-                        .get("node")
-                        == step_1.expected.node
-                    ):
-                        agreed = True
+                    s1_t_idx = extract_s1_target_index(s1_resp.get("raw_answers", {}), step_1.operation)
+                    s1_targets = (s1_resp.get("targets") or targets).get(step_1.operation, {})
+                    if any(a.get("node") == step_1.expected.node for a in s1_targets.values()):
+                        agreed = bool(s1_t_idx) and s1_targets.get(s1_t_idx, {}).get("node") == step_1.expected.node
                 except Exception:
-                    agreed = False
+                    agreed = None
 
-                self.s1_pkg_step1_total += 1
-                if agreed:
-                    self.s1_pkg_step1_agreed += 1
+                if agreed is not None:
+                    self.s1_pkg_step1_total += 1
+                    if agreed:
+                        self.s1_pkg_step1_agreed += 1
 
                 pkg_history_meta = {
                     "id": package.id,
@@ -1770,9 +1803,9 @@ class ReflexSession:
                     "abort_reason": None,
                 }
                 self.package_steps_executed += 1
-                snap = self._execute_and_verify(
+                self._execute_and_verify(
                     action=action_dict,
-                    actor="S1",
+                    actor="S2",
                     operation=sup.operation or action_dict["kind"].upper(),
                     target=sup.target,
                     confidence=1.0,
@@ -1791,50 +1824,8 @@ class ReflexSession:
                     package_meta=pkg_history_meta,
                 )
 
-                # Post-step verification checks for abort
-                last_h = self.history[-1] if self.history else {}
-                v = last_h.get("verification", {})
-                abort_trig: str | None = None
-                abort_detail: str | None = None
-                if last_h.get("url_changed"):
-                    abort_trig = "url_changed"
-                    abort_detail = f"URL changed to {last_h.get('url')}"
-                elif not v.get("effective_progress", True):
-                    abort_trig = "no_progress"
-                    abort_detail = "Validator observed no effective progress"
-                elif v.get("loop_detected"):
-                    abort_trig = "loop_detected"
-                    abort_detail = "Validator detected loop"
-                elif v.get("oscillation_detected"):
-                    abort_trig = "oscillation_detected"
-                    abort_detail = "Validator detected oscillation"
-                elif self.pending_escalation_reason is not None:
-                    abort_trig = "pending_escalation"
-                    abort_detail = f"Pending escalation: {self.pending_escalation_reason}"
-                elif self.status != "ready":
-                    abort_trig = "status_not_ready"
-                    abort_detail = f"Status changed to {self.status}"
-
-                if abort_trig is not None:
-                    self.package_aborts[abort_trig] += 1
-                    package.aborted = True
-                    package.abort_trigger = abort_trig
-                    package.abort_reason = abort_detail
-                    if "package" in last_h:
-                        last_h["package"]["abort_reason"] = abort_detail
-                    reason = format_package_abort_reason(
-                        1,
-                        package.total_steps,
-                        abort_trig,
-                        abort_detail or "",
-                        package.remaining_instructions()[1:],
-                    )
-                    self.pending_escalation_reason = (abort_trig, reason)
-                    self.active_package = None
-                else:
-                    package.current_step_index = 2
-
-                return snap
+                self._finish_package_step(package)
+                return self.snapshot()  # reflects the package bookkeeping above
 
         return self._execute_and_verify(
             action=action_dict,
