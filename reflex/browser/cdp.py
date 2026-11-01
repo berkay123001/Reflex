@@ -292,6 +292,9 @@ def clean_surrogates(data: Any) -> Any:
 class Browser:
     """Single-tab CDP browser session with fresh-state verification and recovery actions."""
 
+    _frame_sessions: dict[str, str] = {}
+    _iframe_node_map: dict[int, dict[str, Any]] = {}
+
     def __init__(self, url: str, *, width: int = 1120, height: int = 780, port: int | None = None):
         cdp_port = port or DEFAULT_CDP_PORT
         if port is None:
@@ -695,7 +698,8 @@ class Browser:
                 if self._try_pierce_cloudflare(info):
                     time.sleep(1.2)
                     info = self.evaluate(READ_STATE) or info
-                self._supplement_iframes(info)
+                if info.get("has_iframes"):
+                    self._supplement_iframes(info)
                 native_dlgs = getattr(self, "_native_dialogs", None)
                 if isinstance(native_dlgs, list) and native_dlgs:
                     prefix = "\n".join(native_dlgs) + "\n"
@@ -1105,11 +1109,13 @@ class Browser:
                     f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
                     f"return f?.contentWindow ? f.contentWindow.eval({json.dumps(_ACCESSIBLE_NAME)})({json.dumps(lookup_node)}) : null; }})()"
                 )
-            else:
+            elif is_iframe and session_id:
                 current = self.evaluate(
                     _ACCESSIBLE_NAME + "(" + json.dumps(lookup_node) + ")",
                     session_id=session_id,
                 )
+            else:
+                current = self.evaluate(_ACCESSIBLE_NAME + "(" + json.dumps(lookup_node) + ")")
         except Exception:
             return True
         if not isinstance(current, str) or not current.strip():
@@ -1244,8 +1250,14 @@ class Browser:
           if (action.kind==='click') {
             const link=e.tagName==='A'?e:e.closest('a[href]');
             if (link) link.removeAttribute('target');
-            if (e.removeAttribute) e.removeAttribute('target');
+            const form=e.form || e.closest('form');
+            if (form) form.removeAttribute('target');
+            if (e.removeAttribute) {
+              e.removeAttribute('target');
+              e.removeAttribute('formtarget');
+            }
             document.querySelectorAll('base[target]').forEach(b=>b.removeAttribute('target'));
+            document.querySelectorAll('[formtarget]').forEach(b=>b.removeAttribute('formtarget'));
           }
           let r=e.getBoundingClientRect();
           if (overlayChoice && (r.width<=0 || r.height<=0)) return null;
@@ -1261,7 +1273,10 @@ class Browser:
           const y=(visTop+visBottom)/2;
           if (!r.width || !r.height || x<0 || y<0 || x>=innerWidth || y>=innerHeight) return null;
           const rx=Math.round(r.x), ry=Math.round(r.y), rw=Math.round(r.width), rh=Math.round(r.height);
-          const hit=document.elementFromPoint(x,y);
+          const rootNode=e.getRootNode?.();
+          const hit=(rootNode && typeof rootNode.elementFromPoint==='function')
+            ? rootNode.elementFromPoint(x,y)
+            : document.elementFromPoint(x,y);
           if (overlayChoice && hit!==node) return null;
           const interactiveSel='button,a,[role="button"],[role="link"],[role="option"],[role="menuitem"],[role="tab"]';
           const hitOk=hit && (
@@ -1329,8 +1344,14 @@ class Browser:
                   if (action.kind==='click') {
                     const link=e.tagName==='A'?e:e.closest('a[href]');
                     if (link) link.removeAttribute('target');
-                    if (e.removeAttribute) e.removeAttribute('target');
+                    const form=e.form || e.closest('form');
+                    if (form) form.removeAttribute('target');
+                    if (e.removeAttribute) {
+                      e.removeAttribute('target');
+                      e.removeAttribute('formtarget');
+                    }
                     document.querySelectorAll('base[target]').forEach(b=>b.removeAttribute('target'));
+                    document.querySelectorAll('[formtarget]').forEach(b=>b.removeAttribute('formtarget'));
                   }
                   let r=e.getBoundingClientRect();
                   if (overlayChoice && (r.width<=0 || r.height<=0)) return null;
@@ -1346,7 +1367,10 @@ class Browser:
                   const y=(visTop+visBottom)/2;
                   if (!r.width || !r.height || x<0 || y<0 || x>=innerWidth || y>=innerHeight) return null;
                   const rx=Math.round(r.x), ry=Math.round(r.y), rw=Math.round(r.width), rh=Math.round(r.height);
-                  const hit=document.elementFromPoint(x,y);
+                  const rootNode=e.getRootNode?.();
+                  const hit=(rootNode && typeof rootNode.elementFromPoint==='function')
+                    ? rootNode.elementFromPoint(x,y)
+                    : document.elementFromPoint(x,y);
                   if (overlayChoice && hit!==node) return null;
                   const interactiveSel='button,a,[role="button"],[role="link"],[role="option"],[role="menuitem"],[role="tab"]';
                   const hitOk=hit && (
@@ -1471,6 +1495,39 @@ class Browser:
                 except Exception:
                     pass
                 self.call("Input.insertText", text=text)
+                try:
+                    setter_js = """((nodeId, textVal) => {
+                      const e = window.__jevFast?.nodes.get(nodeId);
+                      if (!e) return;
+                      const specialTypes = ['date', 'time', 'datetime-local', 'month', 'week', 'range'];
+                      if (e.tagName === 'INPUT' && specialTypes.includes(e.type)) {
+                        const proto = window.HTMLInputElement?.prototype;
+                        const nativeSetter = proto ? Object.getOwnPropertyDescriptor(proto, 'value')?.set : null;
+                        if (nativeSetter) nativeSetter.call(e, textVal);
+                        else e.value = textVal;
+                        e.dispatchEvent(new Event('input', {bubbles: true}));
+                        e.dispatchEvent(new Event('change', {bubbles: true}));
+                      } else if (e.getAttribute('role') === 'slider' && !('value' in e)) {
+                        e.setAttribute('aria-valuenow', textVal);
+                        e.dispatchEvent(new Event('input', {bubbles: true}));
+                        e.dispatchEvent(new Event('change', {bubbles: true}));
+                      }
+                    })"""
+                    if is_iframe and frame_index is not None:
+                        self.evaluate(
+                            f"document.querySelectorAll('iframe')[{frame_index}].contentWindow.eval({json.dumps(setter_js + '(' + json.dumps(lookup_node) + ', ' + json.dumps(text) + ')')})"
+                        )
+                    elif is_iframe:
+                        self.evaluate(
+                            setter_js + "(" + json.dumps(lookup_node) + ", " + json.dumps(text) + ")",
+                            session_id=session_id,
+                        )
+                    else:
+                        self.evaluate(
+                            setter_js + "(" + json.dumps(action.get("node")) + ", " + json.dumps(text) + ")"
+                        )
+                except Exception:
+                    pass
                 search_js = """(nodeId => {
                   const e = window.__jevFast?.nodes.get(nodeId);
                   if (!e) return false;
@@ -1538,7 +1595,7 @@ class Browser:
         """Scroll a specific DOM node into view deterministically using instant center alignment."""
         if not isinstance(node, int):
             return False
-        iframe_info = self._iframe_node_map.get(node)
+        iframe_info = getattr(self, "_iframe_node_map", {}).get(node)
         if iframe_info:
             session_id = iframe_info.get("session_id")
             frame_index = iframe_info.get("frame_index")

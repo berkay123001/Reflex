@@ -1,5 +1,18 @@
 (() => {
   if (!document.body) return null;
+  const allRoots = [document];
+  const collectShadowRoots = start => {
+    if (!start) return;
+    const walker = document.createTreeWalker(start, NodeFilter.SHOW_ELEMENT);
+    let el;
+    while ((el = walker.nextNode())) {
+      if (el.shadowRoot) {
+        allRoots.push(el.shadowRoot);
+        collectShadowRoots(el.shadowRoot);
+      }
+    }
+  };
+  collectShadowRoots(document.body);
   const cache = window.__jevFast ||= {ids:new WeakMap(), nodes:new Map(), next:1};
   const identity = e => {
     if (!cache.ids.has(e)) cache.ids.set(e,cache.next++);
@@ -58,7 +71,8 @@
   const MAX_PAGE_CONTROLS = 150;
   const MAX_CONTROL_LABEL_LEN = 140;
   const roles=['button','link','checkbox','radio','switch','tab','menuitem','menuitemradio',
-    'option','gridcell','combobox','textbox','searchbox','spinbutton'];
+    'menuitemcheckbox','option','gridcell','combobox','textbox','searchbox','spinbutton',
+    'slider','listbox','treeitem'];
   const challengeIframeSel='iframe[src*="challenges.cloudflare.com"],iframe[title*="Cloudflare"],iframe[title*="challenge" i],iframe[src*="recaptcha"],iframe[src*="hcaptcha"]';
   const selector='a[href],button,input,textarea,select,summary,[contenteditable="true"],'+
     challengeIframeSel+','+
@@ -76,12 +90,13 @@
       if (['button','submit','reset','image'].includes(e.type)) return 'button';
       if (e.type==='search') return 'searchbox';
       if (e.type==='number') return 'spinbutton';
-      if (['text','email','url','tel'].includes(e.type)) return 'textbox';
+      if (['text','email','url','tel','date','time','datetime-local','month','week'].includes(e.type)) return 'textbox';
+      if (e.type==='range') return 'slider';
     }
     return null;
   };
   cache.pageKey=()=>[performance.timeOrigin,location.href,scrollX,scrollY,innerWidth,innerHeight,
-    [...document.querySelectorAll('input,textarea,select')].filter(safe)
+    [...allRoots.flatMap(r=>[...r.querySelectorAll('input,textarea,select')])].filter(safe)
       .map(e=>[identity(e),e.value,e.checked,e.selectedIndex,e.disabled,e.readOnly])];
   cache.guard=e=>{
     if (!e?.isConnected || !(visible(e) || choiceProxy(e) || choiceOverlay(e))) return null;
@@ -126,7 +141,7 @@
   const owningForm=el=>el && (el.form || el.closest('form'));
   const hasClickHandler=el=>!!el && (el.hasAttribute('onclick') || /(^|;)\s*click:/.test(el.getAttribute('jsaction')||''));
   const looseRadioNames=new Set();
-  for (const r of document.querySelectorAll('input[type="radio"],[role="radio"]')) {
+  for (const r of allRoots.flatMap(r=>[...r.querySelectorAll('input[type="radio"],[role="radio"]')])) {
     if (r.matches(':disabled') || r.closest('[aria-disabled="true"]') || owningForm(r)) continue;
     const groupName=r.getAttribute('name') || (r.closest('[role="radiogroup"]') ? 'rg'+identity(r.closest('[role="radiogroup"]')) : '');
     if (groupName) looseRadioNames.add(groupName);
@@ -138,7 +153,7 @@
     if (!el) return false;
     if (isFormSubmitter(el)) return true;
     const rname=role(el);
-    if (['radio','checkbox','textbox','searchbox','combobox','option','spinbutton','link','tab','menuitem','menuitemradio'].includes(rname)) return false;
+    if (['radio','checkbox','textbox','searchbox','combobox','option','spinbutton','link','tab','menuitem','menuitemradio','menuitemcheckbox','slider','listbox','treeitem'].includes(rname)) return false;
     if (el.tagName==='LABEL' && el.querySelector('input,textarea,select')) return false;
     const buttonLike=el.tagName==='BUTTON' || rname==='button' || hasClickHandler(el);
     if (!buttonLike || owningForm(el)) return false;
@@ -212,11 +227,11 @@
   };
   const computeGroupLabel = (e, rname) => {
     if (rname === 'radio') return groupQuestion(e);
-    if (['checkbox', 'textbox', 'switch'].includes(rname)) {
+    if (['checkbox', 'textbox', 'switch', 'slider'].includes(rname)) {
       const qItem = e.closest('[role="listitem"],[role="group"],[role="radiogroup"],fieldset');
       const qHead = qItem?.querySelector('[role="heading"],legend,h2,h3,h4');
       let qTxt = cleanQuestion(qHead?.innerText);
-      if (!qTxt && rname !== 'textbox') qTxt = cleanQuestion(choiceQuestion(e));
+      if (!qTxt && rname !== 'textbox' && rname !== 'slider') qTxt = cleanQuestion(choiceQuestion(e));
       return internalGroupName(qTxt) ? '' : qTxt;
     }
     return '';
@@ -239,75 +254,78 @@
   };
   const seenCardLinks=new Set();
   const actions=[];
-  for (const e of document.querySelectorAll(selector)) {
-    if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
-    const proxy=visible(e) ? null : choiceProxy(e);
-    if (!visible(e) && !proxy && !choiceOverlay(e)) continue;
-    const box=proxy || e;
-    const parentClickable=e.parentElement?.closest('a[href],button,[role="button"],[role="link"]');
-    if (parentClickable && (name(parentClickable)||'').trim() && (name(parentClickable)||'').trim()===(name(e)||'').trim()) continue;
-    const r=box.getBoundingClientRect(), rname=role(e);
-    const clip=getClipRect(box.parentElement);
-    const visLeft=Math.max(clip.left,r.left), visRight=Math.min(clip.right,r.right);
-    const visTop=Math.max(clip.top,r.top), visBottom=Math.min(clip.bottom,r.bottom);
-    const visW=visRight-visLeft, visH=visBottom-visTop;
-    if (!rname || r.width<=0 || r.height<=0 || visW<Math.min(16,r.width*0.5) || visH<Math.min(20,r.height*0.35)) continue;
-    if (rname==='gridcell' && e.querySelector('button,[role="button"]')) continue;
-    const { label: lbl, accessibleName, groupLabel } = computeControlLabel(e, rname);
-    const linkEl=e.tagName==='A'?e:e.closest('a[href]');
-    const attrHref=linkEl?.getAttribute('href')?.trim() ?? '';
-    const isPseudoHref=attrHref==='' || attrHref==='#' || /^javascript:/i.test(attrHref);
-    const rawHref=isPseudoHref ? attrHref : (linkEl?.href ? linkEl.href.slice(0,240) : '');
-    if (rname==='link' && rawHref && !isPseudoHref) {
-      const cardScope=e.closest('article,li,tr,[class*="Card-root"],[class*="card"]') || e.parentElement;
-      const scopeId=cardScope ? identity(cardScope) : 0;
-      const dedupKey=`${scopeId}|${rawHref}|${lbl.trim().toLowerCase()}`;
-      if (seenCardLinks.has(dedupKey)) continue;
-      seenCardLinks.add(dedupKey);
-    }
-    const base={node:identity(e),role:rname,label:lbl,accessible_name:accessibleName,
-      rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
-    if (rawHref || rname==='link') base.href=rawHref;
-    const form=owningForm(e);
-    const fkey=form ? 'f'+identity(form) : null;
-    if (isFormSubmitter(e) || isCommitControl(e)) {
-      base.submits_form=true;
-      base.form_key=fkey || 'loose';
-    }
-    if (rname==='radio') {
-      const radioGroup=e.closest('[role="radiogroup"]');
-      const groupName=e.getAttribute('name') || (radioGroup ? 'rg'+identity(radioGroup) : '');
-      if (groupName) base.group=groupName;
-      if (groupLabel) base.group_label=groupLabel;
-      base.form_key=fkey || (groupName ? 'loose' : base.form_key);
-    }
-    if (controlRequired(e)) base.required=true;
-    if (rname!=='radio' && controlEmpty(e)) base.empty=true;
-    if (fkey && (rname==='checkbox' || e.tagName==='SELECT' || ['textbox','searchbox','spinbutton','combobox'].includes(rname))) {
-      base.form_key=fkey;
-    } else if (!fkey && controlRequired(e) && rname!=='radio') {
-      base.form_key='loose';
-    }
-    if (e.tagName==='SELECT' || ['textbox','searchbox','spinbutton','combobox'].includes(rname)) {
-      base.field_label=(name(e)||lbl).replace(/\s*\*\s*$/,'').trim();
-    }
-    for (const key of ['checked','selected','expanded']) {
-      const value=e.getAttribute('aria-'+key);
-      if (value!==null) base[key]=value;
-    }
-    if (['checkbox','radio'].includes(e.type)) base.checked=String(e.checked);
-    if (e.tagName==='SELECT') {
-      for (const o of e.options) if (!o.selected && !o.disabled && !o.closest('optgroup[disabled]'))
-        actions.push({...base,kind:'select',value:o.value,
-          current_value:[...e.selectedOptions].map(o=>o.label).join(', '),label:base.label+' → '+o.label});
-    } else {
-      const editable=!e.readOnly && e.getAttribute('aria-readonly')!=='true' &&
-        (['textbox','searchbox','spinbutton'].includes(rname) ||
-          (rname==='combobox' && ['INPUT','TEXTAREA'].includes(e.tagName)));
-      const value='value' in e ? String(e.value) :
-        e.isContentEditable || rname==='combobox' ? e.innerText.trim() : '';
-      actions.push({...base,kind:editable?'fill':'click',value});
-      if (editable && rname==='combobox' && !value) actions.push({...base,kind:'click',value,label:'Open '+base.label});
+  for (const root of allRoots) {
+    for (const e of root.querySelectorAll(selector)) {
+      if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
+      const proxy=visible(e) ? null : choiceProxy(e);
+      if (!visible(e) && !proxy && !choiceOverlay(e)) continue;
+      const box=proxy || e;
+      const parentClickable=e.parentElement?.closest('a[href],button,[role="button"],[role="link"]');
+      if (parentClickable && (name(parentClickable)||'').trim() && (name(parentClickable)||'').trim()===(name(e)||'').trim()) continue;
+      const r=box.getBoundingClientRect(), rname=role(e);
+      const clip=getClipRect(box.parentElement);
+      const visLeft=Math.max(clip.left,r.left), visRight=Math.min(clip.right,r.right);
+      const visTop=Math.max(clip.top,r.top), visBottom=Math.min(clip.bottom,r.bottom);
+      const visW=visRight-visLeft, visH=visBottom-visTop;
+      if (!rname || r.width<=0 || r.height<=0 || visW<Math.min(16,r.width*0.5) || visH<Math.min(20,r.height*0.35)) continue;
+      if (rname==='gridcell' && e.querySelector('button,[role="button"]')) continue;
+      const { label: lbl, accessibleName, groupLabel } = computeControlLabel(e, rname);
+      const linkEl=e.tagName==='A'?e:e.closest('a[href]');
+      const attrHref=linkEl?.getAttribute('href')?.trim() ?? '';
+      const isPseudoHref=attrHref==='' || attrHref==='#' || /^javascript:/i.test(attrHref);
+      const rawHref=isPseudoHref ? attrHref : (linkEl?.href ? linkEl.href.slice(0,240) : '');
+      if (rname==='link' && rawHref && !isPseudoHref) {
+        const cardScope=e.closest('article,li,tr,[class*="Card-root"],[class*="card"]') || e.parentElement;
+        const scopeId=cardScope ? identity(cardScope) : 0;
+        const dedupKey=`${scopeId}|${rawHref}|${lbl.trim().toLowerCase()}`;
+        if (seenCardLinks.has(dedupKey)) continue;
+        seenCardLinks.add(dedupKey);
+      }
+      const base={node:identity(e),role:rname,label:lbl,accessible_name:accessibleName,
+        rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+      if (rawHref || rname==='link') base.href=rawHref;
+      const form=owningForm(e);
+      const fkey=form ? 'f'+identity(form) : null;
+      if (isFormSubmitter(e) || isCommitControl(e)) {
+        base.submits_form=true;
+        base.form_key=fkey || 'loose';
+      }
+      if (rname==='radio') {
+        const radioGroup=e.closest('[role="radiogroup"]');
+        const groupName=e.getAttribute('name') || (radioGroup ? 'rg'+identity(radioGroup) : '');
+        if (groupName) base.group=groupName;
+        if (groupLabel) base.group_label=groupLabel;
+        base.form_key=fkey || (groupName ? 'loose' : base.form_key);
+      }
+      if (controlRequired(e)) base.required=true;
+      if (rname!=='radio' && controlEmpty(e)) base.empty=true;
+      if (fkey && (rname==='checkbox' || e.tagName==='SELECT' || ['textbox','searchbox','spinbutton','combobox','slider'].includes(rname))) {
+        base.form_key=fkey;
+      } else if (!fkey && controlRequired(e) && rname!=='radio') {
+        base.form_key='loose';
+      }
+      if (e.tagName==='SELECT' || ['textbox','searchbox','spinbutton','combobox','slider'].includes(rname)) {
+        base.field_label=(name(e)||lbl).replace(/\s*\*\s*$/,'').trim();
+      }
+      for (const key of ['checked','selected','expanded']) {
+        const value=e.getAttribute('aria-'+key);
+        if (value!==null) base[key]=value;
+      }
+      if (['checkbox','radio'].includes(e.type)) base.checked=String(e.checked);
+      if (e.tagName==='SELECT') {
+        for (const o of e.options) if (!o.selected && !o.disabled && !o.closest('optgroup[disabled]'))
+          actions.push({...base,kind:'select',value:o.value,
+            current_value:[...e.selectedOptions].map(o=>o.label).join(', '),label:base.label+' → '+o.label});
+      } else {
+        const editable=!e.readOnly && e.getAttribute('aria-readonly')!=='true' &&
+          (['textbox','searchbox','spinbutton','slider'].includes(rname) ||
+            (rname==='combobox' && ['INPUT','TEXTAREA'].includes(e.tagName)));
+        const value='value' in e ? String(e.value) :
+          e.getAttribute('aria-valuenow') ? String(e.getAttribute('aria-valuenow')) :
+          e.isContentEditable || rname==='combobox' ? e.innerText.trim() : '';
+        actions.push({...base,kind:editable?'fill':'click',value});
+        if (editable && rname==='combobox' && !value) actions.push({...base,kind:'click',value,label:'Open '+base.label});
+      }
     }
   }
   // Custom widgets (div/span answers, card toggles) carry no semantic role. Add the outermost element where
@@ -325,34 +343,47 @@
     for (const x of listedEls) if (x===el || x.contains(el) || el.contains(x)) return true;
     return false;
   };
-  const pointerRoot=el=>getComputedStyle(el).cursor==='pointer' &&
-    (!el.parentElement || getComputedStyle(el.parentElement).cursor!=='pointer');
+  const hasPointer=el=>el&&el!==document.body&&el!==document.documentElement&&getComputedStyle(el).cursor==='pointer';
+  const pointerRoot=el=>{
+    if (!hasPointer(el)) return false;
+    if (!hasPointer(el.parentElement)) return true;
+    let p=el.parentElement;
+    while (p&&hasPointer(p)) {
+      if (listedEls.has(p)) return false;
+      p=p.parentElement;
+    }
+    return true;
+  };
   const maxCustomArea=innerWidth*innerHeight*0.25;
   let customAdded=0;
-  for (const e of document.body.querySelectorAll('*')) {
+  for (const root of allRoots) {
     if (customAdded>=60) break;
-    if (['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','IFRAME'].includes(e.tagName)) continue;
-    const r=e.getBoundingClientRect();  // cheap filters first: most elements of a long page are off-screen
-    if (r.width<=0 || r.height<=0 || r.bottom<=0 || r.top>=innerHeight || r.right<=0 || r.left>=innerWidth) continue;
-    if (r.width*r.height>maxCustomArea) continue;
-    if (!hasClickHandler(e) && !pointerRoot(e)) continue;
-    if (e.matches(selector) || (e.closest('svg') && e.tagName.toLowerCase()!=='svg')) continue;
-    if (!visible(e) || e.closest('[aria-disabled="true"]') || touchesListed(e) || e.querySelector(selector)) continue;
-    const clip=getClipRect(e.parentElement);
-    const visW=Math.min(clip.right,r.right)-Math.max(clip.left,r.left);
-    const visH=Math.min(clip.bottom,r.bottom)-Math.max(clip.top,r.top);
-    if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
-    const lbl=name(e);
-    if (!lbl || lbl.length>120) continue;
-    const customAction={node:identity(e),role:'button',label:lbl,accessible_name:lbl,custom:true,kind:'click',value:'',
-      rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
-    if (isCommitControl(e)) {
-      customAction.submits_form=true;
-      customAction.form_key=owningForm(e) ? 'f'+identity(owningForm(e)) : 'loose';
+    const container = root === document ? document.body : root;
+    for (const e of container.querySelectorAll('*')) {
+      if (customAdded>=60) break;
+      if (['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','IFRAME'].includes(e.tagName)) continue;
+      const r=e.getBoundingClientRect();  // cheap filters first: most elements of a long page are off-screen
+      if (r.width<=0 || r.height<=0 || r.bottom<=0 || r.top>=innerHeight || r.right<=0 || r.left>=innerWidth) continue;
+      if (r.width*r.height>maxCustomArea) continue;
+      if (!hasClickHandler(e) && !pointerRoot(e)) continue;
+      if (e.matches(selector) || (e.closest('svg') && e.tagName.toLowerCase()!=='svg')) continue;
+      if (!visible(e) || e.closest('[aria-disabled="true"]') || touchesListed(e) || e.querySelector(selector)) continue;
+      const clip=getClipRect(e.parentElement);
+      const visW=Math.min(clip.right,r.right)-Math.max(clip.left,r.left);
+      const visH=Math.min(clip.bottom,r.bottom)-Math.max(clip.top,r.top);
+      if (visW<Math.min(16,r.width*0.5) || visH<Math.min(12,r.height*0.35)) continue;
+      const lbl=name(e);
+      if (!lbl || lbl.length>120) continue;
+      const customAction={node:identity(e),role:'button',label:lbl,accessible_name:lbl,custom:true,kind:'click',value:'',
+        rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+      if (isCommitControl(e)) {
+        customAction.submits_form=true;
+        customAction.form_key=owningForm(e) ? 'f'+identity(owningForm(e)) : 'loose';
+      }
+      actions.push(customAction);
+      listedEls.add(e);
+      customAdded++;
     }
-    actions.push(customAction);
-    listedEls.add(e);
-    customAdded++;
   }
   if (customAdded) {
     // Keep document order so System 1's first-60 element window sees custom widgets in reading order.
@@ -409,18 +440,24 @@
     clipCache.set(el,b);
     return b;
   };
-  const words=[], fullWords=[], walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
-  const range=document.createRange(); let node,length=0,fullLength=0;
-  while ((node=walker.nextNode()) && (length<6000 || fullLength<30000)) {
-    const value=node.textContent.trim(), parent=node.parentElement;
-    if (!value || !parent || parent.closest('script,style,noscript,template') || !visible(parent)) continue;
-    range.selectNodeContents(node); const r=range.getBoundingClientRect();
-    if (r.width<=0 || r.height<=0 || r.top>=getClipBottom(parent)-2) continue;
-    if (fullLength<30000) {
-      fullWords.push(value); fullLength+=value.length;
-    }
-    if (length<6000 && r.bottom>0 && r.top<innerHeight && r.right>0 && r.left<innerWidth) {
-      words.push(value); length+=value.length;
+  const words=[], fullWords=[];
+  const range=document.createRange(); let length=0,fullLength=0;
+  for (const root of allRoots) {
+    if (length>=6000 && fullLength>=30000) break;
+    const container = root === document ? document.body : root;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node=walker.nextNode()) && (length<6000 || fullLength<30000)) {
+      const value=node.textContent.trim(), parent=node.parentElement;
+      if (!value || !parent || parent.closest('script,style,noscript,template') || !visible(parent)) continue;
+      range.selectNodeContents(node); const r=range.getBoundingClientRect();
+      if (r.width<=0 || r.height<=0 || r.top>=getClipBottom(parent)-2) continue;
+      if (fullLength<30000) {
+        fullWords.push(value); fullLength+=value.length;
+      }
+      if (length<6000 && r.bottom>0 && r.top<innerHeight && r.right>0 && r.left<innerWidth) {
+        words.push(value); length+=value.length;
+      }
     }
   }
   const isUnclipped=el=>{
@@ -428,14 +465,14 @@
     const r=el.getBoundingClientRect();
     return r.width>0 && r.height>0 && r.top<getClipBottom(el.parentElement)-2;
   };
-  const h12=[...document.querySelectorAll('h1,h2')].filter(isUnclipped)
+  const h12=[...allRoots.flatMap(r=>[...r.querySelectorAll('h1,h2')])].filter(isUnclipped)
     .map(h=>`[${h.tagName.toLowerCase()}] `+h.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
-  const h34=[...document.querySelectorAll('h3,h4')].filter(isUnclipped)
+  const h34=[...allRoots.flatMap(r=>[...r.querySelectorAll('h3,h4')])].filter(isUnclipped)
     .map(h=>`[${h.tagName.toLowerCase()}] `+h.innerText.replace(/\s+/g,' ').trim()).filter(Boolean);
   const headings=[...new Set([...h12,...h34])].slice(0,80);
   const seenPageHrefs=new Set(actions.map(a=>a.href).filter(Boolean));
   const pageLinksByHref=new Map();
-  for (const a of document.querySelectorAll('a[href]')) {
+  for (const a of allRoots.flatMap(r=>[...r.querySelectorAll('a[href]')])) {
     const attrHref=a.getAttribute('href')?.trim() ?? '';
     if (!attrHref || attrHref==='#' || /^javascript:|^mailto:|^tel:/i.test(attrHref)) continue;
     const rawHref=a.href ? a.href.slice(0,240) : '';
@@ -452,10 +489,10 @@
   const page_controls = [];
   const seenActionNodes = new Set(actions.map(a => a.node).filter(n => typeof n === 'number'));
   const seenControlNodes = new Set();
-  const formControlSel = 'input,select,textarea,[role="radio"],[role="checkbox"],[role="option"],[role="switch"]';
-  const FORM_CONTROL_ROLES = new Set(['radio', 'checkbox', 'switch', 'option', 'combobox', 'textbox', 'searchbox', 'spinbutton']);
+  const formControlSel = 'input,select,textarea,[role="radio"],[role="checkbox"],[role="option"],[role="switch"],[role="slider"],[role="listbox"],[role="menuitemcheckbox"],[role="treeitem"]';
+  const FORM_CONTROL_ROLES = new Set(['radio', 'checkbox', 'switch', 'option', 'combobox', 'textbox', 'searchbox', 'spinbutton', 'slider', 'listbox', 'menuitemcheckbox', 'treeitem']);
 
-  for (const e of document.querySelectorAll(formControlSel)) {
+  for (const e of allRoots.flatMap(r=>[...r.querySelectorAll(formControlSel)])) {
     if (page_controls.length >= MAX_PAGE_CONTROLS) break;
     if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"],[inert]')) continue;
     const rname = role(e);
@@ -476,7 +513,7 @@
       ctrlLabel = ctrlLabel.slice(0, MAX_CONTROL_LABEL_LEN);
     }
 
-    const kind = ['textbox', 'searchbox', 'spinbutton'].includes(rname) ||
+    const kind = ['textbox', 'searchbox', 'spinbutton', 'slider'].includes(rname) ||
                  (['INPUT', 'TEXTAREA'].includes(e.tagName) && !['checkbox', 'radio'].includes(e.type)) ? 'fill' :
                  (e.tagName === 'SELECT' ? 'select' : 'click');
 
@@ -504,6 +541,8 @@
       if (selVal) ctrlObj.value = selVal.slice(0, 80);
     } else if ('value' in e && e.value) {
       ctrlObj.value = String(e.value).slice(0, 80);
+    } else if (e.hasAttribute('aria-valuenow')) {
+      ctrlObj.value = String(e.getAttribute('aria-valuenow')).slice(0, 80);
     }
 
     page_controls.push(ctrlObj);
@@ -525,5 +564,5 @@
   if (scrollY>0) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
   actions.push({id:'wait',kind:'wait',label:'Wait for the page to update'});
   return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,page_links,page_controls,
-    scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions};
+    scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions,has_iframes:!!document.querySelector('iframe')};
 })()
