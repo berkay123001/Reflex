@@ -11,6 +11,24 @@ MAX_PACKAGE_ACTIONS = 8
 SUPPORTED_PACKAGE_OPERATIONS = {"CLICK", "TYPE_TEXT", "SELECT"}
 
 
+def parse_checked_state(raw: Any) -> bool | None:
+    """Parse checked/selected state into boolean or None."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        val = raw.strip().lower()
+        if val in ("true", "1"):
+            return True
+        if val in ("false", "0"):
+            return False
+        return None
+    if isinstance(raw, (int, float)):
+        return bool(raw)
+    return None
+
+
 @dataclass(frozen=True)
 class ExpectedElement:
     """Pre-converted element attributes captured when S2 creates the package."""
@@ -21,6 +39,8 @@ class ExpectedElement:
     operation: str
     checked: str | None = None
     value: str | None = None
+    initial_checked: bool | None = None
+    desired_checked: bool | None = None
 
 
 @dataclass
@@ -34,6 +54,14 @@ class PackageStep:
     instruction: str
     expected: ExpectedElement
 
+    @property
+    def initial_checked(self) -> bool | None:
+        return self.expected.initial_checked
+
+    @property
+    def desired_checked(self) -> bool | None:
+        return self.expected.desired_checked
+
 
 class ActionPackage:
     """Tracks execution state across multi-step action packages."""
@@ -43,6 +71,7 @@ class ActionPackage:
         self.initial_url = initial_url
         self.steps = steps
         self.current_step_index = 1  # 1..len(steps)
+        self.consecutive_no_progress: int = 0
         self.aborted = False
         self.abort_reason: str | None = None
         self.abort_trigger: str | None = None
@@ -117,13 +146,33 @@ def create_action_package(
             op = "TYPE_TEXT"
         if op not in SUPPORTED_PACKAGE_OPERATIONS:
             continue
-        if not target_idx or op not in targets or target_idx not in targets[op]:
+        if not target_idx:
+            continue
+        target_act = None
+        if op in targets and target_idx in targets[op]:
+            target_act = targets[op][target_idx]
+        elif op == "CLICK" and target_idx.isdigit():
+            idx_int = int(target_idx)
+            page_actions = page.get("actions", [])
+            if 1 <= idx_int <= len(page_actions):
+                cand = page_actions[idx_int - 1]
+                cand_role = str(cand.get("role") or "").lower()
+                if cand_role in {"radio", "menuitemradio"}:
+                    target_act = cand
+        if target_act is None:
             continue
         if not instruction:
             continue
-
-        target_act = targets[op][target_idx]
         text_str = str(text_val).strip() if (op in {"TYPE_TEXT", "SELECT"} and text_val is not None) else None
+
+        init_checked = parse_checked_state(target_act.get("checked"))
+        role_l = str(target_act.get("role") or "").strip().lower()
+        desired_checked: bool | None = None
+        if op == "CLICK":
+            if role_l in {"radio", "menuitemradio"}:
+                desired_checked = True
+            elif role_l in {"checkbox", "switch", "menuitemcheckbox"}:
+                desired_checked = not bool(init_checked)
 
         expected = ExpectedElement(
             node=target_act.get("node"),
@@ -132,6 +181,8 @@ def create_action_package(
             operation=op,
             checked=str(target_act.get("checked")) if target_act.get("checked") is not None else None,
             value=str(target_act.get("value")) if target_act.get("value") is not None else None,
+            initial_checked=init_checked,
+            desired_checked=desired_checked,
         )
 
         step = PackageStep(

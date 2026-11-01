@@ -1052,6 +1052,23 @@ class Browser:
         self.after_input = action
         return {"executed": action["id"], "rect": self.last_action_rect}
 
+    def scroll_to_node(self, node: int) -> bool:
+        """Scroll a specific DOM node into view deterministically using instant center alignment."""
+        if not isinstance(node, int):
+            return False
+        try:
+            res = self.evaluate(
+                f"""(() => {{
+                  const el = window.__jevFast?.nodes?.get({node});
+                  if (!el || !el.isConnected) return false;
+                  el.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                  return true;
+                }})()"""
+            )
+            return bool(res)
+        except Exception:
+            return False
+
     def _recovery_act(self, kind: str) -> dict[str, Any]:
         """Execute a supervisor-level recovery action (Escape, Enter, History Back)."""
         if kind == "press_escape":

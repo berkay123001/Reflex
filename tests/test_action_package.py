@@ -946,7 +946,8 @@ def test_executor_no_progress_aborts_package() -> None:
         actions=[],
     )
 
-    s1_resp = {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9}
+    s1_resp_step1 = {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9}
+    s1_resp_step2 = {"raw_answers": {"click_target": {"choice": "2"}}, "confidence": 0.9}
 
     fake_verify = VerificationResult(
         executed_ok=True,
@@ -964,13 +965,18 @@ def test_executor_no_progress_aborts_package() -> None:
         patch("reflex.agent.Browser", return_value=mock_b),
         patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
         patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
-        patch("reflex.agent.ground_target", return_value=s1_resp),
+        patch("reflex.agent.ground_target", side_effect=[s1_resp_step1, s1_resp_step2]),
         patch("reflex.agent.verify_step", return_value=fake_verify),
     ):
         session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
         session.step()
 
-        # Step 1 saw effective_progress=False, so package aborted post-step
+        # Step 1 saw effective_progress=False, but Choice 2 is on page so it is tolerated (R2)
+        assert session.active_package is not None
+        assert session.active_package.consecutive_no_progress == 1
+
+        # Step 2 also sees effective_progress=False -> 2 consecutive no_progress aborts package!
+        session.step()
         assert session.active_package is None
         assert session.package_aborts["no_progress"] == 1
         assert session.pending_escalation_reason[0] == "no_progress"

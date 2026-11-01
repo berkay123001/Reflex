@@ -46,6 +46,9 @@ from .package import (
     extract_s1_target_index,
     format_package_abort_reason,
     match_step_element,
+    normalize_label,
+    normalize_role,
+    parse_checked_state,
 )
 from .planner import Subgoal, _extract_domain
 from .safety import check_action_safety, extract_origin
@@ -185,6 +188,8 @@ class ReflexSession:
         self.packages_started: int = 0
         self.packages_completed: int = 0
         self.package_steps_executed: int = 0
+        self.package_steps_skipped: int = 0
+        self.package_offscreen_scrolls: int = 0
         self.package_aborts: Counter[str] = Counter()
         self.s1_pkg_step1_agreed: int = 0
         self.s1_pkg_step1_total: int = 0
@@ -451,6 +456,8 @@ class ReflexSession:
                 "packages_started": self.packages_started,
                 "packages_completed": self.packages_completed,
                 "package_steps_executed": self.package_steps_executed,
+                "package_steps_skipped": self.package_steps_skipped,
+                "package_offscreen_scrolls": self.package_offscreen_scrolls,
                 "package_aborts": dict(self.package_aborts),
                 "s1_package_agreement": {
                     "step_1": (
@@ -1140,11 +1147,35 @@ class ReflexSession:
         is_last = pkg.current_step_index >= pkg.total_steps
         # A page change after the final step (typically submit/next) is the expected end, not an abort.
         if trigger is None or (is_last and trigger == "url_changed"):
+            pkg.consecutive_no_progress = 0
             pkg.current_step_index += 1
             if pkg.current_step_index > pkg.total_steps:
                 self.packages_completed += 1
                 self.active_package = None
             return
+
+        if trigger == "no_progress":
+            has_next = pkg.current_step_index < pkg.total_steps
+            if pkg.consecutive_no_progress == 0 and has_next:
+                next_step = pkg.steps[pkg.current_step_index]
+                next_node = next_step.expected.node
+                page_nodes = {
+                    a.get("node")
+                    for a in (self.page.get("actions", []) + (self.page.get("page_controls") or []))
+                    if a.get("node") is not None
+                }
+                next_present = (
+                    (next_node is not None and next_node in page_nodes)
+                    or any(
+                        normalize_label(a.get("label", "")) == normalize_label(next_step.expected.label)
+                        and normalize_role(a.get("role", "")) == normalize_role(next_step.expected.role)
+                        for a in (self.page.get("actions", []) + (self.page.get("page_controls") or []))
+                    )
+                )
+                if next_present:
+                    pkg.consecutive_no_progress = 1
+                    pkg.current_step_index += 1
+                    return
 
         self.package_aborts[trigger] += 1
         pkg.aborted = True
@@ -1253,10 +1284,142 @@ class ReflexSession:
             self.active_package = None
             return self.snapshot()
 
-        # 3. System 1 sees at most MAX_SYSTEM1_ELEMENTS; a target System 2 picked beyond that window
-        # cannot be confirmed, so hand the step back instead of counting a false disagreement.
-        page_actions = self.page.get("actions", [])
+        # 3. Already satisfied check:
+        # If target element is already in desired checked state, skip click without S1/S2 calls.
+        target_el: dict[str, Any] | None = None
         expected_node = step.expected.node
+        if expected_node is not None:
+            for act in self.page.get("actions", []):
+                if act.get("node") == expected_node:
+                    target_el = act
+                    break
+            if target_el is None:
+                for ctrl in (self.page.get("page_controls") or []):
+                    if ctrl.get("node") == expected_node:
+                        target_el = ctrl
+                        break
+        if target_el is None and step.expected.label:
+            norm_exp_lbl = normalize_label(step.expected.label)
+            norm_exp_role = normalize_role(step.expected.role)
+            for act in self.page.get("actions", []):
+                if (
+                    normalize_label(act.get("label", "")) == norm_exp_lbl
+                    and normalize_role(act.get("role", "")) == norm_exp_role
+                ):
+                    target_el = act
+                    break
+            if target_el is None:
+                for ctrl in (self.page.get("page_controls") or []):
+                    if (
+                        normalize_label(ctrl.get("label", "")) == norm_exp_lbl
+                        and normalize_role(ctrl.get("role", "")) == norm_exp_role
+                    ):
+                        target_el = ctrl
+                        break
+
+        if (
+            target_el is not None
+            and step.operation == "CLICK"
+            and step.expected.desired_checked is not None
+        ):
+            curr_checked = parse_checked_state(target_el.get("checked"))
+            curr_checked_bool = bool(curr_checked)
+            if curr_checked_bool == step.expected.desired_checked:
+                self.history.append({
+                    "step": len(self.history) + 1,
+                    "action": {
+                        "id": target_el.get("id", "click"),
+                        "kind": "click",
+                        "node": step.expected.node,
+                        "role": step.expected.role,
+                        "label": step.expected.label,
+                    },
+                    "package": {
+                        "id": pkg.id,
+                        "step": step.step_index,
+                        "of": pkg.total_steps,
+                        "skipped": "already_satisfied",
+                        "step_index": step.step_index,
+                    },
+                    "actor": "package",
+                    "operation": "CLICK",
+                    "target": step.target,
+                    "verification": {
+                        "effective_progress": True,
+                        "page_changed": False,
+                        "url_changed": False,
+                        "element_state_changed": False,
+                        "reason": "already_satisfied",
+                    },
+                    "page_changed": False,
+                    "url_changed": False,
+                    "element_state_changed": False,
+                    "effective_progress": True,
+                    "url": str(self.page.get("url", "")),
+                    "before_url": str(self.page.get("url", "")),
+                    "after_fingerprint": self.page.get("fingerprint", ""),
+                    "elapsed_ms": self.elapsed(),
+                })
+                self._log_trace_step(
+                    actor="package",
+                    action={
+                        "id": target_el.get("id", "click"),
+                        "kind": "click",
+                        "node": step.expected.node,
+                        "role": step.expected.role,
+                        "label": step.expected.label,
+                    },
+                    operation="CLICK",
+                    target=step.target,
+                    typed_text=None,
+                    goto_url=None,
+                    verification={"effective_progress": True, "flags": {}, "reason": "already_satisfied"},
+                    task_status=self.status,
+                    page=self.page,
+                    step_no=len(self.history),
+                )
+                self.package_steps_skipped += 1
+                pkg.current_step_index += 1
+                if pkg.current_step_index > pkg.total_steps:
+                    self.packages_completed += 1
+                    self.active_package = None
+                return self.snapshot()
+
+        # 4. Offscreen target handling (k >= 2):
+        # If expected node is not in actions, but in page_controls, scroll into view and re-observe.
+        page_actions = self.page.get("actions", [])
+        if (
+            expected_node is not None
+            and not any(a.get("node") == expected_node for a in page_actions)
+        ):
+            page_controls = self.page.get("page_controls", [])
+            if any(c.get("node") == expected_node for c in page_controls):
+                if hasattr(self, "browser") and self.browser is not None and hasattr(self.browser, "scroll_to_node"):
+                    self.browser.scroll_to_node(expected_node)
+                self.package_offscreen_scrolls += 1
+                re_obs = self._observe_settled()
+                if re_obs is None:
+                    return self._abort_package(
+                        pkg,
+                        "page_unsettled",
+                        "Page unsettled after scroll_to_node",
+                        step_t0=step_t0,
+                        pre_obs_ms=pre_obs_ms,
+                    )
+                self.page = re_obs
+                self._sync_ineffective_clicks(current_url=str(self.page.get("url", "")), page=self.page)
+                page_actions = self.page.get("actions", [])
+                if not any(a.get("node") == expected_node for a in page_actions):
+                    return self._abort_package(
+                        pkg,
+                        "package_target_missing",
+                        f"Expected node {expected_node} still missing from actions after scroll_to_node",
+                        step_t0=step_t0,
+                        pre_obs_ms=pre_obs_ms,
+                    )
+
+        # 5. System 1 sees at most MAX_SYSTEM1_ELEMENTS; a target System 2 picked beyond that window
+        # cannot be confirmed, so hand the step back instead of counting a false disagreement.
         if expected_node is not None and any(a.get("node") == expected_node for a in page_actions):
             _, s1_window, _ = action_space(page_actions)
             if not any(a.get("node") == expected_node for a in s1_window.get(step.operation, {}).values()):
