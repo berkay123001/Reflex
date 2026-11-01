@@ -59,6 +59,7 @@ RUN_MODES: dict[str, dict[str, bool]] = {
     "s2_only": {"s2_every_step": True, "s1_strict": False},
     "strict": {"s2_every_step": False, "s1_strict": True},
     "hybrid": {"s2_every_step": False, "s1_strict": False},
+    "package": {"s2_every_step": False, "s1_strict": False, "s2_action_packages": True},
 }
 DEFAULT_RUN_MODE = "s2_only"
 
@@ -69,8 +70,10 @@ def run_mode_flags(mode: str | None) -> dict[str, bool]:
     return dict(RUN_MODES.get(key, RUN_MODES[DEFAULT_RUN_MODE]))
 
 
-def run_mode_of(s2_every_step: bool, s1_strict: bool) -> str:
-    """Return the run-mode id matching the given flags (s2_every_step wins over s1_strict)."""
+def run_mode_of(s2_every_step: bool, s1_strict: bool, s2_action_packages: bool = False) -> str:
+    """Return the run-mode id matching the given flags (s2_action_packages wins, then s2_every_step over s1_strict)."""
+    if s2_action_packages:
+        return "package"
     if s2_every_step:
         return "s2_only"
     return "strict" if s1_strict else "hybrid"
@@ -258,6 +261,7 @@ class ReflexConfig(BaseModel):
     interactive: bool = False
     s2_every_step: bool = False  # evaluation baseline: no System 1, System 2 decides every step
     s1_strict: bool = False  # System 1 only for confident clicks/typing; scrolling and arbitrary choices go to System 2
+    s2_action_packages: bool = False
     max_steps: int = 80
     max_escalations: int = 40  # System 2 call budget; see escalation_limit
     observe_deadline_s: float = 8.0
@@ -286,6 +290,6 @@ class ReflexConfig(BaseModel):
         In s2_only and strict modes System 2 decides every or most steps, so a budget below
         max_steps would stop the run early; max_steps bounds those runs instead.
         """
-        if self.s2_every_step or self.s1_strict:
+        if self.s2_every_step or self.s1_strict or self.s2_action_packages:
             return max(self.max_escalations, self.max_steps)
         return self.max_escalations

@@ -12,6 +12,7 @@ import os
 import re
 import time
 import uuid
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +39,14 @@ from .config import ReflexConfig, run_mode_of
 from .context import DualTierContext, _url_match_keys
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
+from .package import (
+    ActionPackage,
+    compile_system1_instruction,
+    create_action_package,
+    extract_s1_target_index,
+    format_package_abort_reason,
+    match_step_element,
+)
 from .planner import Subgoal, _extract_domain
 from .safety import check_action_safety, extract_origin
 from .supervisor import (
@@ -170,6 +179,16 @@ class ReflexSession:
         self._stuck_counter: int = 0
         self._plan_done_rejections: int = 0
         self.unsettled_count: int = 0
+
+        # Action package execution state (G10 R3 & R4)
+        self.active_package: ActionPackage | None = None
+        self.packages_started: int = 0
+        self.package_steps_executed: int = 0
+        self.package_aborts: Counter[str] = Counter()
+        self.s1_pkg_step1_agreed: int = 0
+        self.s1_pkg_step1_total: int = 0
+        self.s1_pkg_stepk_agreed: int = 0
+        self.s1_pkg_stepk_total: int = 0
 
         initial_page_stub: dict[str, Any] = {
             "url": self.url,
@@ -427,6 +446,22 @@ class ReflexSession:
                 "steps": len(self.history),
                 "s1_steps": s1_calls,
                 "s2_escalations": s2_calls,
+                "s2_calls": s2_calls,
+                "packages_started": self.packages_started,
+                "package_steps_executed": self.package_steps_executed,
+                "package_aborts": dict(self.package_aborts),
+                "s1_package_agreement": {
+                    "step_1": (
+                        round(self.s1_pkg_step1_agreed / self.s1_pkg_step1_total, 4)
+                        if self.s1_pkg_step1_total > 0
+                        else 0.0
+                    ),
+                    "step_k": (
+                        round(self.s1_pkg_stepk_agreed / self.s1_pkg_stepk_total, 4)
+                        if self.s1_pkg_stepk_total > 0
+                        else 0.0
+                    ),
+                },
                 "s1_steps_since_s2": self._s1_steps_since_s2,
                 "stuck_counter": self._stuck_counter,
                 "s1_errors": self.s1_errors,
@@ -497,6 +532,11 @@ class ReflexSession:
             return self.snapshot()
 
         step_t0 = time.perf_counter()
+
+        # Action package execution cycle (G10 R3)
+        if self.active_package is not None and not self.active_package.is_finished:
+            return self._execute_package_step(step_t0)
+
         pre_obs_ms = 0
         try:
             needs_obs = (not self.page) or not self.browser.fresh(self.page)
@@ -630,10 +670,15 @@ class ReflexSession:
         # Evaluation baseline: System 2 decides every step and System 1 is never called, to measure
         # what the hybrid saves. Bypasses the gate entirely (threshold tweaks cannot: scroll/wait and
         # arbitrary-choice clicks have fixed gate rules).
-        if self.config.s2_every_step:
+        # In action package mode, when no package is active, S2 plans the next package/step (S1 does not act unguided).
+        if self.config.s2_every_step or self.config.s2_action_packages:
             return self._handle_escalation(
                 trigger_type="s2_every_step",
-                reason="Evaluation baseline: System 2 decides every step",
+                reason=(
+                    "Action package mode: System 2 plans next action package"
+                    if self.config.s2_action_packages
+                    else "Evaluation baseline: System 2 decides every step"
+                ),
                 s1_decision=None,
                 step_t0=step_t0,
                 s1_ms=0,
@@ -1049,6 +1094,265 @@ class ReflexSession:
         )
         return self.snapshot()
 
+    def _execute_package_step(self, step_t0: float) -> dict[str, Any]:
+        """Execute step k (k >= 2) of an active action package."""
+        pkg = self.active_package
+        if pkg is None or pkg.is_finished:
+            self.active_package = None
+            return self.snapshot()
+
+        step = pkg.current_step
+        if step is None:
+            self.active_package = None
+            return self.snapshot()
+
+        # 1. Observe settled DOM
+        pre_obs_ms = 0
+        obs_t0 = time.perf_counter()
+        settled_page = self._observe_settled()
+        pre_obs_ms += round((time.perf_counter() - obs_t0) * 1000)
+
+        if settled_page is None:
+            self.package_aborts["page_unsettled"] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = "page_unsettled"
+            pkg.abort_reason = "Page unsettled"
+            reason = format_package_abort_reason(
+                pkg.current_step_index,
+                pkg.total_steps,
+                "page_unsettled",
+                "Page unsettled",
+                pkg.remaining_instructions(),
+            )
+            self.active_package = None
+            return self._handle_escalation(
+                trigger_type="page_unsettled",
+                reason=reason,
+                s1_decision=None,
+                step_t0=step_t0,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        self.page = settled_page
+        self._sync_ineffective_clicks(current_url=str(self.page.get("url", "")), page=self.page)
+
+        # 2. Pre-execution abort conditions
+        current_url = str(self.page.get("url", ""))
+        if pkg.initial_url and current_url != pkg.initial_url:
+            self.package_aborts["url_changed"] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = "url_changed"
+            pkg.abort_reason = f"URL changed from {pkg.initial_url} to {current_url}"
+            reason = format_package_abort_reason(
+                pkg.current_step_index,
+                pkg.total_steps,
+                "url_changed",
+                pkg.abort_reason,
+                pkg.remaining_instructions(),
+            )
+            self.active_package = None
+            return self._handle_escalation(
+                trigger_type="url_changed",
+                reason=reason,
+                s1_decision=None,
+                step_t0=step_t0,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        if self.pending_escalation_reason is not None:
+            trig, p_reason = self.pending_escalation_reason
+            self.pending_escalation_reason = None
+            self.package_aborts["pending_escalation"] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = "pending_escalation"
+            pkg.abort_reason = p_reason
+            reason = format_package_abort_reason(
+                pkg.current_step_index,
+                pkg.total_steps,
+                "pending_escalation",
+                p_reason,
+                pkg.remaining_instructions(),
+            )
+            self.active_package = None
+            return self._handle_escalation(
+                trigger_type=trig,
+                reason=reason,
+                s1_decision=None,
+                step_t0=step_t0,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        if self.status != "ready":
+            self.package_aborts["status_not_ready"] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = "status_not_ready"
+            self.active_package = None
+            return self.snapshot()
+
+        # 3. Query System 1 with error shielding
+        compiled_instruction = compile_system1_instruction(step.instruction)
+        s1_t0 = time.perf_counter()
+        try:
+            s1_decision = choose_action(
+                self.page,
+                compiled_instruction,
+                self.history,
+                self.config,
+            )
+            s1_ms = round((time.perf_counter() - s1_t0) * 1000)
+        except Exception as exc:
+            s1_ms = round((time.perf_counter() - s1_t0) * 1000)
+            self.s1_errors += 1
+            self.package_aborts["s1_error"] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = "s1_error"
+            pkg.abort_reason = str(exc)
+            reason = format_package_abort_reason(
+                pkg.current_step_index,
+                pkg.total_steps,
+                "s1_error",
+                str(exc),
+                pkg.remaining_instructions(),
+            )
+            self.active_package = None
+            return self._handle_escalation(
+                trigger_type="s1_error",
+                reason=reason,
+                s1_decision=None,
+                step_t0=step_t0,
+                s1_ms=s1_ms,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        # 4. Extract S1 target from raw_answers
+        s1_target_idx = extract_s1_target_index(
+            s1_decision.get("raw_answers", {}), step.operation
+        )
+        current_targets = s1_decision.get("targets", {})
+        if not current_targets:
+            _, current_targets, _ = action_space(
+                self.page.get("actions", []), max_elements=MAX_SUPERVISOR_ELEMENTS
+            )
+
+        # 5. Matching Decision Tree
+        matched, abort_trig, chosen_act = match_step_element(
+            step.expected,
+            s1_target_idx,
+            current_targets,
+            self.page.get("actions", []),
+        )
+
+        self.s1_pkg_stepk_total += 1
+        if matched and chosen_act is not None:
+            self.s1_pkg_stepk_agreed += 1
+        else:
+            trig_name = abort_trig or "package_mismatch"
+            self.package_aborts[trig_name] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = trig_name
+            detail = (
+                f"S1 target '{s1_target_idx}' did not match expected node {step.expected.node}"
+                if trig_name == "package_mismatch"
+                else f"Expected node {step.expected.node} missing and label/role mismatched"
+            )
+            pkg.abort_reason = detail
+            reason = format_package_abort_reason(
+                pkg.current_step_index,
+                pkg.total_steps,
+                trig_name,
+                detail,
+                pkg.remaining_instructions(),
+            )
+            self.active_package = None
+            return self._handle_escalation(
+                trigger_type=trig_name,
+                reason=reason,
+                s1_decision=s1_decision,
+                step_t0=step_t0,
+                s1_ms=s1_ms,
+                pre_obs_ms=pre_obs_ms,
+            )
+
+        # 6. TYPE_TEXT text comes from S2 package
+        preset_text = step.text if step.operation == "TYPE_TEXT" else None
+
+        # 7. Execute via _execute_and_verify
+        pkg_history_meta = {
+            "id": pkg.id,
+            "step": pkg.current_step_index,
+            "of": pkg.total_steps,
+            "agreed": True,
+            "abort_reason": None,
+        }
+        self.package_steps_executed += 1
+        snap = self._execute_and_verify(
+            action=chosen_act,
+            actor="S1",
+            operation=step.operation,
+            target=s1_target_idx,
+            confidence=float(s1_decision.get("confidence") or 1.0),
+            target_confidence=s1_decision.get("target_confidence"),
+            joint_confidence=float(s1_decision.get("joint_confidence") or 1.0),
+            target_margin=float(s1_decision.get("target_margin") or 1.0),
+            latency_ms=s1_decision.get("latency_ms", 0),
+            model_name=str(s1_decision.get("model", "")),
+            usage=s1_decision.get("usage", {}),
+            preset_text=preset_text,
+            escalation_note=f"[package step {pkg.current_step_index}/{pkg.total_steps}] {step.instruction}",
+            step_t0=step_t0,
+            s1_ms=s1_ms,
+            s2_ms=0,
+            pre_obs_ms=pre_obs_ms,
+            package_meta=pkg_history_meta,
+        )
+
+        # 8. Post-step verification checks
+        last_h = self.history[-1] if self.history else {}
+        v = last_h.get("verification", {})
+        post_abort_trig: str | None = None
+        post_abort_detail: str | None = None
+        if last_h.get("url_changed"):
+            post_abort_trig = "url_changed"
+            post_abort_detail = f"URL changed to {last_h.get('url')}"
+        elif not v.get("effective_progress", True):
+            post_abort_trig = "no_progress"
+            post_abort_detail = "Validator observed no effective progress"
+        elif v.get("loop_detected"):
+            post_abort_trig = "loop_detected"
+            post_abort_detail = "Validator detected loop"
+        elif v.get("oscillation_detected"):
+            post_abort_trig = "oscillation_detected"
+            post_abort_detail = "Validator detected oscillation"
+        elif self.pending_escalation_reason is not None:
+            post_abort_trig = "pending_escalation"
+            post_abort_detail = f"Pending escalation: {self.pending_escalation_reason}"
+        elif self.status != "ready":
+            post_abort_trig = "status_not_ready"
+            post_abort_detail = f"Status changed to {self.status}"
+
+        if post_abort_trig is not None:
+            self.package_aborts[post_abort_trig] += 1
+            pkg.aborted = True
+            pkg.abort_trigger = post_abort_trig
+            pkg.abort_reason = post_abort_detail
+            if "package" in last_h:
+                last_h["package"]["abort_reason"] = post_abort_detail
+            reason = format_package_abort_reason(
+                pkg.current_step_index,
+                pkg.total_steps,
+                post_abort_trig,
+                post_abort_detail or "",
+                pkg.remaining_instructions()[1:],
+            )
+            self.pending_escalation_reason = (post_abort_trig, reason)
+            self.active_package = None
+        else:
+            pkg.current_step_index += 1
+            if pkg.current_step_index > pkg.total_steps:
+                self.active_package = None
+
+        return snap
+
     def _handle_escalation(
         self,
         *,
@@ -1061,6 +1365,7 @@ class ReflexSession:
         pre_obs_ms: int = 0,
     ) -> dict[str, Any]:
         """Run System 2 Supervisor (`qwen/qwen3.8-omni-flash`) to resolve an escalation."""
+        self.active_package = None
         if trigger_type == "page_unsettled":
             self.unsettled_count = 0
         if step_t0 is None:
@@ -1118,6 +1423,7 @@ class ReflexSession:
                 allow_model_fallback=self.config.allow_model_fallback,
                 supervisor_timeout_s=self.config.supervisor_timeout_s,
                 reasoning_effort=self.config.supervisor_reasoning_effort,
+                package_mode=self.config.s2_action_packages,
             )
         except Exception as exc:
             self.status = "error"
@@ -1420,6 +1726,116 @@ class ReflexSession:
             if isinstance(raw_queue_urls, (list, tuple)) and raw_queue_urls
             else f"[{trigger_type}] {sup.reasoning}"
         )
+        # Check if S2 produced an Action Package (G10 R3)
+        raw_pkg_actions = getattr(sup, "actions", None)
+        if self.config.s2_action_packages and raw_pkg_actions:
+            package = create_action_package(raw_pkg_actions, self.page, targets)
+            if package is not None and package.total_steps >= 2:
+                self.active_package = package
+                self.packages_started += 1
+                step_1 = package.steps[0]
+
+                # Non-blocking S1 agreement query on step 1 for metrics
+                agreed = False
+                try:
+                    s1_resp = choose_action(
+                        self.page,
+                        compile_system1_instruction(step_1.instruction),
+                        self.history,
+                        self.config,
+                    )
+                    s1_t_idx = extract_s1_target_index(
+                        s1_resp.get("raw_answers", {}), step_1.operation
+                    )
+                    if (
+                        s1_t_idx
+                        and targets.get(step_1.operation, {})
+                        .get(s1_t_idx, {})
+                        .get("node")
+                        == step_1.expected.node
+                    ):
+                        agreed = True
+                except Exception:
+                    agreed = False
+
+                self.s1_pkg_step1_total += 1
+                if agreed:
+                    self.s1_pkg_step1_agreed += 1
+
+                pkg_history_meta = {
+                    "id": package.id,
+                    "step": 1,
+                    "of": package.total_steps,
+                    "agreed": agreed,
+                    "abort_reason": None,
+                }
+                self.package_steps_executed += 1
+                snap = self._execute_and_verify(
+                    action=action_dict,
+                    actor="S1",
+                    operation=sup.operation or action_dict["kind"].upper(),
+                    target=sup.target,
+                    confidence=1.0,
+                    target_confidence=1.0,
+                    joint_confidence=1.0,
+                    target_margin=1.0,
+                    latency_ms=sup.latency_ms,
+                    model_name=sup.model,
+                    usage={"cost": 0.0},
+                    preset_text=sup.text,
+                    escalation_note=esc_note,
+                    step_t0=step_t0,
+                    s1_ms=s1_ms,
+                    s2_ms=s2_ms,
+                    pre_obs_ms=pre_obs_ms,
+                    package_meta=pkg_history_meta,
+                )
+
+                # Post-step verification checks for abort
+                last_h = self.history[-1] if self.history else {}
+                v = last_h.get("verification", {})
+                abort_trig: str | None = None
+                abort_detail: str | None = None
+                if last_h.get("url_changed"):
+                    abort_trig = "url_changed"
+                    abort_detail = f"URL changed to {last_h.get('url')}"
+                elif not v.get("effective_progress", True):
+                    abort_trig = "no_progress"
+                    abort_detail = "Validator observed no effective progress"
+                elif v.get("loop_detected"):
+                    abort_trig = "loop_detected"
+                    abort_detail = "Validator detected loop"
+                elif v.get("oscillation_detected"):
+                    abort_trig = "oscillation_detected"
+                    abort_detail = "Validator detected oscillation"
+                elif self.pending_escalation_reason is not None:
+                    abort_trig = "pending_escalation"
+                    abort_detail = f"Pending escalation: {self.pending_escalation_reason}"
+                elif self.status != "ready":
+                    abort_trig = "status_not_ready"
+                    abort_detail = f"Status changed to {self.status}"
+
+                if abort_trig is not None:
+                    self.package_aborts[abort_trig] += 1
+                    package.aborted = True
+                    package.abort_trigger = abort_trig
+                    package.abort_reason = abort_detail
+                    if "package" in last_h:
+                        last_h["package"]["abort_reason"] = abort_detail
+                    reason = format_package_abort_reason(
+                        1,
+                        package.total_steps,
+                        abort_trig,
+                        abort_detail or "",
+                        package.remaining_instructions()[1:],
+                    )
+                    self.pending_escalation_reason = (abort_trig, reason)
+                    self.active_package = None
+                else:
+                    package.current_step_index = 2
+
+                return snap
+
         return self._execute_and_verify(
             action=action_dict,
             actor="S2",
@@ -1577,6 +1993,7 @@ class ReflexSession:
         s1_ms: int = 0,
         s2_ms: int = 0,
         pre_obs_ms: int = 0,
+        package_meta: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run safety check, text generation (if fill), CDP action execution, and 3-layer verification."""
         if step_t0 is None:
@@ -1926,6 +2343,8 @@ class ReflexSession:
             "usage": usage,
             "elapsed_ms": self.elapsed(),
         }
+        if package_meta is not None:
+            step_record["package"] = package_meta
         self.history.append(step_record)
         self._log_trace_step(
             actor=actor,
@@ -2411,7 +2830,7 @@ class ReflexSession:
             }
 
             eff_step = step_no if step_no is not None else max(1, len(self.history))
-            mode_str = run_mode_of(self.config.s2_every_step, self.config.s1_strict)
+            mode_str = run_mode_of(self.config.s2_every_step, self.config.s1_strict, self.config.s2_action_packages)
 
             act = action or {}
             action_label = str(act.get("label") or act.get("action") or operation or "").strip()

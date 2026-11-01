@@ -30,7 +30,7 @@ def test_default_run_mode_is_s2_only_and_library_default_stays_hybrid() -> None:
 def test_run_mode_of_round_trips_every_mode() -> None:
     for mode in RUN_MODES:
         flags = run_mode_flags(mode)
-        assert run_mode_of(flags["s2_every_step"], flags["s1_strict"]) == mode
+        assert run_mode_of(flags["s2_every_step"], flags["s1_strict"], flags.get("s2_action_packages", False)) == mode
 
 
 class _FakeSession:

@@ -498,3 +498,630 @@ def test_package_system_prompt_determinism() -> None:
 def test_package_system_prompt_free_of_hardcoded_heuristics(pattern: str) -> None:
     """PACKAGE_ESCALATION_SYSTEM_PROMPT must not contain any scenario-specific names or heuristics."""
     assert pattern.lower() not in PACKAGE_ESCALATION_SYSTEM_PROMPT.lower()
+
+
+# ============================================================================
+# 9. R3 Action Package Executor & S1 Matching Tests
+# ============================================================================
+
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+from reflex.agent import ReflexSession
+from reflex.config import ReflexConfig, run_mode_of
+from reflex.package import (
+    ActionPackage,
+    ExpectedElement,
+    PackageStep,
+    compile_system1_instruction,
+    create_action_package,
+    extract_s1_target_index,
+    format_package_abort_reason,
+    match_step_element,
+    normalize_label,
+    normalize_role,
+)
+from reflex.system1 import build_system1_request
+from reflex.verifier import VerificationResult
+
+
+def _make_mock_browser(page: dict[str, Any]) -> MagicMock:
+    mock_b = MagicMock()
+    mock_b.observe.return_value = page
+    mock_b.fresh.return_value = True
+    mock_b.act.return_value = {"rect": {"x": 10, "y": 10, "width": 50, "height": 20}}
+    return mock_b
+
+
+def _make_mock_interp() -> MagicMock:
+    return MagicMock(
+        intent="TASK_START",
+        direct_reply=None,
+        constraints=[],
+        allow_arbitrary_choices=True,
+        budget_sources=None,
+        model="test-supervisor",
+        plan=None,
+    )
+
+
+def _ok_verify() -> VerificationResult:
+    return VerificationResult(
+        executed_ok=True,
+        page_changed=True,
+        url_changed=False,
+        element_state_changed=True,
+        effective_progress=True,
+        loop_detected=False,
+        oscillation_detected=False,
+        scroll_budget_exceeded=False,
+        reason="Progress verified",
+    )
+
+
+def test_executor_4_step_all_agree_single_s2_call() -> None:
+    """A 4-step package where S1 agrees on all steps executes completely with only 1 S2 call."""
+    page = {
+        "url": "https://example.com/quiz",
+        "title": "Quiz",
+        "text": "Quiz questions",
+        "actions": [
+            {"id": "q1_opt1", "node": 101, "kind": "click", "role": "radio", "label": "Option A"},
+            {"id": "q2_opt2", "node": 102, "kind": "click", "role": "radio", "label": "Option B"},
+            {"id": "q3_text", "node": 103, "kind": "fill", "role": "textbox", "label": "Notes"},
+            {"id": "btn_sub", "node": 104, "kind": "click", "role": "button", "label": "Submit"},
+        ],
+    }
+    mock_b = _make_mock_browser(page)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Batching 4 quiz inputs",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Select Option A"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Select Option B"),
+            ActionPackageItem(operation="TYPE_TEXT", target="3", text="Looks good", instruction="Type Notes"),
+            ActionPackageItem(operation="CLICK", target="4", instruction="Submit Quiz"),
+        ],
+    )
+
+    s1_responses = [
+        {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9, "model": "turnike"},
+        {"raw_answers": {"click_target": {"choice": "2"}}, "confidence": 0.85, "model": "turnike"},
+        {"raw_answers": {"type_text_target": {"choice": "3"}}, "confidence": 0.95, "model": "turnike"},
+        {"raw_answers": {"click_target": {"choice": "4"}}, "confidence": 0.99, "model": "turnike"},
+    ]
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", return_value=decision) as mock_sup,
+        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.verify_step", return_value=_ok_verify()),
+    ):
+        session = ReflexSession(url="https://example.com/quiz", goal="Complete quiz", config=cfg)
+
+        # Step 1: Initial escalation to S2, which plans package and runs Step 1
+        snap1 = session.step()
+        assert len(session.history) == 1
+        assert session.history[0]["actor"] == "S1"
+        assert session.history[0]["package"]["step"] == 1
+        assert session.history[0]["package"]["of"] == 4
+        assert session.history[0]["package"]["agreed"] is True
+        assert session.active_package is not None
+        assert session.active_package.current_step_index == 2
+
+        # Step 2: Executes package step 2
+        snap2 = session.step()
+        assert len(session.history) == 2
+        assert session.history[1]["actor"] == "S1"
+        assert session.history[1]["package"]["step"] == 2
+        assert session.history[1]["package"]["agreed"] is True
+
+        # Step 3: Executes package step 3
+        snap3 = session.step()
+        assert len(session.history) == 3
+        assert session.history[2]["actor"] == "S1"
+        assert session.history[2]["package"]["step"] == 3
+        assert session.history[2]["text"] == "Looks good"
+        assert session.history[2]["package"]["agreed"] is True
+
+        # Step 4: Executes package step 4
+        snap4 = session.step()
+        assert len(session.history) == 4
+        assert session.history[3]["actor"] == "S1"
+        assert session.history[3]["package"]["step"] == 4
+        assert session.history[3]["package"]["agreed"] is True
+
+        # Package finished
+        assert session.active_package is None
+        assert mock_sup.call_count == 1
+        metrics = snap4["metrics"]
+        assert metrics["s2_calls"] == 1
+        assert metrics["packages_started"] == 1
+        assert metrics["package_steps_executed"] == 4
+        assert metrics["package_aborts"] == {}
+        assert metrics["s1_package_agreement"]["step_1"] == 1.0
+        assert metrics["s1_package_agreement"]["step_k"] == 1.0
+
+
+def test_executor_step2_mismatch_aborts_and_escalates_to_s2() -> None:
+    """When S1 picks a different element on step 2, package aborts and escalates with package_mismatch and discarded instructions."""
+    page = {
+        "url": "https://example.com/quiz",
+        "title": "Quiz",
+        "text": "Quiz questions",
+        "actions": [
+            {"id": "q1_opt1", "node": 101, "kind": "click", "role": "radio", "label": "Option A"},
+            {"id": "q2_opt2", "node": 102, "kind": "click", "role": "radio", "label": "Option B"},
+            {"id": "q2_opt3", "node": 105, "kind": "click", "role": "radio", "label": "Option C"},
+            {"id": "btn_sub", "node": 104, "kind": "click", "role": "button", "label": "Submit"},
+        ],
+    }
+    mock_b = _make_mock_browser(page)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision1 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Batching 3 quiz inputs",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Select Option A"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Select Option B"),
+            ActionPackageItem(operation="CLICK", target="4", instruction="Submit Quiz"),
+        ],
+    )
+    decision2 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="3",
+        reasoning="Single override after mismatch",
+        actions=[],
+    )
+
+    s1_responses = [
+        {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9},
+        {"raw_answers": {"click_target": {"choice": "3"}}, "confidence": 0.8},
+    ]
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
+        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.verify_step", return_value=_ok_verify()),
+    ):
+        session = ReflexSession(url="https://example.com/quiz", goal="Complete quiz", config=cfg)
+
+        # Step 1: S2 packages, runs step 1
+        session.step()
+        assert len(session.history) == 1
+        assert session.active_package is not None
+
+        # Step 2: S1 selects target 3 instead of target 2 -> mismatch abort!
+        session.step()
+        assert mock_sup.call_count == 2
+        second_call_kwargs = mock_sup.call_args_list[1].kwargs
+        assert second_call_kwargs["trigger_type"] == "package_mismatch"
+        reason = second_call_kwargs["escalation_reason"]
+        assert "package_mismatch" in reason
+        assert "Select Option B" in reason
+        assert "Submit Quiz" in reason
+        assert session.active_package is None
+        assert session.package_aborts["package_mismatch"] == 1
+        assert session.s1_pkg_stepk_total == 1
+        assert session.s1_pkg_stepk_agreed == 0
+
+
+def test_executor_missing_node_re_render_label_match_executes() -> None:
+    """When expected node is missing due to DOM re-render, matching normalized label/role executes successfully."""
+    page_step1 = {
+        "url": "https://example.com/form",
+        "actions": [
+            {"id": "btn_agree", "node": 101, "kind": "click", "role": "button", "label": "I Agree"},
+            {"id": "btn_next", "node": 102, "kind": "click", "role": "button", "label": "Proceed → Next"},
+        ],
+    }
+    # On step 2, page re-renders: node 102 disappeared, node 202 is now present with label "Proceed"
+    page_step2 = {
+        "url": "https://example.com/form",
+        "actions": [
+            {"id": "btn_agree", "node": 101, "kind": "click", "role": "button", "label": "I Agree"},
+            {"id": "btn_next_new", "node": 202, "kind": "click", "role": "button", "label": "Proceed"},
+        ],
+    }
+    mock_b = _make_mock_browser(page_step1)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Agree and proceed",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Click I Agree"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Click Proceed"),
+        ],
+    )
+
+    s1_responses = [
+        {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9},
+        {"raw_answers": {"click_target": {"choice": "2"}}, "confidence": 0.85},
+    ]
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", return_value=decision) as mock_sup,
+        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.verify_step", return_value=_ok_verify()),
+    ):
+        session = ReflexSession(url="https://example.com/form", goal="Agree and proceed", config=cfg)
+        session.step()
+
+        # Update page to re-rendered DOM before step 2
+        mock_b.observe.return_value = page_step2
+        session.step()
+
+        assert len(session.history) == 2
+        assert session.history[1]["actor"] == "S1"
+        assert session.history[1]["node"] == 202
+        assert session.history[1]["package"]["agreed"] is True
+        assert session.package_aborts["package_target_missing"] == 0
+        assert mock_sup.call_count == 1
+
+
+def test_executor_missing_node_label_mismatch_aborts() -> None:
+    """When expected node is missing and S1 selects an element with different label, package aborts with package_target_missing."""
+    page_step1 = {
+        "url": "https://example.com/form",
+        "actions": [
+            {"id": "btn_1", "node": 101, "kind": "click", "role": "button", "label": "Step 1"},
+            {"id": "btn_agree", "node": 102, "kind": "click", "role": "button", "label": "I Agree"},
+        ],
+    }
+    page_step2 = {
+        "url": "https://example.com/form",
+        "actions": [
+            {"id": "btn_1", "node": 101, "kind": "click", "role": "button", "label": "Step 1"},
+            {"id": "btn_cancel", "node": 202, "kind": "click", "role": "button", "label": "Cancel"},
+        ],
+    }
+    mock_b = _make_mock_browser(page_step1)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision1 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="2-step package",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Click Step 1"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Click I Agree"),
+        ],
+    )
+    decision2 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Fallback after abort",
+        actions=[],
+    )
+
+    s1_responses = [
+        {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9},
+        {"raw_answers": {"click_target": {"choice": "2"}}, "confidence": 0.85},
+    ]
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
+        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.verify_step", return_value=_ok_verify()),
+    ):
+        session = ReflexSession(url="https://example.com/form", goal="Form", config=cfg)
+        session.step()
+
+        # DOM re-renders with "Cancel" instead of "I Agree"
+        mock_b.observe.return_value = page_step2
+        session.step()
+
+        assert mock_sup.call_count == 2
+        second_kwargs = mock_sup.call_args_list[1].kwargs
+        assert second_kwargs["trigger_type"] == "package_target_missing"
+        assert session.package_aborts["package_target_missing"] == 1
+        assert "package_target_missing" in second_kwargs["escalation_reason"]
+
+
+def test_executor_url_change_aborts_package() -> None:
+    """When an action causes a URL change, the action package aborts immediately and escalates to S2."""
+    page_step1 = {
+        "url": "https://example.com/quiz",
+        "actions": [
+            {"id": "btn_1", "node": 101, "kind": "click", "role": "button", "label": "Next"},
+            {"id": "btn_2", "node": 102, "kind": "click", "role": "button", "label": "Next 2"},
+        ],
+    }
+    page_step2 = {
+        "url": "https://example.com/result",  # URL changed!
+        "actions": [
+            {"id": "btn_2", "node": 102, "kind": "click", "role": "button", "label": "Next 2"},
+        ],
+    }
+    mock_b = _make_mock_browser(page_step1)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision1 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="2 steps",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Click Next"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Click Next 2"),
+        ],
+    )
+    decision2 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="Escalated after URL change",
+        actions=[],
+    )
+
+    s1_resp = {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9}
+
+    url_change_verify = VerificationResult(
+        executed_ok=True,
+        page_changed=True,
+        url_changed=True,
+        element_state_changed=False,
+        effective_progress=True,
+        loop_detected=False,
+        oscillation_detected=False,
+        scroll_budget_exceeded=False,
+        reason="Navigated to new URL",
+    )
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
+        patch("reflex.agent.choose_action", return_value=s1_resp),
+        patch("reflex.agent.verify_step", return_value=url_change_verify),
+    ):
+        session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
+
+        def _nav_act(action, before_page, text=None):
+            mock_b.observe.return_value = page_step2
+            return {"rect": {"x": 10, "y": 10}}
+
+        mock_b.act.side_effect = _nav_act
+        session.step()
+
+        # Step 1 executed, but URL changed to /result
+        assert session.active_package is None
+        assert session.package_aborts["url_changed"] == 1
+        assert session.pending_escalation_reason is not None
+        assert session.pending_escalation_reason[0] == "url_changed"
+
+        # Next step escalates to S2
+        session.step()
+        assert mock_sup.call_count == 2
+        assert mock_sup.call_args_list[1].kwargs["trigger_type"] == "url_changed"
+
+
+def test_executor_no_progress_aborts_package() -> None:
+    """When verification detects no progress, the package aborts immediately."""
+    page = {
+        "url": "https://example.com/quiz",
+        "actions": [
+            {"id": "btn_1", "node": 101, "kind": "click", "role": "button", "label": "Choice 1"},
+            {"id": "btn_2", "node": 102, "kind": "click", "role": "button", "label": "Choice 2"},
+        ],
+    }
+    mock_b = _make_mock_browser(page)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision1 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="2 steps",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Click Choice 1"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Click Choice 2"),
+        ],
+    )
+    decision2 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="After no progress",
+        actions=[],
+    )
+
+    s1_resp = {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9}
+
+    fake_verify = VerificationResult(
+        executed_ok=True,
+        page_changed=False,
+        url_changed=False,
+        element_state_changed=False,
+        effective_progress=False,
+        loop_detected=False,
+        oscillation_detected=False,
+        scroll_budget_exceeded=False,
+        reason="No change detected",
+    )
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
+        patch("reflex.agent.choose_action", return_value=s1_resp),
+        patch("reflex.agent.verify_step", return_value=fake_verify),
+    ):
+        session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
+        session.step()
+
+        # Step 1 saw effective_progress=False, so package aborted post-step
+        assert session.active_package is None
+        assert session.package_aborts["no_progress"] == 1
+        assert session.pending_escalation_reason[0] == "no_progress"
+
+        # Next step escalates
+        session.step()
+        assert mock_sup.call_count == 2
+        assert mock_sup.call_args_list[1].kwargs["trigger_type"] == "no_progress"
+
+
+def test_executor_s1_error_shields_session_from_crash() -> None:
+    """When System 1 throws an error, the action package aborts, escalates cleanly to S2, and session never crashes."""
+    page = {
+        "url": "https://example.com/quiz",
+        "actions": [
+            {"id": "btn_1", "node": 101, "kind": "click", "role": "button", "label": "Choice 1"},
+            {"id": "btn_2", "node": 102, "kind": "click", "role": "button", "label": "Choice 2"},
+        ],
+    }
+    mock_b = _make_mock_browser(page)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision1 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="1",
+        reasoning="2 steps",
+        actions=[
+            ActionPackageItem(operation="CLICK", target="1", instruction="Click Choice 1"),
+            ActionPackageItem(operation="CLICK", target="2", instruction="Click Choice 2"),
+        ],
+    )
+    decision2 = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="CLICK",
+        target="2",
+        reasoning="Fallback after S1 crash",
+        actions=[],
+    )
+
+    s1_effects = [
+        {"raw_answers": {"click_target": {"choice": "1"}}, "confidence": 0.9},
+        RuntimeError("Turnike 503 Server Unavailable"),
+    ]
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", side_effect=[decision1, decision2]) as mock_sup,
+        patch("reflex.agent.choose_action", side_effect=s1_effects),
+        patch("reflex.agent.verify_step", return_value=_ok_verify()),
+    ):
+        session = ReflexSession(url="https://example.com/quiz", goal="Quiz", config=cfg)
+        session.step()
+
+        # Step 2 encounters S1 error: must NOT crash session status to 'error'!
+        session.step()
+        assert session.status == "ready"
+        assert session.s1_errors == 1
+        assert session.package_aborts["s1_error"] == 1
+        assert mock_sup.call_count == 2
+        assert mock_sup.call_args_list[1].kwargs["trigger_type"] == "s1_error"
+
+
+def test_executor_type_text_uses_s2_preset_text() -> None:
+    """TYPE_TEXT actions in a package use the preset text from S2 without calling generate_field_text."""
+    page = {
+        "url": "https://example.com/signup",
+        "actions": [
+            {"id": "inp_user", "node": 101, "kind": "fill", "role": "textbox", "label": "Username"},
+            {"id": "inp_email", "node": 102, "kind": "fill", "role": "textbox", "label": "Email"},
+        ],
+    }
+    mock_b = _make_mock_browser(page)
+    cfg = ReflexConfig(s2_action_packages=True, max_steps=10)
+
+    decision = SupervisorDecision(
+        action_type="OVERRIDE_ACTION",
+        operation="TYPE_TEXT",
+        target="1",
+        text="berkay123",
+        reasoning="Fill registration form",
+        actions=[
+            ActionPackageItem(operation="TYPE_TEXT", target="1", text="berkay123", instruction="Type Username"),
+            ActionPackageItem(operation="TYPE_TEXT", target="2", text="user@example.test", instruction="Type Email"),
+        ],
+    )
+
+    s1_responses = [
+        {"raw_answers": {"type_text_target": {"choice": "1"}}, "confidence": 0.9},
+        {"raw_answers": {"type_text_target": {"choice": "2"}}, "confidence": 0.9},
+    ]
+
+    with (
+        patch("reflex.agent.Browser", return_value=mock_b),
+        patch("reflex.agent.interpret_user_message", return_value=_make_mock_interp()),
+        patch("reflex.agent.resolve_escalation", return_value=decision),
+        patch("reflex.agent.choose_action", side_effect=s1_responses),
+        patch("reflex.agent.generate_field_text") as mock_field_text,
+        patch("reflex.agent.verify_step", return_value=_ok_verify()),
+    ):
+        session = ReflexSession(url="https://example.com/signup", goal="Register", config=cfg)
+
+        # Step 1: uses "berkay123"
+        session.step()
+        assert mock_b.act.call_args_list[0].kwargs["text"] == "berkay123"
+
+        # Step 2: uses "user@example.test"
+        session.step()
+        assert mock_b.act.call_args_list[1].kwargs["text"] == "user@example.test"
+
+        # generate_field_text was never called because text was supplied by S2 package
+        assert mock_field_text.call_count == 0
+        assert session.history[0]["text"] == "berkay123"
+        assert session.history[1]["text"] == "user@example.test"
+
+
+def test_run_mode_package_and_s1_request_isolation() -> None:
+    """Verifies package mode identity, legacy mode invariance, and byte-for-byte S1 request isolation."""
+    # 1. run_mode_of returns package for s2_action_packages=True
+    assert run_mode_of(s2_every_step=False, s1_strict=False, s2_action_packages=True) == "package"
+    # Legacy modes unchanged
+    assert run_mode_of(s2_every_step=True, s1_strict=False) == "s2_only"
+    assert run_mode_of(s2_every_step=False, s1_strict=True) == "strict"
+    assert run_mode_of(s2_every_step=False, s1_strict=False) == "hybrid"
+
+    # 2. compile_system1_instruction strictly caps to 15 words
+    long_inst = "This is a very detailed instruction with more than fifteen words in order to test truncation limit"
+    compiled = compile_system1_instruction(long_inst)
+    assert len(compiled.split()) == 15
+    assert compiled == "This is a very detailed instruction with more than fifteen words in order to test"
+
+    # 3. Non-package S1 request payload is byte-for-byte identical
+    page = {
+        "url": "https://example.com/books",
+        "actions": [
+            {"id": "btn_search", "node": 10, "kind": "click", "role": "button", "label": "Search"},
+        ],
+    }
+    body1, targets1, controls1 = build_system1_request(
+        page=page,
+        compiled_goal="Find books",
+        history=[],
+    )
+    body2, targets2, controls2 = build_system1_request(
+        page=page,
+        compiled_goal="Find books",
+        history=[],
+    )
+    assert body1 == body2
+    assert targets1 == targets2
+    assert controls1 == controls2
+
+

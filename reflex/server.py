@@ -124,7 +124,7 @@ def current_state() -> dict[str, Any]:
 
 def _config_dump(cfg: ReflexConfig) -> dict[str, Any]:
     """Serialize a config for the UI, adding the derived run-mode id."""
-    return {**cfg.model_dump(), "mode": run_mode_of(cfg.s2_every_step, cfg.s1_strict)}
+    return {**cfg.model_dump(), "mode": run_mode_of(cfg.s2_every_step, cfg.s1_strict, cfg.s2_action_packages)}
 
 
 def _requested_mode(body: dict[str, Any]) -> str:
