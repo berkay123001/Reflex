@@ -579,6 +579,25 @@ def test_agent_handle_escalation_targets_mapping_f_indices() -> None:
     assert resolved_bracket is not None
     assert resolved_bracket["node"] == 88
 
+    # Regression test: single action with whitespace around brackets " [f1] ", "  [f2]  ", " [ f3 ] "
+    for raw_tgt, op, expected_node, expected_tgt in [
+        (" [f1] ", "CLICK", 88, "f1"),
+        ("  [f2]  ", "SELECT", 89, "f2"),
+        ("[ f2 ]", "SELECT", 89, "f2"),
+        (" [ f3 ] ", "TYPE_TEXT", 90, "f3"),
+        ("  [[f3]]  ", "TYPE_TEXT", 90, "f3"),
+    ]:
+        sup_ws = SupervisorDecision(
+            action_type="OVERRIDE_ACTION",
+            operation=op,
+            target=raw_tgt,
+            reasoning="Whitespace bracket normalization test",
+        )
+        resolved_ws = session._resolve_supervisor_action(sup_ws, targets, controls)
+        assert resolved_ws is not None, f"Failed to resolve target {raw_tgt!r}"
+        assert resolved_ws["node"] == expected_node
+        assert sup_ws.target == expected_tgt
+
 
 def test_create_action_package_with_f_indices() -> None:
     """Verify create_action_package validates and constructs PackageStep with f indices and captured states."""

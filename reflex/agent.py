@@ -1883,7 +1883,8 @@ class ReflexSession:
             sup.operation = "TYPE_TEXT"
         target = sup.target
         if target:
-            target = target.strip("[]").strip()
+            target = target.strip().strip("[]").strip()
+            sup.target = target
         cur_url = str(self.page.get("url", ""))
 
         if op in {"GOTO_URL", "NAVIGATE", "OPEN_URL"}:
