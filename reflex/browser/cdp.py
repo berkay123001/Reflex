@@ -266,6 +266,26 @@ def fingerprint(state: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+def clean_surrogates(data: Any) -> Any:
+    """Recursively clean unpaired Unicode surrogates from strings, dicts, lists, and tuples."""
+    if isinstance(data, str):
+        try:
+            data.encode("utf-8")
+            return data
+        except UnicodeEncodeError:
+            return data.encode("utf-16", "surrogatepass").decode("utf-16", errors="ignore")
+    if isinstance(data, dict):
+        return {
+            clean_surrogates(k): clean_surrogates(v)
+            for k, v in data.items()
+        }
+    if isinstance(data, list):
+        return [clean_surrogates(x) for x in data]
+    if isinstance(data, tuple):
+        return tuple(clean_surrogates(x) for x in data)
+    return data
+
+
 class Browser:
     """Single-tab CDP browser session with fresh-state verification and recovery actions."""
 
@@ -670,6 +690,7 @@ class Browser:
                     prefix = "\n".join(native_dlgs) + "\n"
                     info["text"] = (prefix + str(info.get("text") or ""))[:6000]
                     info["full_text"] = (prefix + str(info.get("full_text") or ""))[:30000]
+                info = clean_surrogates(info)
                 info["fingerprint"] = fingerprint(info)
                 info["last_action_rect"] = self.last_action_rect
                 if screenshot:
