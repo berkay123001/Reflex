@@ -27,7 +27,7 @@ def test_no_books_toscrape_hardcoded_redirect():
                 config=ReflexConfig(),
             )
         assert session.url == "https://books.toscrape.com"
-        mock_browser_cls.assert_called_once_with("https://books.toscrape.com")
+        mock_browser_cls.assert_called_once_with("https://books.toscrape.com", browser_language="tr-TR")
 
 
 def test_ctx_allow_arbitrary_choices_default_and_goal_init():

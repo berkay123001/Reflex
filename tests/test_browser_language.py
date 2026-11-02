@@ -16,12 +16,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from reflex.agent import ReflexAgent
+from reflex.agent import ReflexAgent, ReflexSession
 from reflex.browser.cdp import (
     Browser,
     build_accept_language_header,
     build_stealth_init_script,
     ensure_chromium_cdp,
+    format_accept_language,
+    format_browser_languages,
 )
 from reflex.browser.isolated import managed_isolated_browser
 from reflex.config import ReflexConfig, get_default_browser_language
@@ -293,3 +295,97 @@ def test_reflex_agent_forwards_browser_language_to_browser():
 
         ReflexAgent("https://example.com", goal="Search", config=config)
         assert captured_kwargs.get("browser_language") == "en-US"
+
+
+# ==============================================================================
+# 5. ReflexSession Precedence & Delegation Hierarchy
+# ==============================================================================
+
+
+def test_reflex_session_precedence_config_tr_over_env_en(monkeypatch: pytest.MonkeyPatch):
+    """ReflexSession with ReflexConfig(browser_language='tr-TR') forwards 'tr-TR' to Browser
+
+    even when REFLEX_BROWSER_LANG='en-US'.
+    """
+    monkeypatch.setenv("REFLEX_BROWSER_LANG", "en-US")
+    cfg = ReflexConfig(browser_language="tr-TR")
+    captured_kwargs: dict[str, Any] = {}
+
+    def fake_browser_init(url: str, **kwargs: Any) -> Any:
+        nonlocal captured_kwargs
+        captured_kwargs = dict(kwargs)
+        mock_b = MagicMock()
+        mock_b.observe.return_value = {"url": url, "actions": []}
+        return mock_b
+
+    with patch("reflex.agent.Browser", side_effect=fake_browser_init):
+        ReflexSession("about:blank", goal="Test", config=cfg)
+        assert captured_kwargs.get("browser_language") == "tr-TR", (
+            f"Precedence violation: browser_kwargs {captured_kwargs} did not pass 'browser_language=tr-TR', "
+            "causing Browser to fall back to REFLEX_BROWSER_LANG=en-US!"
+        )
+
+
+def test_reflex_session_precedence_config_en_over_env_tr(monkeypatch: pytest.MonkeyPatch):
+    """ReflexSession with ReflexConfig(browser_language='en-US') forwards 'en-US' to Browser
+
+    even when REFLEX_BROWSER_LANG='tr-TR'.
+    """
+    monkeypatch.setenv("REFLEX_BROWSER_LANG", "tr-TR")
+    cfg = ReflexConfig(browser_language="en-US")
+    captured_kwargs: dict[str, Any] = {}
+
+    def fake_browser_init(url: str, **kwargs: Any) -> Any:
+        nonlocal captured_kwargs
+        captured_kwargs = dict(kwargs)
+        mock_b = MagicMock()
+        mock_b.observe.return_value = {"url": url, "actions": []}
+        return mock_b
+
+    with patch("reflex.agent.Browser", side_effect=fake_browser_init):
+        ReflexSession("about:blank", goal="Test", config=cfg)
+        assert captured_kwargs.get("browser_language") == "en-US"
+
+
+def test_reflex_session_default_uses_env_var_when_config_not_overridden(monkeypatch: pytest.MonkeyPatch):
+    """When ReflexConfig.browser_language is not explicitly set, ReflexSession inherits REFLEX_BROWSER_LANG='en-US'."""
+    monkeypatch.setenv("REFLEX_BROWSER_LANG", "en-US")
+    cfg = ReflexConfig()
+    captured_kwargs: dict[str, Any] = {}
+
+    def fake_browser_init(url: str, **kwargs: Any) -> Any:
+        nonlocal captured_kwargs
+        captured_kwargs = dict(kwargs)
+        mock_b = MagicMock()
+        mock_b.observe.return_value = {"url": url, "actions": []}
+        return mock_b
+
+    with patch("reflex.agent.Browser", side_effect=fake_browser_init):
+        session = ReflexSession("about:blank", goal="Test", config=cfg)
+        assert session.config.browser_language == "en-US"
+        assert captured_kwargs.get("browser_language") == "en-US"
+
+
+# ==============================================================================
+# 6. Subtag Casing Normalization in format_browser_languages & Headers
+# ==============================================================================
+
+
+def test_format_browser_languages_casing_variants():
+    """format_browser_languages normalizes single-subtag casing and compound separator variants."""
+    # Single subtag English casing variants
+    for tag in ("EN", "En", "eN", "en"):
+        langs = format_browser_languages(tag)
+        assert langs == ["en", "en-US"]
+        hdr = format_accept_language(tag)
+        assert "en-US" in hdr
+
+    # Single subtag non-English casing variants
+    assert format_browser_languages("TR") == ["tr", "en-US", "en"]
+    assert format_browser_languages("tr") == ["tr", "en-US", "en"]
+    assert format_browser_languages("DE") == ["de", "en-US", "en"]
+
+    # Separator & multi-part casing variants
+    assert format_browser_languages("Tr_tr")[0] == "tr-TR"
+    assert format_browser_languages("en_us")[0] == "en-US"
+    assert format_browser_languages("TR-TR")[0] == "tr-TR"

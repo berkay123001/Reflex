@@ -73,7 +73,9 @@ def format_browser_languages(tag: str | None) -> list[str]:
 
     parts = clean.split("-")
     base = parts[0].lower()
-    if len(parts) == 2 and len(parts[1]) == 2:
+    if len(parts) == 1:
+        normalized_tag = base
+    elif len(parts) == 2 and len(parts[1]) == 2:
         normalized_tag = f"{base}-{parts[1].upper()}"
     else:
         normalized_tag = clean
@@ -86,7 +88,7 @@ def format_browser_languages(tag: str | None) -> list[str]:
         for fallback in ("en-US", "en"):
             if fallback not in langs:
                 langs.append(fallback)
-    elif normalized_tag == "en":
+    elif normalized_tag.lower() == "en":
         if "en-US" not in langs:
             langs.append("en-US")
 
