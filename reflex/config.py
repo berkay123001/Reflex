@@ -211,6 +211,13 @@ def get_default_light_stealth() -> bool:
     return val in {"1", "true", "yes", "on"}
 
 
+def get_default_stay_on_start_site() -> bool:
+    """Return whether S2 must stay on the start website, from REFLEX_STAY_ON_SITE (default on)."""
+    load_env()
+    val = os.environ.get("REFLEX_STAY_ON_SITE", "1").strip().lower()
+    return val not in {"0", "false", "no", "off"}
+
+
 DEFAULT_BROWSER_LANGUAGE = "tr-TR"
 
 
@@ -300,6 +307,7 @@ class ReflexConfig(BaseModel):
     trace_path: str | None = Field(default_factory=get_default_trace_path)
     ax_supplement: bool = Field(default_factory=get_default_ax_supplement)
     light_stealth: bool = Field(default_factory=get_default_light_stealth)
+    stay_on_start_site: bool = Field(default_factory=get_default_stay_on_start_site)
     browser_language: str = Field(default_factory=get_default_browser_language)
 
     @field_validator("browser_language", mode="before")

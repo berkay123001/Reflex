@@ -177,6 +177,26 @@ def repeated_type_text_nodes(page: dict[str, Any], history: list[dict[str, Any]]
     return masked
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
+MAX_IDLE_STEP_CALLS = 6
+# A run that starts on a web search engine is an open-web task: no home site to stay on.
+_OPEN_WEB_START_SITES = {"google", "bing", "duckduckgo", "yandex", "yahoo", "baidu", "ecosia", "startpage", "brave"}
+_SECOND_LEVEL_LABELS = {"co", "com", "org", "net", "gov", "ac", "edu"}
+
+
+def _site_key(url: str | None) -> str:
+    """Registrable site of a URL (`webapps.akc.org` -> `akc.org`, `www.bbc.co.uk` -> `bbc.co.uk`)."""
+    host = extract_domain(url)
+    labels = [p for p in host.split(".") if p]
+    if len(labels) < 2:
+        return host
+    if len(labels) >= 3 and len(labels[-1]) == 2 and labels[-2] in _SECOND_LEVEL_LABELS:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
+
+
+def _home_site_for(url: str | None) -> str:
+    site = _site_key(url)
+    return "" if not site or site.split(".")[0] in _OPEN_WEB_START_SITES else site
 
 
 def _extract_candidate_url(sup: SupervisorDecision, current_url: str) -> str | None:
@@ -235,6 +255,7 @@ class ReflexSession:
             allow_arbitrary_choices=allow_arbitrary_choices,
             constraints=list(constraints or []),
             user_present=self.config.interactive,
+            home_site=_home_site_for(clean_url) if self.config.stay_on_start_site else "",
         )
         self.ctx.add_user_message(goal.strip(), kind="chat")
         self.site_memory = SiteMemoryStore()
@@ -281,6 +302,8 @@ class ReflexSession:
         self._domain_consecutive_empty: dict[str, int] = {}
         self._no_progress_steps: int = 0
         self._stuck_finish_count: int = 0
+        self._idle_step_calls: int = 0
+        self._linked_sites: set[str] = set()
         self._fruitless_scroll_count: int = 0
         self._fruitless_scrolls_by_dir: dict[str, int] = {"up": 0, "down": 0}
         self._last_scroll_direction: str | None = None
@@ -473,13 +496,13 @@ class ReflexSession:
         notes_cnt = len(self.ctx.working_memory_notes) + len(self.ctx.verified_dom_facts)
         return (results_cnt, cands_cnt, notes_cnt)
 
-    def _build_honest_failure_summary(self) -> str:
+    def _build_honest_failure_summary(self, cause: str | None = None) -> str:
         """Construct an honest termination failure summary."""
-        return (
-            "Task could not be completed: No progress was made for 24 consecutive steps "
-            "(no new URL reached, no effective page change observed, and no new findings recorded). "
-            "The session has been terminated honestly."
+        cause = cause or (
+            "No progress was made for 24 consecutive steps "
+            "(no new URL reached, no effective page change observed, and no new findings recorded)."
         )
+        return f"Task could not be completed: {cause} The session has been terminated honestly."
 
     def snapshot(self) -> dict[str, Any]:
         """Return complete UI/telemetry state for the session."""
@@ -670,6 +693,66 @@ class ReflexSession:
         return None
 
     def step(self) -> dict[str, Any]:
+        """Run one step; stop supervisor calls that never turn into a recorded browser step.
+
+        Several escalation outcomes (subgoal update, unresolved target, unsettled page) return
+        without a history entry. The no-progress budget counts history entries only, so on pages
+        whose fingerprint changes on every observation these calls could repeat until the wall clock.
+        """
+        history_before = len(self.history)
+        snap = self._step_once()
+        if len(self.history) > history_before or self.status != "ready":
+            self._idle_step_calls = 0
+            return snap
+        self._idle_step_calls = getattr(self, "_idle_step_calls", 0) + 1
+        if self._idle_step_calls < MAX_IDLE_STEP_CALLS:
+            return snap
+        self._idle_step_calls = 0
+        if getattr(self, "_stuck_finish_count", 0) >= 1:
+            self.status = "done"
+            fail_summary = self._build_honest_failure_summary(
+                f"The last {MAX_IDLE_STEP_CALLS} supervisor decisions could not be executed on this page."
+            )
+            self.last_error = fail_summary
+            self.ctx.add_agent_message(fail_summary, kind="chat")
+            return self.snapshot()
+        self._stuck_finish_count = 1
+        self.pending_escalation_reason = (
+            "stuck_finish",
+            (
+                f"{MAX_IDLE_STEP_CALLS} consecutive supervisor calls produced no executable browser action. "
+                "Pick one concrete action from the listed elements, or honestly report what you found with COMPLETE_TASK."
+            ),
+        )
+        self.ctx.add_agent_message("idle_supervisor_calls", kind="escalation_note")
+        return self.snapshot()
+
+    def _is_off_site_guess(self, nav_url: str) -> bool:
+        """True for a GOTO_URL to another website that the task site never linked to."""
+        home = getattr(self.ctx, "home_site", "")
+        target = _site_key(nav_url)
+        if not home or not target or target == home:
+            return False
+        if target.split(".")[0] in self.ctx.primary_goal.lower():
+            return False
+        reached = {_site_key(u) for u in self.ctx.visited_urls}
+        reached.add(_site_key(str((self.page or {}).get("url", ""))))
+        if target in reached or target in getattr(self, "_linked_sites", set()):
+            return False
+        return not _is_grounded_url(nav_url, self.page, self.ctx)
+
+    def _remember_linked_sites(self, page: dict[str, Any] | None) -> None:
+        """Record sites linked from pages the supervisor has seen; following them later is not a guess."""
+        if not isinstance(page, dict):
+            return
+        linked = getattr(self, "_linked_sites", None)
+        if linked is None:
+            linked = self._linked_sites = set()
+        hrefs = [a.get("href") for a in page.get("actions") or [] if isinstance(a, dict)]
+        hrefs += [pl.get("href") if isinstance(pl, dict) else pl for pl in page.get("page_links") or []]
+        linked.update(site for site in (_site_key(str(h)) for h in hrefs if h) if site)
+
+    def _step_once(self) -> dict[str, Any]:
         """Execute a single hybrid step (Observe -> S1 or S2 Escalate -> Safety Guard -> Act -> Verify)."""
         if self.status in {"waiting_user", "waiting_confirmation", "done", "blocked", "error"}:
             return self.snapshot()
@@ -1815,6 +1898,7 @@ class ReflexSession:
                 targets.setdefault(op, {})[f_idx] = action_dict
                 if op != "CLICK" and role in {"combobox", "textbox"}:
                     targets.setdefault("CLICK", {})[f_idx] = {**action_dict, "kind": "click"}
+        self._remember_linked_sites(self.page)
         s2_t0 = time.perf_counter()
         try:
             sup: SupervisorDecision = resolve_escalation(
@@ -2243,6 +2327,14 @@ class ReflexSession:
                 if self.ctx.is_domain_blocked(nav_url):
                     self.ctx.rejected_links.append(f"navigation rejected: domain is blocked ({nav_url})")
                     return None
+                if self._is_off_site_guess(nav_url):
+                    home = self.ctx.home_site
+                    self.ctx.rejected_links.append(f"navigation rejected: other website not linked from the task site ({nav_url})")
+                    self.ctx.tactical_hint = (
+                        f"Do not guess addresses of other websites; use {home}'s own search, menus and links, "
+                        f"or links shown on the page. If the task cannot be done on {home}, use COMPLETE_TASK and explain why."
+                    )
+                    return None
                 dom = extract_domain(nav_url)
                 if dom in self._404_domains and not _is_search_url(nav_url):
                     parts = urlsplit(nav_url)
@@ -2511,6 +2603,14 @@ class ReflexSession:
             except Exception:
                 pass
             self.page = self.browser.observe(screenshot=self.config.screenshots)
+            # Tell S2 why nothing happened; otherwise it keeps choosing the same unreachable element.
+            self.pending_escalation_reason = (
+                "target_covered",
+                (
+                    f"Previous action {operation} on '{action.get('label', '')}' could not run: {exc} "
+                    "Choose a different visible element, close the overlay, or scroll."
+                ),
+            )
             self.status = "ready"
             return self.snapshot()
         except StalePage as exc:
@@ -3027,6 +3127,8 @@ class ReflexSession:
                 nav_url = str(self.page.get("url", "")) if self.page else ""
                 if not nav_url:
                     nav_url = interp.target_url
+                if self.config.stay_on_start_site:
+                    self.ctx.home_site = _home_site_for(nav_url)
                 if nav_url and nav_url not in self.ctx.visited_urls:
                     self.ctx.visited_urls.append(nav_url)
 
@@ -3098,6 +3200,8 @@ class ReflexSession:
             nav_url = str(self.page.get("url", "")) if self.page else ""
             if not nav_url:
                 nav_url = interp.target_url
+            if self.config.stay_on_start_site:
+                self.ctx.home_site = _home_site_for(nav_url)
             if nav_url and nav_url not in self.ctx.visited_urls:
                 self.ctx.visited_urls.append(nav_url)
         if interp.direct_reply:

@@ -149,6 +149,8 @@ class DualTierContext(BaseModel):
     plan: TaskLedger | None = None
     # False for unattended runs (eval, batch): System 2 must not pause for preferences nobody will answer.
     user_present: bool = True
+    # Registrable site the task is bound to ("" = open web, e.g. the run started on a search engine).
+    home_site: str = ""
     # Session-level tracking for questions converted in unattended mode
     unattended_questions: list[str] = Field(default_factory=list)
     subgoal_queue: list[str] = Field(default_factory=list)
@@ -410,6 +412,12 @@ class DualTierContext(BaseModel):
         ]
         if self.constraints:
             lines.append(f"Active Constraints: {'; '.join(self.constraints)}")
+        if self.home_site:
+            lines.append(
+                f"Task Website: {self.home_site}. Work on this website with its own search, menus and links; following links "
+                "shown on pages is fine, but do not GOTO_URL guessed addresses of other websites unless the Primary Goal "
+                "names them. If the task cannot be done here, use COMPLETE_TASK and explain why."
+            )
         if not self.user_present:
             lines.append(
                 "User Availability: the user is NOT available during this run. Do not ASK_USER for preferences, "
