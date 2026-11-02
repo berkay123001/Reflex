@@ -49,6 +49,12 @@ _AD_BLOCK_URLS = [
     "*://*.yandex.ru/ads/*",
 ]
 
+INTERACTIVE_AX_ROLES: set[str] = {
+    "button", "link", "textbox", "searchbox", "combobox", "listbox",
+    "option", "checkbox", "radio", "switch", "slider", "spinbutton",
+    "menuitem", "menuitemcheckbox", "menuitemradio", "tab", "treeitem",
+}
+
 _STEALTH_INIT_SCRIPT = """(() => {
   try {
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
@@ -301,7 +307,24 @@ class Browser:
     _frame_sessions: dict[str, str] = {}
     _iframe_node_map: dict[int, dict[str, Any]] = {}
 
-    def __init__(self, url: str, *, width: int = 1120, height: int = 780, port: int | None = None):
+    def __init__(
+        self,
+        url: str,
+        *,
+        width: int = 1120,
+        height: int = 780,
+        port: int | None = None,
+        ax_supplement: bool | None = None,
+        light_stealth: bool | None = None,
+        config: Any = None,
+    ):
+        if ax_supplement is not None:
+            self.ax_supplement: bool = bool(ax_supplement)
+        elif config is not None and hasattr(config, "ax_supplement"):
+            self.ax_supplement = bool(config.ax_supplement)
+        else:
+            val = os.environ.get("REFLEX_AX_SUPPLEMENT", "1").strip().lower()
+            self.ax_supplement = val not in {"0", "false", "no", "off"}
         cdp_port = port or DEFAULT_CDP_PORT
         if port is None:
             bu_cdp = os.environ.get("BU_CDP_URL")
@@ -706,6 +729,8 @@ class Browser:
                     info = self.evaluate(READ_STATE) or info
                 if info.get("has_iframes"):
                     self._supplement_iframes(info)
+                if getattr(self, "ax_supplement", True):
+                    self._supplement_axtree(info)
                 native_dlgs = getattr(self, "_native_dialogs", None)
                 if isinstance(native_dlgs, list) and native_dlgs:
                     prefix = "\n".join(native_dlgs) + "\n"
@@ -770,6 +795,214 @@ class Browser:
         except Exception:
             pass
         return fallback
+
+    def _supplement_axtree(self, info: dict[str, Any]) -> None:
+        """Supplement snapshot.js actions with interactive elements from CDP Accessibility tree."""
+        try:
+            snap = self.call("DOMSnapshot.captureSnapshot", computedStyles=["visibility"], includeDOMRects=True)
+        except Exception as e:
+            logger.debug("DOMSnapshot.captureSnapshot failed: %s", e)
+            return
+
+        documents = snap.get("documents", [])
+        strings = snap.get("strings", [])
+        if not documents:
+            return
+
+        vw = int(info.get("w") or 1120)
+        vh = int(info.get("h") or 780)
+
+        seen_backend_ids: set[int] = set()
+        backend_to_bounds: dict[int, tuple[float, float, float, float]] = {}
+        backend_to_vis: dict[int, str] = {}
+        backend_to_attrs: dict[int, dict[str, str]] = {}
+
+        for doc in documents:
+            nodes = doc.get("nodes", {})
+            layout = doc.get("layout", {})
+            backend_ids = nodes.get("backendNodeId", [])
+            attributes = nodes.get("attributes", [])
+            node_indices = layout.get("nodeIndex", [])
+            bounds = layout.get("bounds", [])
+            styles = layout.get("styles", [])
+
+            for n_idx, bid in enumerate(backend_ids):
+                attrs = attributes[n_idx] if n_idx < len(attributes) else None
+                if attrs:
+                    attr_dict: dict[str, str] = {}
+                    for i in range(0, len(attrs) - 1, 2):
+                        k_idx = attrs[i]
+                        v_idx = attrs[i + 1]
+                        if k_idx < len(strings) and v_idx < len(strings):
+                            k = strings[k_idx]
+                            v = strings[v_idx]
+                            attr_dict[k] = v
+                            if k == "data-reflex-id":
+                                seen_backend_ids.add(bid)
+                    backend_to_attrs[bid] = attr_dict
+
+            for l_idx, n_idx in enumerate(node_indices):
+                if n_idx < len(backend_ids):
+                    bid = backend_ids[n_idx]
+                    box = bounds[l_idx] if l_idx < len(bounds) else None
+                    if box and len(box) >= 4:
+                        backend_to_bounds[bid] = (float(box[0]), float(box[1]), float(box[2]), float(box[3]))
+                    style_pair = styles[l_idx] if l_idx < len(styles) else None
+                    if style_pair and len(style_pair) > 0:
+                        s_idx = style_pair[0]
+                        if s_idx < len(strings):
+                            backend_to_vis[bid] = strings[s_idx]
+
+        try:
+            ax = self.call("Accessibility.getFullAXTree")
+            ax_nodes = ax.get("nodes", [])
+        except Exception as e:
+            logger.debug("Accessibility.getFullAXTree failed: %s", e)
+            return
+
+        candidates: list[dict[str, Any]] = []
+        seen_candidate_bids: set[int] = set()
+
+        for node in ax_nodes:
+            if node.get("ignored"):
+                continue
+            role_obj = node.get("role")
+            role_val = str(role_obj.get("value") if isinstance(role_obj, dict) else (role_obj or "")).lower()
+            if not (role_val in INTERACTIVE_AX_ROLES or role_val.startswith("menuitem")):
+                continue
+
+            bid = node.get("backendDOMNodeId")
+            if bid is None or bid in seen_backend_ids or bid in seen_candidate_bids:
+                continue
+
+            props: dict[str, Any] = {}
+            for p in node.get("properties", []):
+                pname = p.get("name")
+                pval = p.get("value")
+                if isinstance(pval, dict):
+                    pval = pval.get("value")
+                props[pname] = pval
+
+            if props.get("disabled") is True or props.get("hidden") is True or props.get("hiddenRoot") is True:
+                continue
+
+            node_attrs = backend_to_attrs.get(bid, {})
+            if "disabled" in node_attrs or node_attrs.get("aria-disabled") == "true" or node_attrs.get("aria-hidden") == "true":
+                continue
+
+            box = backend_to_bounds.get(bid)
+            if not box:
+                continue
+            bx, by, bw, bh = box
+            if bw <= 0 or bh <= 0:
+                continue
+
+            if backend_to_vis.get(bid) == "hidden":
+                continue
+
+            if bx + bw <= 0 or bx >= vw or by + bh <= 0 or by >= vh:
+                continue
+
+            name_obj = node.get("name")
+            name_val = str(name_obj.get("value") if isinstance(name_obj, dict) else (name_obj or "")).strip()
+
+            candidates.append({
+                "backend_id": bid,
+                "role": role_val,
+                "name": name_val,
+                "bounds": (bx, by, bw, bh),
+            })
+            seen_candidate_bids.add(bid)
+
+        if not candidates:
+            return
+
+        element_actions = [a for a in info.get("actions", []) if a.get("kind") not in ("scroll", "wait")]
+        tail_actions = [a for a in info.get("actions", []) if a.get("kind") in ("scroll", "wait")]
+
+        max_id_num = 0
+        for a in element_actions:
+            aid = str(a.get("id", ""))
+            if aid.startswith("e") and aid[1:].isdigit():
+                max_id_num = max(max_id_num, int(aid[1:]))
+
+        next_id_num = max(max_id_num + 1, len(element_actions) + 1)
+
+        reg_script = """function() {
+            const doc = this.ownerDocument || document;
+            const win = doc.defaultView || window;
+            let topWin = window;
+            try { if (window.top && window.top.__jevFast) topWin = window.top; } catch (_) {}
+            const cache = topWin.__jevFast ||= {ids: new WeakMap(), nodes: new Map(), next: 1};
+            if (!cache.ids.has(this)) cache.ids.set(this, cache.next++);
+            const id = cache.ids.get(this);
+            cache.nodes.set(id, this);
+            if (topWin !== win) {
+                const localCache = win.__jevFast ||= {ids: new WeakMap(), nodes: new Map(), next: 1};
+                localCache.ids.set(this, id);
+                localCache.nodes.set(id, this);
+            }
+            return id;
+        }"""
+
+        supplemented_actions: list[dict[str, Any]] = []
+        guards = info.setdefault("guards", {})
+
+        for cand in candidates:
+            bid = cand["backend_id"]
+            role_val = cand["role"]
+            name_val = cand["name"]
+            bx, by, bw, bh = cand["bounds"]
+
+            try:
+                resolved = self.call("DOM.resolveNode", backendNodeId=bid)
+                obj_id = resolved.get("object", {}).get("objectId")
+                if not obj_id:
+                    continue
+
+                reg_res = self.call("Runtime.callFunctionOn", objectId=obj_id, functionDeclaration=reg_script, returnByValue=True)
+                node_id = reg_res.get("result", {}).get("value")
+                if node_id is None:
+                    continue
+
+                guard = self.evaluate(f"window.__jevFast.guard(window.__jevFast.nodes.get({node_id}))")
+                if guard:
+                    guards[str(node_id)] = guard
+                    guards[node_id] = guard
+
+                act_id = f"e{next_id_num}"
+                next_id_num += 1
+
+                kind = (
+                    "fill"
+                    if role_val in ("textbox", "searchbox", "spinbutton", "slider")
+                    else ("select" if role_val in ("combobox", "listbox") else "click")
+                )
+                action = {
+                    "id": act_id,
+                    "node": node_id,
+                    "role": role_val,
+                    "label": name_val or role_val,
+                    "accessible_name": name_val,
+                    "kind": kind,
+                    "value": "",
+                    "rect": {
+                        "x": round(bx),
+                        "y": round(by),
+                        "w": round(bw),
+                        "h": round(bh),
+                    },
+                    "is_ax_supplement": True,
+                }
+                supplemented_actions.append(action)
+                seen_backend_ids.add(bid)
+            except Exception as e:
+                logger.debug("Failed to register AX candidate %s: %s", bid, e)
+                continue
+
+        if supplemented_actions:
+            all_actions = element_actions + supplemented_actions + tail_actions
+            info["actions"] = all_actions
 
     def _supplement_iframes(self, info: dict[str, Any]) -> None:
         """Discover visible iframes (>=200x100, max 5) and merge their interactive actions."""

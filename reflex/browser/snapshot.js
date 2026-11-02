@@ -256,7 +256,7 @@
   const actions=[];
   for (const root of allRoots) {
     for (const e of root.querySelectorAll(selector)) {
-      if (!safe(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
+      if (!safe(e) || e.tagName==='CANVAS' || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
       const proxy=visible(e) ? null : choiceProxy(e);
       if (!visible(e) && !proxy && !choiceOverlay(e)) continue;
       const box=proxy || e;
@@ -283,6 +283,7 @@
       }
       const base={node:identity(e),role:rname,label:lbl,accessible_name:accessibleName,
         rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+      try { e.setAttribute('data-reflex-id', String(base.node)); } catch (_) {}
       if (rawHref || rname==='link') base.href=rawHref;
       const form=owningForm(e);
       const fkey=form ? 'f'+identity(form) : null;
@@ -376,6 +377,7 @@
       if (!lbl || lbl.length>120) continue;
       const customAction={node:identity(e),role:'button',label:lbl,accessible_name:lbl,custom:true,kind:'click',value:'',
         rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+      try { e.setAttribute('data-reflex-id', String(customAction.node)); } catch (_) {}
       if (isCommitControl(e)) {
         customAction.submits_form=true;
         customAction.form_key=owningForm(e) ? 'f'+identity(owningForm(e)) : 'loose';

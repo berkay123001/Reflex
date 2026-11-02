@@ -197,6 +197,13 @@ def get_default_trace_path() -> str | None:
     return val or None
 
 
+def get_default_ax_supplement() -> bool:
+    """Return whether AXTree supplementation is active from REFLEX_AX_SUPPLEMENT."""
+    load_env()
+    val = os.environ.get("REFLEX_AX_SUPPLEMENT", "1").strip().lower()
+    return val not in {"0", "false", "no", "off"}
+
+
 def save_env_key(key_name: str, key_value: str) -> None:
     """Persist an API key (`META_API_KEY`, `LLAMA_API_KEY`, `OPENROUTER_API_KEY`) into `.env` and `os.environ`."""
     if "\n" in key_name or "\r" in key_name:
@@ -274,6 +281,7 @@ class ReflexConfig(BaseModel):
         default_factory=lambda: {k: dict(v) for k, v in MODEL_PRICING.items()}
     )
     trace_path: str | None = Field(default_factory=get_default_trace_path)
+    ax_supplement: bool = Field(default_factory=get_default_ax_supplement)
 
     @field_validator("trace_path", mode="before")
     @classmethod
