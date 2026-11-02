@@ -217,12 +217,12 @@ class ReflexSession:
             reasoning_effort=self.config.supervisor_reasoning_effort,
         )
         try:
-            self.browser = Browser(
-                self.url,
-                ax_supplement=self.config.ax_supplement,
-                light_stealth=self.config.light_stealth,
-                config=self.config,
-            )
+            browser_kwargs: dict[str, Any] = {}
+            if getattr(self.config, "light_stealth", False):
+                browser_kwargs["light_stealth"] = True
+            if not getattr(self.config, "ax_supplement", True):
+                browser_kwargs["ax_supplement"] = False
+            self.browser = Browser(self.url, **browser_kwargs)
             try:
                 self.page = self.browser.observe(screenshot=self.config.screenshots)
             except Exception:

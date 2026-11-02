@@ -339,6 +339,8 @@ class Browser:
 
     _frame_sessions: dict[str, str] = {}
     _iframe_node_map: dict[int, dict[str, Any]] = {}
+    ax_supplement: bool = False
+    light_stealth: bool = False
 
     def __init__(
         self,
