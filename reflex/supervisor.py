@@ -113,6 +113,7 @@ Choose ONE of these three `action_type` values in your JSON response (NEVER use 
 3. "COMPLETE_TASK": Mark the task complete ONLY when all requirements of the Primary Goal are satisfied on the current page or across the trajectory.
    - IMPORTANT: `<untrusted_page_data>` already includes `All Page Headings (h1-h4)` and `Full Page Text (Entire Document From Top to Bottom)` covering the entire page regardless of scroll position! Read them directly and return `"COMPLETE_TASK"` with a comprehensive `summary_for_user` in the user's language.
    - NEVER return `"COMPLETE_TASK"` claiming you "could not find" a target page or information if you haven't even scrolled down (`SCROLL_DOWN`) the search results!
+   - STUCK_FINISH RULE: When Escalation Trigger is 'stuck_finish', you have reached the non-progress budget limit (12 steps without progress). Either execute a clearly different approach (such as a different navigation path or search query), or honestly report what you tried and why it failed with COMPLETE_TASK and a clear failure explanation in summary_for_user.
 
 Return ONLY a valid JSON object with these keys (CRITICAL: Keep evaluation_previous_goal, memory, next_goal, and reasoning strictly under 15 words each — NO long monologues!):
 {
@@ -172,6 +173,7 @@ Choose ONE of these three `action_type` values in your JSON response (NEVER use 
 3. "COMPLETE_TASK": Mark the task complete ONLY when all requirements of the Primary Goal are satisfied on the current page or across the trajectory.
    - IMPORTANT: `<untrusted_page_data>` already includes `All Page Headings (h1-h4)` and `Full Page Text (Entire Document From Top to Bottom)` covering the entire page regardless of scroll position! Read them directly and return `"COMPLETE_TASK"` with a comprehensive `summary_for_user` in the user's language.
    - NEVER return `"COMPLETE_TASK"` claiming you "could not find" a target page or information if you haven't even scrolled down (`SCROLL_DOWN`) the search results!
+   - STUCK_FINISH RULE: When Escalation Trigger is 'stuck_finish', you have reached the non-progress budget limit (12 steps without progress). Either execute a clearly different approach (such as a different navigation path or search query), or honestly report what you tried and why it failed with COMPLETE_TASK and a clear failure explanation in summary_for_user.
 
 Return ONLY a valid JSON object with these keys (CRITICAL: Keep evaluation_previous_goal, memory, next_goal, and reasoning strictly under 15 words each — NO long monologues!):
 {

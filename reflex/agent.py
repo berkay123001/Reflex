@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlsplit
 
 
 def _is_raw_dom(text: str) -> bool:
@@ -33,10 +34,90 @@ def _is_raw_dom(text: str) -> bool:
         or ("</p>" in s_low and "<p" in s_low)
     )
 
+
+def _is_empty_page(page: dict[str, Any] | None) -> bool:
+    """Return True iff settled page has no text, 0 non-utility interactive actions, and 0 page_controls."""
+    if page is None or not isinstance(page, dict):
+        return False
+    if "text" not in page:
+        return False
+    text = str(page.get("text", "") or "").strip()
+    if text:
+        return False
+    actions = page.get("actions", []) or []
+    interactive_actions = [
+        a for a in actions
+        if a.get("kind") not in ("scroll", "wait")
+        and a.get("id") not in ("scroll_down", "scroll_up", "wait")
+    ]
+    if interactive_actions:
+        return False
+    page_controls = page.get("page_controls", []) or []
+    if page_controls:
+        return False
+    return True
+
+
+def _is_404_error_page(page: dict[str, Any] | None) -> bool:
+    """Return True if settled page indicates an HTTP 404 Not Found error."""
+    if not page or not isinstance(page, dict):
+        return False
+    status = page.get("status") or page.get("response_status") or page.get("http_status")
+    if status == 404:
+        return True
+    title = str(page.get("title", "") or "").lower()
+    if "404" in title or "not found" in title or "sayfa bulunamadı" in title:
+        return True
+    headings = [str(h).lower() for h in page.get("headings", []) or []]
+    if any("404" in h or "not found" in h or "sayfa bulunamadı" in h for h in headings):
+        return True
+    text = str(page.get("text", "") or "").lower()
+    if ("404 not found" in text or "404 - not found" in text or "page not found" in text or "sayfa bulunamadı" in text) and len(text) < 1000:
+        return True
+    return False
+
+
+def _is_grounded_url(url: str, page: dict[str, Any] | None, ctx: DualTierContext) -> bool:
+    if not url or not page:
+        return False
+    clean_u = url.strip()
+    u_keys = _url_match_keys(clean_u)
+    for pl in page.get("page_links", []) or []:
+        pl_str = str(pl.get("href", "") if isinstance(pl, dict) else pl).strip()
+        if pl_str and (_url_match_keys(pl_str) & u_keys):
+            return True
+    for a in page.get("actions", []) or []:
+        href = str(a.get("href", "") or "").strip()
+        if href:
+            if _url_match_keys(href) & u_keys:
+                return True
+            cur_url = page.get("url", "")
+            if cur_url:
+                resolved = urljoin(cur_url, href)
+                if _url_match_keys(resolved) & u_keys:
+                    return True
+    for q_url in ctx.visit_queue:
+        if _url_match_keys(q_url) & u_keys:
+            return True
+    return False
+
+
+def _is_search_url(url: str) -> bool:
+    try:
+        p = urlsplit(url)
+        path = p.path.lower()
+        q = p.query.lower()
+        if "search" in path or "ara" in path or "q=" in q or "query=" in q or "k=" in q:
+            return True
+    except Exception:
+        pass
+    return False
+
+
 from .browser import Browser, NavigationTimeout, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
 from .config import ReflexConfig, run_mode_of
-from .context import DualTierContext, _url_match_keys
+from .context import DualTierContext, _url_match_keys, extract_domain
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
 from .package import (
@@ -196,6 +277,15 @@ class ReflexSession:
         self.s1_pkg_stepk_agreed: int = 0
         self.s1_pkg_stepk_total: int = 0
 
+        # G12 M3 tracking state (R2: dead-ends, domain block, stuck budget, scroll limit, 404 guidance)
+        self._domain_consecutive_empty: dict[str, int] = {}
+        self._no_progress_steps: int = 0
+        self._stuck_finish_count: int = 0
+        self._fruitless_scroll_count: int = 0
+        self._last_scroll_direction: str | None = None
+        self._locked_scroll_direction: str | None = None
+        self._404_domains: set[str] = set()
+
         initial_page_stub: dict[str, Any] = {
             "url": self.url,
             "title": "",
@@ -224,7 +314,7 @@ class ReflexSession:
                 browser_kwargs["ax_supplement"] = False
             self.browser = Browser(self.url, **browser_kwargs)
             try:
-                self.page = self.browser.observe(screenshot=self.config.screenshots)
+                self.page = self._observe_settled() or self.browser.observe(screenshot=self.config.screenshots)
             except Exception:
                 self.browser.close()
                 raise
@@ -359,6 +449,40 @@ class ReflexSession:
             ):
                 return True
         return False
+
+    def _get_notebook_snapshot(self) -> tuple[int, int, int]:
+        """Capture count tuple (results_count, candidates_count, notes_count) for progress detection."""
+        results_cnt = (
+            sum(len(sg.results) for sg in self.ctx.plan.subgoals)
+            if self.ctx.plan and self.ctx.plan.subgoals
+            else 0
+        )
+        cands_cnt = len(self.ctx.plan.candidates) if self.ctx.plan and self.ctx.plan.candidates else 0
+        notes_cnt = len(self.ctx.working_memory_notes) + len(self.ctx.verified_dom_facts)
+        return (results_cnt, cands_cnt, notes_cnt)
+
+    def _build_honest_failure_summary(self) -> str:
+        """Construct an honest termination failure summary in the language of the Primary Goal."""
+        goal = self.ctx.primary_goal or ""
+        tr_chars = set("çğıöşüÇĞİÖŞÜ")
+        is_tr = any(c in tr_chars for c in goal)
+        if not is_tr:
+            lower = goal.lower()
+            tr_words = {"ve", "veya", "ile", "için", "olan", "bir", "bu", "şu", "bul", "getir", "git", "tıkla", "seç"}
+            words = set(re.findall(r"\b\w+\b", lower))
+            is_tr = len(words & tr_words) >= 1
+
+        if is_tr:
+            return (
+                "Görev tamamlanamadı: Art arda 24 adım boyunca ilerleme sağlanamadı "
+                "(yeni URL'ye ulaşılamadı, sayfada etkili değişiklik görülmedi ve yeni bulgu kaydedilemedi). "
+                "Denenen adımlar sonuç vermediği için oturum dürüstçe sonlandırıldı."
+            )
+        return (
+            "Task could not be completed: No progress was made for 24 consecutive steps "
+            "(no new URL reached, no effective page change observed, and no new findings recorded). "
+            "The session has been terminated honestly."
+        )
 
     def snapshot(self) -> dict[str, Any]:
         """Return complete UI/telemetry state for the session."""
@@ -510,7 +634,32 @@ class ReflexSession:
         screenshots = bool(getattr(getattr(self, "config", None), "screenshots", False))
         while True:
             try:
-                return self.browser.observe(screenshot=screenshots)
+                page = self.browser.observe(screenshot=screenshots)
+                if page and isinstance(page, dict):
+                    is_empty = _is_empty_page(page)
+                    page["is_empty"] = is_empty
+                    page_url = str(page.get("url", "") or "")
+                    domain = extract_domain(page_url)
+                    if domain and hasattr(self, "_domain_consecutive_empty"):
+                        last_dom = getattr(self, "_last_observed_domain", None)
+                        if last_dom and last_dom != domain:
+                            self._domain_consecutive_empty[last_dom] = 0
+                        self._last_observed_domain = domain
+
+                        if is_empty:
+                            self._domain_consecutive_empty[domain] = (
+                                self._domain_consecutive_empty.get(domain, 0) + 1
+                            )
+                            if self._domain_consecutive_empty[domain] >= 3:
+                                if hasattr(self, "ctx") and hasattr(self.ctx, "block_domain"):
+                                    self.ctx.block_domain(domain)
+                                self.pending_escalation_reason = (
+                                    "domain_blocked",
+                                    f"Domain '{domain}' blocked after 3 consecutive empty pages (shows no content)",
+                                )
+                        else:
+                            self._domain_consecutive_empty[domain] = 0
+                return page
             except StalePage:
                 elapsed = time.monotonic() - start
                 if elapsed >= effective_deadline:
@@ -967,13 +1116,18 @@ class ReflexSession:
 
     def _is_rejected_target(self, action: dict[str, Any], current_url: str) -> bool:
         """Return True if clicking `action` would revisit a navigation link/URL that was already visited and abandoned,
-        or re-click an already-selected radio button.
+        or re-click an already-selected radio button, or navigate to a blocked domain.
         """
         if action.get("kind") != "click":
             return False
+        href_raw = str(action.get("href", "")).strip()
+        if href_raw:
+            resolved_href = urljoin(current_url, href_raw) if current_url else href_raw
+            if hasattr(self, "ctx") and hasattr(self.ctx, "is_domain_blocked") and self.ctx.is_domain_blocked(resolved_href):
+                return True
         role = str(action.get("role", "")).lower()
         lbl = str(action.get("label", "")).strip().lower()
-        href = str(action.get("href", "")).strip().rstrip("/").lower()
+        href = href_raw.rstrip("/").lower()
 
         # 1. Never re-click a radio option that is already checked="true"
         if role in {"radio", "menuitemradio"} and str(action.get("checked", "")).lower() == "true":
@@ -1580,10 +1734,34 @@ class ReflexSession:
             self.ctx.add_agent_message(self.last_error, kind="escalation_note")
             return self.snapshot()
 
+        if trigger_type == "stuck_finish":
+            if getattr(self, "_stuck_finish_count", 0) >= 1 and getattr(self, "_no_progress_steps", 0) >= 24:
+                self.status = "done"
+                fail_summary = self._build_honest_failure_summary()
+                self.last_error = fail_summary
+                self.ctx.add_agent_message(fail_summary, kind="chat")
+                self._log_trace_step(
+                    actor="system",
+                    action={"id": "stuck_finish", "label": "Honest Failure Termination", "kind": "complete_task"},
+                    operation="DONE",
+                    target=None,
+                    typed_text=None,
+                    verification={"effective_progress": False, "flags": {}, "reason": "Second consecutive stuck_finish terminated"},
+                    task_status="done",
+                    page=self.page,
+                    step_no=len(self.history) + 1,
+                )
+                return self.snapshot()
+            self._stuck_finish_count = 1
+
         elements, targets, controls = action_space(
             self.page.get("actions", []),
             max_elements=MAX_SUPERVISOR_ELEMENTS,
         )
+        if getattr(self, "_locked_scroll_direction", None) == "down":
+            controls.pop("SCROLL_DOWN", None)
+        elif getattr(self, "_locked_scroll_direction", None) == "up":
+            controls.pop("SCROLL_UP", None)
         existing_href_keys: set[str] = set()
         for el in elements:
             existing_href_keys.update(_url_match_keys(str(el.get("href") or "")))
@@ -1658,6 +1836,7 @@ class ReflexSession:
             return self.snapshot()
 
         s2_ms = int(sup.latency_ms or round((time.perf_counter() - s2_t0) * 1000))
+        self._locked_scroll_direction = None
         cur_url = str(self.page.get("url", "")).strip()
         step_num = len(self.history) + 1
         self._s1_steps_since_s2 = 0
@@ -1843,7 +2022,7 @@ class ReflexSession:
 
         # Case 1: Supervisor verifies the task is complete
         if sup.action_type == "COMPLETE_TASK":
-            if self.ctx.plan and self.ctx.plan.needs_plan:
+            if self.ctx.plan and self.ctx.plan.needs_plan and trigger_type != "stuck_finish":
                 return self._verify_and_complete_task_from_plan(sup.summary_for_user)
             self.status = "done"
             msg = sup.summary_for_user or sup.reasoning or "Task verified complete by Supervisor."
@@ -2058,6 +2237,16 @@ class ReflexSession:
         if op in {"GOTO_URL", "NAVIGATE", "OPEN_URL"}:
             nav_url = _extract_candidate_url(sup, cur_url)
             if nav_url:
+                if self.ctx.is_domain_blocked(nav_url):
+                    self.ctx.rejected_links.append(f"navigation rejected: domain is blocked ({nav_url})")
+                    return None
+                dom = extract_domain(nav_url)
+                if dom in self._404_domains and not _is_search_url(nav_url):
+                    parts = urlsplit(nav_url)
+                    if parts.path.strip("/") and not _is_grounded_url(nav_url, self.page, self.ctx):
+                        self.ctx.rejected_links.append(f"navigation rejected: ungrounded deep URL on 404 domain ({nav_url})")
+                        self.ctx.tactical_hint = f"Domain {dom}: Before guessing new deep URLs on this domain, use on-page links or search."
+                        return None
                 sup.operation = "GOTO_URL"
                 sup.url = nav_url
                 return {"id": "goto_url", "kind": "goto_url", "label": f"Navigate to {nav_url}", "url": nav_url}
@@ -2070,6 +2259,10 @@ class ReflexSession:
             return {"id": op.lower(), "kind": op.lower(), "label": op.replace("_", " ").title()}
 
         if op in {"SCROLL_DOWN", "SCROLL_UP", "WAIT"}:
+            if op == "SCROLL_DOWN" and getattr(self, "_locked_scroll_direction", None) == "down":
+                return None
+            if op == "SCROLL_UP" and getattr(self, "_locked_scroll_direction", None) == "up":
+                return None
             if op in controls:
                 return controls[op]
             if op == "WAIT":
@@ -2126,6 +2319,16 @@ class ReflexSession:
         # Fallback: if no element target resolved, check if Supervisor specified a new URL to navigate to
         fallback_url = _extract_candidate_url(sup, cur_url)
         if fallback_url:
+            if self.ctx.is_domain_blocked(fallback_url):
+                self.ctx.rejected_links.append(f"navigation rejected: domain is blocked ({fallback_url})")
+                return None
+            dom = extract_domain(fallback_url)
+            if dom in self._404_domains and not _is_search_url(fallback_url):
+                parts = urlsplit(fallback_url)
+                if parts.path.strip("/") and not _is_grounded_url(fallback_url, self.page, self.ctx):
+                    self.ctx.rejected_links.append(f"navigation rejected: ungrounded deep URL on 404 domain ({fallback_url})")
+                    self.ctx.tactical_hint = f"Domain {dom}: Before guessing new deep URLs on this domain, use on-page links or search."
+                    return None
             sup.operation = "GOTO_URL"
             sup.url = fallback_url
             return {
@@ -2185,6 +2388,7 @@ class ReflexSession:
         """Run safety check, text generation (if fill), CDP action execution, and 3-layer verification."""
         if step_t0 is None:
             step_t0 = time.perf_counter()
+        before_nb = self._get_notebook_snapshot()
         # 1. Irreversible Action Safety Guard
         origin = extract_origin(action.get("origin")) or extract_origin(self.page.get("url"))
         if action.get("kind") == "press_enter":
@@ -2414,6 +2618,27 @@ class ReflexSession:
                 step_no=len(self.history),
             )
             self.page = {}  # force subsequent step to re-observe without reusing stale page
+            after_nb = self._get_notebook_snapshot()
+            notebook_progress = (after_nb > before_nb)
+            if notebook_progress:
+                self._no_progress_steps = 0
+                self._stuck_finish_count = 0
+            else:
+                self._no_progress_steps += 1
+                if self._no_progress_steps == 12:
+                    self._stuck_finish_count = 1
+                    self.pending_escalation_reason = (
+                        "stuck_finish",
+                        "12 consecutive steps without progress (no URL change, no verifier progress, no notebook entry). "
+                        "Try a clearly different approach, or honestly report what you tried and why it failed with COMPLETE_TASK.",
+                    )
+                elif self._stuck_finish_count >= 1 and self._no_progress_steps >= 24:
+                    self.status = "done"
+                    fail_summary = self._build_honest_failure_summary()
+                    self.last_error = fail_summary
+                    self.ctx.add_agent_message(fail_summary, kind="chat")
+                    return self.snapshot()
+
             if self.unsettled_count >= 3:
                 self.pending_escalation_reason = (
                     "page_unsettled",
@@ -2437,6 +2662,17 @@ class ReflexSession:
         elif action.get("kind") == "click" and after_url != str(before_page.get("url", "")) and action.get("href"):
             self.ctx.drop_queued_url(str(action.get("href")))
         self.ctx.prune_visit_queue()
+
+        if action.get("kind") == "goto_url" and _is_404_error_page(after_page):
+            dead_url = str(action.get("url") or "")
+            self.ctx.rejected_links.append(f"404 Not Found ({dead_url})")
+            self.ctx.drop_queued_url(dead_url)
+            dom = extract_domain(dead_url)
+            if dom:
+                self._404_domains.add(dom)
+                guide = "Before guessing new deep URLs on this domain, use on-page links or search."
+                self.ctx.domain_guidance[dom] = guide
+                self.ctx.tactical_hint = f"Domain {dom}: {guide}"
 
         # 4. Three-Layer Action Verification
         verification: VerificationResult = verify_step(
@@ -2546,6 +2782,77 @@ class ReflexSession:
             step_no=len(self.history),
         )
 
+        # Fruitless scroll tracking
+        if action.get("kind") == "scroll":
+            scroll_dir = (
+                "down"
+                if int(action.get("delta", 560) or 560) > 0 or "down" in str(action.get("id", "")).lower()
+                else "up"
+            )
+            if self._last_scroll_direction is not None and scroll_dir != self._last_scroll_direction:
+                self._fruitless_scroll_count = 0
+            self._last_scroll_direction = scroll_dir
+
+            scroll_revealed = bool(
+                verification.details.get("scroll_revealed_content", False)
+                or verification.effective_progress
+            )
+            if not scroll_revealed:
+                self._fruitless_scroll_count += 1
+                if self._fruitless_scroll_count >= 4:
+                    self._locked_scroll_direction = scroll_dir
+                    warning_msg = (
+                        "4 kaydırmada yeni bir şey çıkmadı; aradığın öğe bu belgede görünmüyor olabilir "
+                        "(çerçeve, açılır pencere ya da başka bir sayfa)"
+                    )
+                    self.ctx.scroll_warning = warning_msg
+                    self.pending_escalation_reason = ("fruitless_scroll", warning_msg)
+            else:
+                self._fruitless_scroll_count = 0
+                self._locked_scroll_direction = None
+                self.ctx.scroll_warning = ""
+        else:
+            self._fruitless_scroll_count = 0
+            self._last_scroll_direction = None
+            if verification.url_changed:
+                self._locked_scroll_direction = None
+                self.ctx.scroll_warning = ""
+
+        # Non-progress budget tracking
+        after_nb = self._get_notebook_snapshot()
+        notebook_progress = (after_nb > before_nb)
+        has_progress = bool(verification.url_changed or verification.effective_progress or notebook_progress)
+
+        if has_progress:
+            self._no_progress_steps = 0
+            self._stuck_finish_count = 0
+        else:
+            self._no_progress_steps += 1
+            if self._no_progress_steps == 12:
+                self._stuck_finish_count = 1
+                self.pending_escalation_reason = (
+                    "stuck_finish",
+                    "12 consecutive steps without progress (no URL change, no verifier progress, no notebook entry). "
+                    "Try a clearly different approach, or honestly report what you tried and why it failed with COMPLETE_TASK.",
+                )
+            elif self._stuck_finish_count >= 1 and self._no_progress_steps >= 24:
+                self.status = "done"
+                fail_summary = self._build_honest_failure_summary()
+                self.last_error = fail_summary
+                self.ctx.add_agent_message(fail_summary, kind="chat")
+                self._log_trace_step(
+                    actor="system",
+                    action={"id": "stuck_finish", "label": "Honest Failure Termination", "kind": "complete_task"},
+                    operation="DONE",
+                    target=None,
+                    typed_text=None,
+                    verification={"effective_progress": False, "flags": {}, "reason": "Second consecutive stuck_finish terminated"},
+                    task_status="done",
+                    page=after_page,
+                    step_no=len(self.history) + 1,
+                )
+                return self.snapshot()
+
         # 5. Schedule post-step escalation if a loop, oscillation, or scroll budget was reached
         if (
             verification.loop_detected
@@ -2554,13 +2861,14 @@ class ReflexSession:
         ):
             if action.get("kind") == "click" and (verification.loop_detected or verification.oscillation_detected):
                 self._record_rejected_from_history(after_url)
-            if verification.oscillation_detected:
-                trig = "oscillation"
-            elif verification.scroll_budget_exceeded:
-                trig = "scroll_budget"
-            else:
-                trig = "loop_detected"
-            self.pending_escalation_reason = (trig, verification.reason)
+            if self.pending_escalation_reason is None:
+                if verification.oscillation_detected:
+                    trig = "oscillation"
+                elif verification.scroll_budget_exceeded:
+                    trig = "scroll_budget"
+                else:
+                    trig = "loop_detected"
+                self.pending_escalation_reason = (trig, verification.reason)
 
         # 6. Milestone Triggers (only for planned tasks)
         if self.ctx.plan and self.ctx.plan.needs_plan and self.pending_escalation_reason is None:

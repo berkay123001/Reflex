@@ -10,6 +10,7 @@ Addresses the limitation of relying solely on `page_changed == False`:
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -112,9 +113,50 @@ def verify_step(
         before_y = int((before_page.get("scroll") or {}).get("y", 0) or 0)
         after_y = int((after_page.get("scroll") or {}).get("y", 0) or 0)
         scroll_moved = abs(after_y - before_y) >= 4
-        element_state_changed = scroll_moved
-        if not scroll_moved:
+
+        # 1. Check for newly revealed interactive elements
+        before_nodes = {a.get("node") for a in before_page.get("actions", []) if a.get("node") is not None}
+        after_nodes = {a.get("node") for a in after_page.get("actions", []) if a.get("node") is not None}
+        new_nodes = after_nodes - before_nodes
+
+        before_sigs = {(a.get("role"), str(a.get("label", "")).strip(), a.get("href")) for a in before_page.get("actions", [])}
+        after_sigs = {(a.get("role"), str(a.get("label", "")).strip(), a.get("href")) for a in after_page.get("actions", [])}
+        new_sigs = after_sigs - before_sigs
+        new_elements = bool(new_nodes or new_sigs)
+
+        # 2. Check for newly revealed text
+        before_lines = {l.strip() for l in before_page.get("text", "").splitlines() if len(l.strip()) >= 3}
+        after_lines = {l.strip() for l in after_page.get("text", "").splitlines() if len(l.strip()) >= 3}
+        new_lines = after_lines - before_lines
+
+        before_words = set(re.findall(r"\b\w{3,}\b", before_page.get("text", "").lower()))
+        after_words = set(re.findall(r"\b\w{3,}\b", after_page.get("text", "").lower()))
+        new_words = after_words - before_words
+
+        before_headings = set(before_page.get("headings", []))
+        after_headings = set(after_page.get("headings", []))
+        new_headings = after_headings - before_headings
+
+        new_text = bool(new_lines or (len(new_words) >= 3) or new_headings)
+
+        has_text_or_elements = bool(
+            str(before_page.get("text", "") or "").strip()
+            or str(after_page.get("text", "") or "").strip()
+            or before_page.get("actions")
+            or after_page.get("actions")
+        )
+        fingerprint_advanced = bool(
+            not has_text_or_elements and before_fp and after_fp and before_fp != after_fp
+        )
+        scroll_revealed_content = bool(scroll_moved and (new_elements or new_text or fingerprint_advanced))
+        element_state_changed = scroll_revealed_content
+        if not scroll_revealed_content:
             page_changed = False
+
+        details["scroll_moved"] = scroll_moved
+        details["scroll_revealed_content"] = scroll_revealed_content
+        details["new_elements_count"] = len(new_nodes or new_sigs)
+        details["new_text_lines"] = len(new_lines)
 
     elif kind in {"wait", "press_escape", "press_enter", "go_back", "goto_url"}:
         element_state_changed = page_changed or url_changed
@@ -151,8 +193,11 @@ def verify_step(
             details["moving_scroll_streak"] = scroll_streak
             if scroll_streak >= 12 and scroll_streak % 12 == 0:
                 scroll_budget_exceeded = True
-        # Scrolling is only a loop when scroll.y stops moving (not effective_progress)
-        repeated_without_progress = not effective_progress
+        # Stuck at boundary is a repeated loop; moving without new content requires repeated attempts
+        if not scroll_moved:
+            repeated_without_progress = True
+        else:
+            repeated_without_progress = same_action_count >= 1 and not effective_progress
     else:
         repeated_without_progress = same_action_count >= 1 and not effective_progress
 

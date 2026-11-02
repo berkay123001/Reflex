@@ -28,6 +28,38 @@ MAX_VISIT_QUEUE_URL_CHARS = 200
 _REJECTED_URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
 
 
+def extract_domain(url: str | None) -> str:
+    """Extract normalized hostname from URL, stripping port, scheme, 'www.', and trailing dots.
+
+    Returns empty string for non-HTTP(S) schemes (about:, javascript:, data:, chrome:) or empty input.
+    """
+    if not url:
+        return ""
+    clean = str(url).strip()
+    if not clean:
+        return ""
+    lower = clean.lower()
+    if lower.startswith(("about:", "javascript:", "data:", "chrome:", "chrome-extension:", "file:", "mailto:", "tel:")):
+        return ""
+    if clean.startswith("#"):
+        return ""
+    if "://" not in clean and not clean.startswith("//"):
+        clean = f"http://{clean}"
+    try:
+        parts = urlsplit(clean)
+        if parts.scheme and parts.scheme.lower() not in ("http", "https"):
+            return ""
+        hostname = parts.hostname or ""
+        if not hostname and parts.netloc:
+            hostname = parts.netloc.split(":")[0].strip("[]")
+        hostname = hostname.lower().strip().rstrip(".")
+        if hostname.startswith("www."):
+            hostname = hostname[4:]
+        return hostname
+    except Exception:
+        return ""
+
+
 def _url_match_keys(raw_url: str) -> set[str]:
     """Return canonical_url(raw_url) and HTTP(S)/www-normalized equivalent for queue matching."""
     c = canonical_url(raw_url)
@@ -148,6 +180,34 @@ class DualTierContext(BaseModel):
     # Goal & user constraints (e.g. "do not submit form", "only add to cart")
     constraints: list[str] = Field(default_factory=list)
 
+    # Domain blocking, domain guidance, and scroll limiter state (G12 M3 / R2)
+    blocked_domains: set[str] = Field(default_factory=set)
+    domain_guidance: dict[str, str] = Field(default_factory=dict)
+    scroll_warning: str = ""
+
+    def is_domain_blocked(self, url: str) -> bool:
+        """Return True if url's domain matches any blocked domain or subdomain thereof."""
+        if not self.blocked_domains or not url:
+            return False
+        d = extract_domain(url)
+        if not d:
+            return False
+        if d in self.blocked_domains:
+            return True
+        return any(d.endswith("." + b) for b in self.blocked_domains)
+
+    def block_domain(self, domain: str, reason: str = "showing no content") -> None:
+        """Mark a domain as blocked, record in rejected_links and S2 context, and prune visit queue."""
+        clean_d = extract_domain(domain)
+        if not clean_d:
+            return
+        if clean_d not in self.blocked_domains:
+            self.blocked_domains.add(clean_d)
+            rej_entry = f"domain {reason} ({clean_d})"
+            if rej_entry not in self.rejected_links:
+                self.rejected_links.append(rej_entry)
+            self.prune_visit_queue()
+
     def model_post_init(self, __context: Any) -> None:
         self._wrap_pruning_lists()
         self.prune_visit_queue()
@@ -171,7 +231,7 @@ class DualTierContext(BaseModel):
         return blocked
 
     def prune_visit_queue(self) -> None:
-        """Drop visited or rejected URLs and deduplicate `visit_queue` in place."""
+        """Drop visited, rejected, or blocked-domain URLs and deduplicate `visit_queue` in place."""
         if not self.visit_queue:
             return
         blocked = self._blocked_url_keys()
@@ -180,6 +240,8 @@ class DualTierContext(BaseModel):
         for raw_u in self.visit_queue:
             clipped = str(raw_u or "").strip()[:MAX_VISIT_QUEUE_URL_CHARS]
             if not clipped:
+                continue
+            if self.is_domain_blocked(clipped):
                 continue
             u_keys = _url_match_keys(clipped)
             if not u_keys or (u_keys & blocked) or (u_keys & seen):
@@ -232,6 +294,9 @@ class DualTierContext(BaseModel):
             if not clean_u:
                 continue
             clipped = clean_u[:MAX_VISIT_QUEUE_URL_CHARS]
+            if self.is_domain_blocked(clean_u) or self.is_domain_blocked(clipped):
+                self.visit_queue_rejected_count += 1
+                continue
             u_keys = _url_match_keys(clipped) | _url_match_keys(clean_u)
             if not u_keys or not (u_keys & allowed_keys):
                 self.visit_queue_rejected_count += 1
@@ -366,6 +431,16 @@ class DualTierContext(BaseModel):
         elif self.working_memory:
             lines.append(f"Cumulative Working Memory: {self.working_memory}")
 
+        if self.blocked_domains:
+            lines.append(
+                f"Blocked Domains Showing No Content (DO NOT NAVIGATE OR CLICK LINKS TO THESE): {sorted(self.blocked_domains)}"
+            )
+        if self.scroll_warning:
+            lines.append(f"Scroll Warning: {self.scroll_warning}")
+        if self.domain_guidance:
+            for dom, guide in sorted(self.domain_guidance.items()):
+                lines.append(f"Domain Guidance ({dom}): {guide}")
+
         if self.rejected_links:
             lines.append(f"Already Visited & Rejected Links (DO NOT CLICK THESE AGAIN): {self.rejected_links[-10:]}")
         if self.ineffective_clicks:
@@ -460,4 +535,7 @@ class DualTierContext(BaseModel):
             "agent_hypotheses": self.agent_hypotheses,
             "chat_log": [m.model_dump() for m in self.chat_log],
             "approved_actions": sorted(self.approved_actions),
+            "blocked_domains": sorted(self.blocked_domains),
+            "domain_guidance": dict(self.domain_guidance),
+            "scroll_warning": self.scroll_warning,
         }
