@@ -1233,14 +1233,23 @@ class Browser:
             try:
                 dom_frame_index = action.get("dom_frame_index") if action.get("dom_frame_index") is not None else action.get("frame_index")
                 if dom_frame_index is not None:
-                    self.evaluate(f"document.querySelectorAll('iframe')[{dom_frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
+                    self.evaluate(f"""(() => {{
+                        const f = document.querySelectorAll('iframe')[{dom_frame_index}];
+                        if (!f) return;
+                        const r = f.getBoundingClientRect();
+                        if (r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) {{
+                            f.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                        }}
+                    }})()""")
                 else:
                     self.evaluate(f"""(() => {{
                         const frames = document.querySelectorAll('iframe');
                         for (const f of frames) {{
                             const r = f.getBoundingClientRect();
                             if (Math.abs(r.x - {action.get('frame_rect', {}).get('x', 0)}) < 10) {{
-                                f.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                                if (r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) {{
+                                    f.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                                }}
                                 break;
                             }}
                         }}
@@ -1457,6 +1466,9 @@ class Browser:
 
         if kind != "select" and not target.get("jsClicked"):
             x, y = target["x"], target["y"]
+            if is_iframe:
+                self.call("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
+                time.sleep(0.03)
             for event in ("mousePressed", "mouseReleased"):
                 self.call("Input.dispatchMouseEvent", type=event, x=x, y=y, button="left", clickCount=1)
             if kind == "fill":

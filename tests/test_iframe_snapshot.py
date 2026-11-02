@@ -189,6 +189,65 @@ class DualOriginHandler(http.server.BaseHTTPRequestHandler):
 </body>
 </html>"""
 
+        elif path == "/dual_maneuver_page":
+            c1_url = f"http://{self.cross_origin_host}:{self.cross_origin_port}/maneuver_target_1"
+            c2_url = f"http://{self.cross_origin_host}:{self.cross_origin_port}/maneuver_target_2"
+            body = f"""<!DOCTYPE html>
+<html>
+<head><title>Dual Maneuver Page</title></head>
+<body style="margin: 0; padding: 0; height: 5000px; font-family: sans-serif;">
+  <div style="height: 100px; padding: 10px;"><h2>Header Section</h2></div>
+  <!-- Frame 1 at top: 200px -->
+  <iframe id="frame_alpha" src="{c1_url}"
+          style="position: absolute; left: 50px; top: 200px; width: 450px; height: 300px; border: 2px solid green;">
+  </iframe>
+  <div style="position: absolute; top: 800px; height: 1600px; width: 100%; background: #f0f4f8;">
+    <h3>Middle Content Filler</h3>
+  </div>
+  <!-- Frame 2 at top: 2600px -->
+  <iframe id="frame_beta" src="{c2_url}"
+          style="position: absolute; left: 50px; top: 2600px; width: 450px; height: 300px; border: 2px solid orange;">
+  </iframe>
+  <div style="height: 2100px; position: absolute; top: 2900px; width: 100%; background: #fff5f0;">
+    <h3>Bottom Content Filler</h3>
+  </div>
+</body>
+</html>"""
+
+        elif path == "/maneuver_target_1":
+            body = """<!DOCTYPE html>
+<html>
+<body style="margin: 0; padding: 15px; font-family: sans-serif;">
+  <button id="btn_alpha" style="height: 25px; padding: 2px 8px;"
+          onclick="window.__clicks = (window.__clicks || 0) + 1;">
+    Alpha Button
+  </button>
+  <div id="alpha_counter" style="margin-top: 10px;">0</div>
+  <script>
+    document.getElementById('btn_alpha').addEventListener('click', () => {
+      document.getElementById('alpha_counter').textContent = window.__clicks;
+    });
+  </script>
+</body>
+</html>"""
+
+        elif path == "/maneuver_target_2":
+            body = """<!DOCTYPE html>
+<html>
+<body style="margin: 0; padding: 15px; font-family: sans-serif;">
+  <button id="btn_beta" style="height: 25px; padding: 2px 8px;"
+          onclick="window.__clicks = (window.__clicks || 0) + 1;">
+    Beta Button
+  </button>
+  <div id="beta_counter" style="margin-top: 10px;">0</div>
+  <script>
+    document.getElementById('btn_beta').addEventListener('click', () => {
+      document.getElementById('beta_counter').textContent = window.__clicks;
+    });
+  </script>
+</body>
+</html>"""
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -232,6 +291,7 @@ def dual_origin_servers() -> Generator[dict[str, Any], None, None]:
         "multi_frames_url": f"http://127.0.0.1:{p1}/multi_frames",
         "scrolled_url": f"http://127.0.0.1:{p1}/scrolled_parent",
         "scrolled_cross_url": f"http://127.0.0.1:{p1}/scrolled_cross_parent",
+        "dual_maneuver_url": f"http://127.0.0.1:{p1}/dual_maneuver_page",
     }
 
     try:
@@ -658,3 +718,119 @@ def test_iframe_dynamic_removal_raises_stalepage(dual_origin_servers: dict[str, 
             assert "Same Frame Click" not in final_labels
         finally:
             browser.close()
+
+
+def test_iframe_multi_maneuver_alternating_distant_oopifs(
+    dual_origin_servers: dict[str, Any],
+) -> None:
+    """Regression test: Alternating interactions between distant OOPIFs under page scrolls.
+
+    Verifies:
+    1. Interaction with top OOPIF (frame_alpha at y=200).
+    2. Scrolling down to distant OOPIF (frame_beta at y=2600) so it enters viewport (y=200).
+    3. Action on frame_beta executes without compositor hit-test desynchronization,
+       ensuring Input.dispatchMouseEvent accurately reaches the button inside the OOPIF.
+    4. Scrolling back to top (y=0) and re-interacting with frame_alpha, confirming
+       bidirectional alternation between distant OOPIFs works deterministically.
+    """
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    dual_url = dual_origin_servers["dual_maneuver_url"]
+    with managed_isolated_browser(port=0):
+        browser = Browser(dual_url)
+        try:
+            # Step 1: Initial observation at top of page (scrollY = 0)
+            page_top = browser.observe()
+            act_alpha = next(
+                (a for a in page_top.get("actions", []) if "Alpha Button" in a.get("label", "")),
+                None,
+            )
+            assert act_alpha is not None, "Alpha Button inside top OOPIF must be discovered"
+            assert act_alpha.get("is_iframe") is True
+            assert act_alpha.get("dom_frame_index") == 0
+
+            # Click Alpha Button
+            res_alpha = browser.act(act_alpha, page=page_top)
+            assert res_alpha.get("executed") == act_alpha["id"]
+            time.sleep(0.2)
+
+            sid_alpha = act_alpha.get("frame_session_id")
+            clicks_alpha = browser.evaluate("window.__clicks || 0", session_id=sid_alpha)
+            assert clicks_alpha == 1, f"Alpha clicks must be 1, got {clicks_alpha}"
+            assert (
+                browser.evaluate(
+                    "document.getElementById('alpha_counter').textContent",
+                    session_id=sid_alpha,
+                )
+                == "1"
+            )
+
+            # Step 2: Maneuver 1: Scroll down to y=2400.
+            # frame_beta (top: 2600px) enters the viewport at y = 2600 - 2400 = 200px.
+            browser.evaluate("window.scrollTo(0, 2400)")
+            time.sleep(0.3)
+
+            beta_dom_y = browser.evaluate(
+                "document.querySelectorAll('iframe')[1].getBoundingClientRect().y"
+            )
+            assert 100 <= beta_dom_y <= 300, f"Frame Beta must be in viewport near y=200, got {beta_dom_y}"
+
+            page_bottom = browser.observe()
+            act_beta = next(
+                (a for a in page_bottom.get("actions", []) if "Beta Button" in a.get("label", "")),
+                None,
+            )
+            assert act_beta is not None, "Beta Button inside bottom OOPIF must be discovered after scroll"
+            assert act_beta.get("is_iframe") is True
+            assert act_beta.get("dom_frame_index") == 1
+
+            # Click Beta Button
+            # In buggy versions, unthrottled scrollIntoView shifts scrollY from 2400 to ~2362,
+            # desynchronizing Chromium's RenderWidgetHostInputEventRouter and missing the button.
+            res_beta = browser.act(act_beta, page=page_bottom)
+            assert res_beta.get("executed") == act_beta["id"]
+            time.sleep(0.2)
+
+            sid_beta = act_beta.get("frame_session_id")
+            clicks_beta = browser.evaluate("window.__clicks || 0", session_id=sid_beta)
+            assert clicks_beta == 1, (
+                f"Beta clicks was {clicks_beta} (expected 1). "
+                "Chromium RenderWidgetHostInputEventRouter desynchronized due to unthrottled scrollIntoView in act()."
+            )
+            assert (
+                browser.evaluate(
+                    "document.getElementById('beta_counter').textContent",
+                    session_id=sid_beta,
+                )
+                == "1"
+            )
+
+            # Step 3: Maneuver 2: Scroll back to top (y=0) and alternate back to Alpha.
+            browser.evaluate("window.scrollTo(0, 0)")
+            time.sleep(0.3)
+
+            page_top_return = browser.observe()
+            act_alpha_return = next(
+                (a for a in page_top_return.get("actions", []) if "Alpha Button" in a.get("label", "")),
+                None,
+            )
+            assert act_alpha_return is not None, "Alpha Button must be discovered again after return to top"
+            assert act_alpha_return.get("dom_frame_index") == 0
+
+            res_alpha_return = browser.act(act_alpha_return, page=page_top_return)
+            assert res_alpha_return.get("executed") == act_alpha_return["id"]
+            time.sleep(0.2)
+
+            clicks_alpha_2 = browser.evaluate("window.__clicks || 0", session_id=sid_alpha)
+            assert clicks_alpha_2 == 2, f"Alpha clicks must be 2 after returning, got {clicks_alpha_2}"
+            assert (
+                browser.evaluate(
+                    "document.getElementById('alpha_counter').textContent",
+                    session_id=sid_alpha,
+                )
+                == "2"
+            )
+        finally:
+            browser.close()
+
