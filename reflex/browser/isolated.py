@@ -127,7 +127,10 @@ def managed_isolated_browser(
     old_bu_name = os.environ.get("BU_NAME")
     os.environ["BU_CDP_URL"] = cdp_url
     os.environ["BU_NAME"] = daemon_name
-    lang = (browser_language or os.environ.get("REFLEX_BROWSER_LANG", "tr-TR")).strip() or "tr-TR"
+    from reflex.browser.cdp import format_browser_languages
+
+    raw_lang = (browser_language or os.environ.get("REFLEX_BROWSER_LANG", "tr-TR")).strip() or "tr-TR"
+    lang = format_browser_languages(raw_lang)[0]
     old_lang = os.environ.get("REFLEX_BROWSER_LANG")
     os.environ["REFLEX_BROWSER_LANG"] = lang
     # browser_harness reads BU_NAME once at import; without this the client keeps talking to the

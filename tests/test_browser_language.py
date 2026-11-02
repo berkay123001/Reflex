@@ -182,6 +182,350 @@ def test_ensure_chromium_cdp_launch_flag_env_en_us(monkeypatch: pytest.MonkeyPat
     assert "--lang=tr-TR" not in captured_cmd
 
 
+@pytest.mark.parametrize(
+    ("input_lang", "expected_flag"),
+    [
+        ("EN", "--lang=en"),
+        ("TR", "--lang=tr"),
+        ("en_us", "--lang=en-US"),
+        ("Tr_tr", "--lang=tr-TR"),
+    ],
+)
+def test_managed_isolated_browser_launch_flag_casing_normalization(
+    input_lang: str,
+    expected_flag: str,
+):
+    """managed_isolated_browser normalizes casing variants in browser_language param."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.isolated._check_port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            with managed_isolated_browser(port=9998, browser_language=input_lang):
+                pass
+        except RuntimeError:
+            pass
+
+    assert captured_cmd, f"Subprocess command must be captured for {input_lang}"
+    lang_flags = [arg for arg in captured_cmd if arg.startswith("--lang=")]
+    assert lang_flags == [expected_flag], (
+        f"Expected CLI flag {expected_flag} for input {input_lang!r}, but found {lang_flags}"
+    )
+
+
+def test_managed_isolated_browser_launch_flag_casing_en():
+    """managed_isolated_browser: browser_language='EN' normalizes to --lang=en."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.isolated._check_port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            with managed_isolated_browser(port=9998, browser_language="EN"):
+                pass
+        except RuntimeError:
+            pass
+
+    assert "--lang=en" in captured_cmd
+    assert "--lang=EN" not in captured_cmd
+
+
+def test_managed_isolated_browser_launch_flag_casing_tr():
+    """managed_isolated_browser: browser_language='TR' normalizes to --lang=tr."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.isolated._check_port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            with managed_isolated_browser(port=9998, browser_language="TR"):
+                pass
+        except RuntimeError:
+            pass
+
+    assert "--lang=tr" in captured_cmd
+    assert "--lang=TR" not in captured_cmd
+
+
+def test_managed_isolated_browser_launch_flag_casing_en_us():
+    """managed_isolated_browser: browser_language='en_us' normalizes to --lang=en-US."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.isolated._check_port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            with managed_isolated_browser(port=9998, browser_language="en_us"):
+                pass
+        except RuntimeError:
+            pass
+
+    assert "--lang=en-US" in captured_cmd
+    assert "--lang=en_us" not in captured_cmd
+
+
+def test_managed_isolated_browser_launch_flag_casing_tr_tr():
+    """managed_isolated_browser: browser_language='Tr_tr' normalizes to --lang=tr-TR."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.isolated._check_port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            with managed_isolated_browser(port=9998, browser_language="Tr_tr"):
+                pass
+        except RuntimeError:
+            pass
+
+    assert "--lang=tr-TR" in captured_cmd
+    assert "--lang=Tr_tr" not in captured_cmd
+
+
+@pytest.mark.parametrize(
+    ("env_lang", "expected_flag"),
+    [
+        ("EN", "--lang=en"),
+        ("TR", "--lang=tr"),
+        ("en_us", "--lang=en-US"),
+        ("Tr_tr", "--lang=tr-TR"),
+    ],
+)
+def test_managed_isolated_browser_launch_flag_env_casing_variants(
+    monkeypatch: pytest.MonkeyPatch,
+    env_lang: str,
+    expected_flag: str,
+):
+    """managed_isolated_browser normalizes casing when language comes from REFLEX_BROWSER_LANG."""
+    monkeypatch.setenv("REFLEX_BROWSER_LANG", env_lang)
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.isolated._check_port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            with managed_isolated_browser(port=9998):
+                pass
+        except RuntimeError:
+            pass
+
+    lang_flags = [arg for arg in captured_cmd if arg.startswith("--lang=")]
+    assert lang_flags == [expected_flag], (
+        f"Expected CLI flag {expected_flag} for env {env_lang!r}, but found {lang_flags}"
+    )
+
+
+@pytest.mark.parametrize(
+    ("input_lang", "expected_flag"),
+    [
+        ("EN", "--lang=en"),
+        ("TR", "--lang=tr"),
+        ("en_us", "--lang=en-US"),
+        ("Tr_tr", "--lang=tr-TR"),
+    ],
+)
+def test_ensure_chromium_cdp_launch_flag_casing_normalization(
+    input_lang: str,
+    expected_flag: str,
+):
+    """ensure_chromium_cdp normalizes casing variants in browser_language param."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.cdp._port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            ensure_chromium_cdp(port=9996, browser_language=input_lang)
+        except RuntimeError:
+            pass
+
+    assert captured_cmd, f"Subprocess command must be captured for {input_lang}"
+    lang_flags = [arg for arg in captured_cmd if arg.startswith("--lang=")]
+    assert lang_flags == [expected_flag], (
+        f"Expected CLI flag {expected_flag} for input {input_lang!r}, but found {lang_flags}"
+    )
+
+
+def test_ensure_chromium_cdp_launch_flag_casing_en():
+    """ensure_chromium_cdp: browser_language='EN' normalizes to --lang=en."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.cdp._port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            ensure_chromium_cdp(port=9996, browser_language="EN")
+        except RuntimeError:
+            pass
+
+    assert "--lang=en" in captured_cmd
+    assert "--lang=EN" not in captured_cmd
+
+
+def test_ensure_chromium_cdp_launch_flag_casing_tr():
+    """ensure_chromium_cdp: browser_language='TR' normalizes to --lang=tr."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.cdp._port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            ensure_chromium_cdp(port=9996, browser_language="TR")
+        except RuntimeError:
+            pass
+
+    assert "--lang=tr" in captured_cmd
+    assert "--lang=TR" not in captured_cmd
+
+
+def test_ensure_chromium_cdp_launch_flag_casing_en_us():
+    """ensure_chromium_cdp: browser_language='en_us' normalizes to --lang=en-US."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.cdp._port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            ensure_chromium_cdp(port=9996, browser_language="en_us")
+        except RuntimeError:
+            pass
+
+    assert "--lang=en-US" in captured_cmd
+    assert "--lang=en_us" not in captured_cmd
+
+
+def test_ensure_chromium_cdp_launch_flag_casing_tr_tr():
+    """ensure_chromium_cdp: browser_language='Tr_tr' normalizes to --lang=tr-TR."""
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.cdp._port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            ensure_chromium_cdp(port=9996, browser_language="Tr_tr")
+        except RuntimeError:
+            pass
+
+    assert "--lang=tr-TR" in captured_cmd
+    assert "--lang=Tr_tr" not in captured_cmd
+
+
+@pytest.mark.parametrize(
+    ("env_lang", "expected_flag"),
+    [
+        ("EN", "--lang=en"),
+        ("TR", "--lang=tr"),
+        ("en_us", "--lang=en-US"),
+        ("Tr_tr", "--lang=tr-TR"),
+    ],
+)
+def test_ensure_chromium_cdp_launch_flag_env_casing_variants(
+    monkeypatch: pytest.MonkeyPatch,
+    env_lang: str,
+    expected_flag: str,
+):
+    """ensure_chromium_cdp normalizes casing when language comes from REFLEX_BROWSER_LANG."""
+    monkeypatch.setenv("REFLEX_BROWSER_LANG", env_lang)
+    captured_cmd: list[str] = []
+
+    def fake_popen(cmd: list[str], *args: Any, **kwargs: Any) -> Any:
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        raise RuntimeError("Stop after capturing cmd")
+
+    with (
+        patch("subprocess.Popen", side_effect=fake_popen),
+        patch("reflex.browser.cdp._port_open", return_value=False),
+        patch("shutil.which", return_value="/usr/bin/chromium"),
+    ):
+        try:
+            ensure_chromium_cdp(port=9996)
+        except RuntimeError:
+            pass
+
+    lang_flags = [arg for arg in captured_cmd if arg.startswith("--lang=")]
+    assert lang_flags == [expected_flag], (
+        f"Expected CLI flag {expected_flag} for env {env_lang!r}, but found {lang_flags}"
+    )
+
+
 # ==============================================================================
 # 3. navigator.languages Script Generation in cdp.py
 # ==============================================================================

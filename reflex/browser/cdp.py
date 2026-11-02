@@ -208,7 +208,8 @@ def ensure_chromium_cdp(
     )
     if not binary:
         return
-    lang = (browser_language or os.environ.get("REFLEX_BROWSER_LANG", "tr-TR")).strip() or "tr-TR"
+    raw_lang = (browser_language or os.environ.get("REFLEX_BROWSER_LANG", "tr-TR")).strip() or "tr-TR"
+    lang = format_browser_languages(raw_lang)[0]
     profile_dir = Path("/tmp/reflex_chromium_profile")
     profile_dir.mkdir(parents=True, exist_ok=True)
     log_file = Path("/tmp/reflex_chromium.log").open("a", encoding="utf-8")
