@@ -982,6 +982,17 @@ class Browser:
         next_id_num = max(max_id_num + 1, len(element_actions) + 1)
 
         reg_script = """function() {
+            if (!this.isConnected) return null;
+            let curr = this;
+            while (curr) {
+                const root = curr.getRootNode ? curr.getRootNode() : null;
+                if (root && root.mode === 'closed') return null;
+                if (root && root.host && root.host !== curr) {
+                    curr = root.host;
+                } else {
+                    break;
+                }
+            }
             const doc = this.ownerDocument || document;
             const win = doc.defaultView || window;
             let topWin = window;
