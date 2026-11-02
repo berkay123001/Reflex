@@ -157,6 +157,24 @@ class DualOriginHandler(http.server.BaseHTTPRequestHandler):
 </body>
 </html>"""
 
+        elif path == "/scrolled_cross_parent":
+            cross_url = f"http://{self.cross_origin_host}:{self.cross_origin_port}/frame_targets"
+            body = f"""<!DOCTYPE html>
+<html>
+<head><title>Scrolled Parent with Cross Origin OOPIF</title></head>
+<body style="margin: 0; padding: 0; height: 3500px; font-family: sans-serif;">
+  <div style="height: 1200px; background: #eef; padding: 20px;">
+    <h1>Tall Page Top</h1>
+  </div>
+  <iframe id="scrolled_cross_frame" src="{cross_url}"
+          style="position: absolute; left: 80px; top: 1200px; width: 500px; height: 400px; border: 2px solid red;">
+  </iframe>
+  <div style="height: 1900px; background: #fee; padding: 20px;">
+    <h2>Tall Page Bottom</h2>
+  </div>
+</body>
+</html>"""
+
         elif path == "/frame_targets":
             body = """<!DOCTYPE html>
 <html>
@@ -213,6 +231,7 @@ def dual_origin_servers() -> Generator[dict[str, Any], None, None]:
         "top_url": f"http://127.0.0.1:{p1}/",
         "multi_frames_url": f"http://127.0.0.1:{p1}/multi_frames",
         "scrolled_url": f"http://127.0.0.1:{p1}/scrolled_parent",
+        "scrolled_cross_url": f"http://127.0.0.1:{p1}/scrolled_cross_parent",
     }
 
     try:
@@ -515,6 +534,66 @@ def test_iframe_scrolled_parent_live_rect_and_click(dual_origin_servers: dict[st
             assert "target_clicked" in after_page.get("text", "") or browser.evaluate(
                 "document.getElementById('scrolled_frame').contentWindow.__clicked"
             ) is True
+        finally:
+            browser.close()
+
+
+def test_iframe_cross_origin_scrolled_parent_live_rect_and_click(
+    dual_origin_servers: dict[str, Any],
+) -> None:
+    """Verify _get_iframe_rect returns live viewport rect after parent scroll for cross-origin OOPIF and click succeeds."""
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    scrolled_cross_url = dual_origin_servers["scrolled_cross_url"]
+    with managed_isolated_browser(port=0):
+        browser = Browser(scrolled_cross_url)
+        try:
+            # 1. Scroll parent so iframe is in initial view (top: 1200px - scroll: 1000px = viewport y: 200px)
+            browser.evaluate("window.scrollTo(0, 1000)")
+            time.sleep(0.3)
+
+            page = browser.observe()
+            target_act = next(
+                (a for a in page.get("actions", []) if "Target Button" in a.get("label", "")),
+                None,
+            )
+            assert target_act is not None, "Target button inside cross-origin OOPIF must be discovered"
+            assert target_act.get("is_iframe") is True
+            assert (
+                target_act.get("frame_rect", {}).get("y") == 200
+            ), f"Expected initial frame_rect y=200, got {target_act.get('frame_rect', {}).get('y')}"
+
+            # 2. Scroll parent by additional 200px down (viewport y becomes 0)
+            browser.evaluate("window.scrollTo(0, 1200)")
+            time.sleep(0.2)
+
+            # Confirm true live DOM position is at y = 0
+            live_dom_y = browser.evaluate(
+                "document.querySelectorAll('iframe')[0].getBoundingClientRect().y"
+            )
+            assert live_dom_y == 0, f"Expected DOM iframe y=0, got {live_dom_y}"
+
+            # 3. Verify _get_iframe_rect returns live rect (y=0), NOT stale fallback (y=200)
+            live_rect = browser._get_iframe_rect(target_act)
+            assert (
+                live_rect.get("y") == 0
+            ), f"Expected live iframe rect y=0, got {live_rect.get('y')} (stale fallback)"
+
+            # 4. Execute click action on the button inside scrolled cross-origin OOPIF
+            res = browser.act(target_act, page=page)
+            assert res.get("executed") == target_act["id"]
+
+            time.sleep(0.3)
+            # 5. Verify click reached button inside OOPIF
+            sid = target_act.get("frame_session_id")
+            clicked = browser.evaluate("window.__clicked || false", session_id=sid)
+            assert clicked is True, "Mouse click must hit target button inside scrolled cross-origin OOPIF"
+
+            after_page = browser.observe()
+            assert "target_clicked" in after_page.get("text", "") or any(
+                "target_clicked" in str(v) for v in after_page.values()
+            ), "Status div inside OOPIF must reflect 'target_clicked'"
         finally:
             browser.close()
 

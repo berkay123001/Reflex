@@ -741,12 +741,12 @@ class Browser:
 
     def _get_iframe_rect(self, action: dict[str, Any]) -> dict[str, Any]:
         """Retrieve current top-level bounding rect of the iframe holding this action."""
-        frame_index = action.get("frame_index")
+        dom_frame_index = action.get("dom_frame_index") if action.get("dom_frame_index") is not None else action.get("frame_index")
         fallback = action.get("frame_rect") or {"x": 0, "y": 0, "w": 0, "h": 0}
         try:
-            if frame_index is not None:
+            if dom_frame_index is not None:
                 r = self.evaluate(
-                    f"(() => {{ const f = document.querySelectorAll('iframe')[{frame_index}]; "
+                    f"(() => {{ const f = document.querySelectorAll('iframe')[{dom_frame_index}]; "
                     f"return f ? ({{x: f.getBoundingClientRect().x, y: f.getBoundingClientRect().y, "
                     f"w: f.getBoundingClientRect().width, h: f.getBoundingClientRect().height}}) : null; }})()"
                 )
@@ -875,6 +875,7 @@ class Browser:
             frame_state: dict[str, Any] | None = None
             sid: str | None = None
             frame_index: int | None = None
+            dom_frame_index: int | None = candidate.get("index")
 
             if candidate.get("sameOrigin"):
                 frame_index = candidate.get("index")
@@ -982,6 +983,7 @@ class Browser:
                 merged_act["frame_rect"] = f_rect
                 merged_act["frame_session_id"] = sid
                 merged_act["frame_index"] = frame_index
+                merged_act["dom_frame_index"] = dom_frame_index
                 merged_act["frame_page_key"] = frame_pk
                 merged_act["rect"] = {
                     "x": round(trans_x),
@@ -995,6 +997,7 @@ class Browser:
                 self._iframe_node_map[unified_node] = {
                     "session_id": sid,
                     "frame_index": frame_index,
+                    "dom_frame_index": dom_frame_index,
                     "orig_node": orig_node,
                     "frame_rect": f_rect,
                     "frame_page_key": frame_pk,
@@ -1228,8 +1231,9 @@ class Browser:
 
         if is_iframe:
             try:
-                if frame_index is not None:
-                    self.evaluate(f"document.querySelectorAll('iframe')[{frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
+                dom_frame_index = action.get("dom_frame_index") if action.get("dom_frame_index") is not None else action.get("frame_index")
+                if dom_frame_index is not None:
+                    self.evaluate(f"document.querySelectorAll('iframe')[{dom_frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
                 else:
                     self.evaluate(f"""(() => {{
                         const frames = document.querySelectorAll('iframe');
@@ -1608,21 +1612,12 @@ class Browser:
         iframe_info = getattr(self, "_iframe_node_map", {}).get(node)
         if iframe_info:
             session_id = iframe_info.get("session_id")
+            dom_frame_index = iframe_info.get("dom_frame_index") if iframe_info.get("dom_frame_index") is not None else iframe_info.get("frame_index")
             frame_index = iframe_info.get("frame_index")
             orig_node = iframe_info.get("orig_node", node)
             try:
-                if frame_index is not None:
-                    self.evaluate(f"document.querySelectorAll('iframe')[{frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
-                    res = self.evaluate(
-                        f"""(() => {{
-                          const f = document.querySelectorAll('iframe')[{frame_index}];
-                          const el = f?.contentWindow?.__jevFast?.nodes?.get({orig_node});
-                          if (!el || !el.isConnected) return false;
-                          el.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
-                          return true;
-                        }})()"""
-                    )
-                    return bool(res)
+                if dom_frame_index is not None:
+                    self.evaluate(f"document.querySelectorAll('iframe')[{dom_frame_index}]?.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}})")
                 else:
                     f_rect = iframe_info.get("frame_rect") or {}
                     self.evaluate(f"""(() => {{
@@ -1635,6 +1630,19 @@ class Browser:
                             }}
                         }}
                     }})()""")
+
+                if frame_index is not None:
+                    res = self.evaluate(
+                        f"""(() => {{
+                          const f = document.querySelectorAll('iframe')[{frame_index}];
+                          const el = f?.contentWindow?.__jevFast?.nodes?.get({orig_node});
+                          if (!el || !el.isConnected) return false;
+                          el.scrollIntoView({{behavior: 'instant', block: 'center', inline: 'nearest'}});
+                          return true;
+                        }})()"""
+                    )
+                    return bool(res)
+                else:
                     res = self.evaluate(
                         f"""(() => {{
                           const el = window.__jevFast?.nodes?.get({orig_node});
