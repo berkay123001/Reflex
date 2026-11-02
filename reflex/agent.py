@@ -217,7 +217,12 @@ class ReflexSession:
             reasoning_effort=self.config.supervisor_reasoning_effort,
         )
         try:
-            self.browser = Browser(self.url)
+            self.browser = Browser(
+                self.url,
+                ax_supplement=self.config.ax_supplement,
+                light_stealth=self.config.light_stealth,
+                config=self.config,
+            )
             try:
                 self.page = self.browser.observe(screenshot=self.config.screenshots)
             except Exception:

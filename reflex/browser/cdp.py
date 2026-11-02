@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import random
 import re
 import shutil
 import socket
@@ -129,21 +130,23 @@ def ensure_chromium_cdp(port: int | None = None) -> None:
     profile_dir = Path("/tmp/reflex_chromium_profile")
     profile_dir.mkdir(parents=True, exist_ok=True)
     log_file = Path("/tmp/reflex_chromium.log").open("a", encoding="utf-8")
+    cmd = [
+        binary,
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={profile_dir}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-gpu",
+        "--disk-cache-size=1048576",
+        "--media-cache-size=1048576",
+        "--window-size=1280,900",
+        "--lang=tr-TR",
+    ]
+    if os.environ.get("REFLEX_HEADED") not in ("1", "true", "True"):
+        cmd.insert(1, "--headless=new")
     subprocess.Popen(
-        [
-            binary,
-            "--headless=new",
-            f"--remote-debugging-port={port}",
-            f"--user-data-dir={profile_dir}",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--disable-blink-features=AutomationControlled",
-            "--disable-gpu",
-            "--disk-cache-size=1048576",
-            "--media-cache-size=1048576",
-            "--window-size=1280,900",
-            "--lang=tr-TR",
-        ],
+        cmd,
         stdout=log_file,
         stderr=subprocess.STDOUT,
         start_new_session=True,
@@ -301,6 +304,36 @@ def clean_surrogates(data: Any) -> Any:
     return data
 
 
+STEALTH_MIN_DELAY_S: float = 0.05
+STEALTH_MAX_DELAY_S: float = 0.25
+
+
+def _stealth_delay(
+    target: Any = None,
+    min_s: float = STEALTH_MIN_DELAY_S,
+    max_s: float = STEALTH_MAX_DELAY_S,
+) -> float:
+    """Sleep for a randomized duration between min_s and max_s if target enables light stealth, returning duration."""
+    enabled = False
+    if target is None:
+        val = os.environ.get("REFLEX_LIGHT_STEALTH", "").strip().lower()
+        enabled = val in {"1", "true", "yes", "on"}
+    elif isinstance(target, bool):
+        enabled = target
+    elif hasattr(target, "light_stealth"):
+        enabled = bool(getattr(target, "light_stealth"))
+    elif isinstance(target, (int, float)):
+        min_s = float(target)
+        val = os.environ.get("REFLEX_LIGHT_STEALTH", "").strip().lower()
+        enabled = val in {"1", "true", "yes", "on"}
+
+    if enabled:
+        delay = random.uniform(min_s, max_s)
+        time.sleep(delay)
+        return delay
+    return 0.0
+
+
 class Browser:
     """Single-tab CDP browser session with fresh-state verification and recovery actions."""
 
@@ -325,6 +358,13 @@ class Browser:
         else:
             val = os.environ.get("REFLEX_AX_SUPPLEMENT", "1").strip().lower()
             self.ax_supplement = val not in {"0", "false", "no", "off"}
+        if light_stealth is not None:
+            self.light_stealth: bool = bool(light_stealth)
+        elif config is not None and hasattr(config, "light_stealth"):
+            self.light_stealth = bool(config.light_stealth)
+        else:
+            val = os.environ.get("REFLEX_LIGHT_STEALTH", "").strip().lower()
+            self.light_stealth = val in {"1", "true", "yes", "on"}
         cdp_port = port or DEFAULT_CDP_PORT
         if port is None:
             bu_cdp = os.environ.get("BU_CDP_URL")
@@ -376,7 +416,12 @@ class Browser:
             pass
         try:
             raw_ua = str(self.evaluate("navigator.userAgent") or "")
-            clean_ua = raw_ua.replace("HeadlessChrome/", "Chrome/")
+            if not raw_ua:
+                try:
+                    raw_ua = str(cdp("Browser.getVersion").get("userAgent", ""))
+                except Exception:
+                    pass
+            clean_ua = raw_ua.replace("HeadlessChrome", "Chrome").replace("Headless", "")
             if clean_ua:
                 self.call(
                     "Emulation.setUserAgentOverride",
@@ -387,6 +432,14 @@ class Browser:
         except Exception:
             pass
         self.navigate(url)
+
+    def _stealth_delay(
+        self,
+        min_s: float = STEALTH_MIN_DELAY_S,
+        max_s: float = STEALTH_MAX_DELAY_S,
+    ) -> float:
+        """Sleep for a randomized duration if light_stealth is active, returning duration."""
+        return _stealth_delay(self.light_stealth, min_s=min_s, max_s=max_s)
 
     def _wait_for_navigation_and_settle(self, prev_origin: Any = None, max_wait: float = 10.0) -> None:
         """Wait for a newly triggered navigation (or Enter submit) to commit, reach readyState complete, and settle."""
@@ -1450,6 +1503,8 @@ class Browser:
                     self.evaluate(f"window.scrollBy(0, {total_delta})")
             except Exception:
                 pass
+            if self.light_stealth:
+                self._stealth_delay()
             self.after_input = action
             return {"executed": action["id"], "rect": self.last_action_rect}
 
@@ -1699,11 +1754,19 @@ class Browser:
 
         if kind != "select" and not target.get("jsClicked"):
             x, y = target["x"], target["y"]
-            if is_iframe:
+            if self.light_stealth:
                 self.call("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
-                time.sleep(0.03)
-            for event in ("mousePressed", "mouseReleased"):
-                self.call("Input.dispatchMouseEvent", type=event, x=x, y=y, button="left", clickCount=1)
+                self._stealth_delay()
+                self.call("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y, button="left", clickCount=1)
+                self._stealth_delay(min_s=0.03, max_s=0.08)
+                self.call("Input.dispatchMouseEvent", type="mouseReleased", x=x, y=y, button="left", clickCount=1)
+                self._stealth_delay()
+            else:
+                if is_iframe:
+                    self.call("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
+                    time.sleep(0.03)
+                for event in ("mousePressed", "mouseReleased"):
+                    self.call("Input.dispatchMouseEvent", type=event, x=x, y=y, button="left", clickCount=1)
             if kind == "fill":
                 if text is None:
                     raise ValueError("fill action requires non-null text")
@@ -1754,6 +1817,8 @@ class Browser:
                 except Exception:
                     pass
                 self.call("Input.insertText", text=text)
+                if self.light_stealth:
+                    self._stealth_delay()
                 try:
                     setter_js = """((nodeId, textVal) => {
                       const e = window.__jevFast?.nodes.get(nodeId);
@@ -1847,6 +1912,8 @@ class Browser:
                     self.after_input = None
                     return {"executed": action["id"], "rect": self.last_action_rect}
 
+        if kind == "select" and self.light_stealth:
+            self._stealth_delay()
         self.after_input = action
         return {"executed": action["id"], "rect": self.last_action_rect}
 

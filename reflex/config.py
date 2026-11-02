@@ -204,6 +204,13 @@ def get_default_ax_supplement() -> bool:
     return val not in {"0", "false", "no", "off"}
 
 
+def get_default_light_stealth() -> bool:
+    """Return whether light stealth mode is active from REFLEX_LIGHT_STEALTH."""
+    load_env()
+    val = os.environ.get("REFLEX_LIGHT_STEALTH", "").strip().lower()
+    return val in {"1", "true", "yes", "on"}
+
+
 def save_env_key(key_name: str, key_value: str) -> None:
     """Persist an API key (`META_API_KEY`, `LLAMA_API_KEY`, `OPENROUTER_API_KEY`) into `.env` and `os.environ`."""
     if "\n" in key_name or "\r" in key_name:
@@ -282,6 +289,7 @@ class ReflexConfig(BaseModel):
     )
     trace_path: str | None = Field(default_factory=get_default_trace_path)
     ax_supplement: bool = Field(default_factory=get_default_ax_supplement)
+    light_stealth: bool = Field(default_factory=get_default_light_stealth)
 
     @field_validator("trace_path", mode="before")
     @classmethod

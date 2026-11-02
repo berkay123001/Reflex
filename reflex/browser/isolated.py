@@ -143,6 +143,8 @@ def managed_isolated_browser(
     proc: subprocess.Popen[Any] | None = None
 
     try:
+        if os.environ.get("REFLEX_HEADED") in ("1", "true", "True"):
+            headless = False
         if not _check_port_open("127.0.0.1", resolved_port):
             binary = (
                 shutil.which("chromium")
