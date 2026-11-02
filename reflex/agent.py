@@ -2797,11 +2797,10 @@ class ReflexSession:
             )
             self._last_scroll_direction = scroll_dir
 
-            scroll_revealed = bool(
-                verification.details.get("scroll_revealed_content", False)
-                or (verification.effective_progress and verification.details.get("new_elements_count", 0) > 0)
-                or (verification.effective_progress and verification.details.get("new_text_lines", 0) > 0)
-            )
+            if "scroll_revealed_content" in verification.details:
+                scroll_revealed = bool(verification.details["scroll_revealed_content"])
+            else:
+                scroll_revealed = bool(verification.effective_progress)
             if not hasattr(self, "_fruitless_scrolls_by_dir"):
                 self._fruitless_scrolls_by_dir = {"up": 0, "down": 0}
 
