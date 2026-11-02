@@ -68,7 +68,9 @@
     const trimmed = String(s).replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
     if (!trimmed) return true;
     if (/^(slider|textbox|spinbutton|searchbox|combobox|input|field)$/i.test(trimmed)) return true;
-    if (/^[$€£¥]?\s*-?\d+([.,]\d+)?\s*[%]?$/.test(trimmed)) return true;
+    if (/^(slider\s+)?range\s+(min(imum)?|max(imum)?)\b/i.test(trimmed)) return true;
+    if (/^(leading|trailing),\s*\d+\s+to\s+\d+/i.test(trimmed)) return true;
+    if (/^[$€£¥]?\s*-?\d+([.,]\d+)?\s*[kKmMbB%]?$/i.test(trimmed)) return true;
     return false;
   };
   const controlFallbackLabel = (e, seen) => {

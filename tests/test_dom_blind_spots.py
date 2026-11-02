@@ -885,3 +885,61 @@ def test_slider_container_and_sibling_labels() -> None:
             browser.close()
 
 
+def test_slider_range_boilerplate_fallback_label() -> None:
+    """Verify that sliders with range boilerplate aria-labels fall back to container labels."""
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    html = """data:text/html,<!DOCTYPE html>
+<html>
+<head><title>Slider Range Boilerplate Test</title></head>
+<body>
+  <h1>Retirement Calculator</h1>
+
+  <!-- Pattern 1: Boilerplate Slider range minimum ... with container field-title -->
+  <div class="form-group" style="margin-bottom: 20px;">
+    <span class="field-title" style="font-weight: bold;">Current Age</span>
+    <div class="slider-track" style="margin-top: 5px;">
+      <div id="sl_age" role="slider" tabindex="0"
+           aria-label="Slider range minimum 0, maximum 100000, increments of 1"
+           aria-valuenow="35" style="width:200px; height:20px;"></div>
+    </div>
+  </div>
+
+  <!-- Pattern 2: Dual thumb leading/trailing range boilerplate -->
+  <div class="form-group" style="margin-bottom: 20px;">
+    <span class="field-title" style="font-weight: bold;">Target Retirement Age</span>
+    <div class="slider-track" style="margin-top: 5px;">
+      <div id="sl_retire" role="slider" tabindex="0"
+           aria-label="leading, 25 to 75 25 to 75"
+           aria-valuenow="65" style="width:200px; height:20px;"></div>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    with managed_isolated_browser(port=0) as cdp_url:
+        browser = Browser(html)
+        try:
+            page = browser.observe()
+            actions = page["actions"]
+
+            age_act = next((a for a in actions if a.get("role") == "slider" and "Current Age" in a.get("label", "")), None)
+            assert age_act is not None, f"Slider for Current Age must be present in actions: {[a.get('label') for a in actions]}"
+            assert age_act.get("label") == "Current Age", (
+                f"Expected label 'Current Age', got {age_act.get('label')!r}"
+            )
+            assert age_act.get("value") == "35"
+
+            retire_act = next((a for a in actions if a.get("role") == "slider" and "Target Retirement Age" in a.get("label", "")), None)
+            assert retire_act is not None, f"Slider for Target Retirement Age must be present in actions: {[a.get('label') for a in actions]}"
+            assert age_act.get("label") != "Slider range minimum 0, maximum 100000, increments of 1"
+            assert retire_act.get("label") == "Target Retirement Age", (
+                f"Expected label 'Target Retirement Age', got {retire_act.get('label')!r}"
+            )
+            assert retire_act.get("value") == "65"
+        finally:
+            browser.close()
+
+
+
