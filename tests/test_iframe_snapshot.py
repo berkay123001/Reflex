@@ -248,6 +248,56 @@ class DualOriginHandler(http.server.BaseHTTPRequestHandler):
 </body>
 </html>"""
 
+        elif path == "/top_ira_calculator":
+            cross_url = f"http://{self.cross_origin_host}:{self.cross_origin_port}/cross_ira_calculator"
+            body = f"""<!DOCTYPE html>
+<html>
+<head><title>Retirement Planning Top</title></head>
+<body style="margin: 0; padding: 20px; font-family: sans-serif;">
+  <h1>Top Retirement Portal</h1>
+  <p>Please use the embedded IRA calculator below.</p>
+  <iframe id="ira_frame" src="{cross_url}"
+          style="position: absolute; left: 50px; top: 200px; width: 600px; height: 500px; border: 2px solid #ccc;">
+  </iframe>
+</body>
+</html>"""
+
+        elif path == "/cross_ira_calculator":
+            body = """<!DOCTYPE html>
+<html>
+<head><title>Cross Origin IRA Calculator</title></head>
+<body style="margin: 0; padding: 20px; font-family: sans-serif;">
+  <h2>Retirement Calculator</h2>
+  <h3>Traditional vs Roth IRA</h3>
+  <p>Compare Traditional and Roth IRA returns to plan your retirement savings.</p>
+
+  <div class="form-group" style="margin-bottom: 15px;">
+    <span class="field-title" style="font-weight: bold; display: block;">Current age</span>
+    <input id="ira_age" type="range" min="18" max="100" value="30" style="width: 250px; height: 25px;" />
+  </div>
+
+  <div class="form-group" style="margin-bottom: 15px;">
+    <span class="field-title" style="font-weight: bold; display: block;">Retirement age</span>
+    <input id="ira_retire_age" type="range" min="18" max="100" value="65" style="width: 250px; height: 25px;" />
+  </div>
+
+  <div class="form-group" style="margin-bottom: 15px;">
+    <span class="field-title" style="font-weight: bold; display: block;">Starting balance ($)</span>
+    <input id="ira_balance" type="range" min="0" max="100000" value="0" style="width: 250px; height: 25px;" />
+  </div>
+
+  <div class="form-group" style="margin-bottom: 15px;">
+    <span class="field-title" style="font-weight: bold; display: block;">Annual rate of return (%)</span>
+    <input id="ira_return" type="range" min="0" max="15" value="4" style="width: 250px; height: 25px;" />
+  </div>
+
+  <div class="form-group" style="margin-bottom: 15px;">
+    <span class="field-title" style="font-weight: bold; display: block;">Current tax rate (%)</span>
+    <input id="ira_tax" type="range" min="0" max="50" value="22" style="width: 250px; height: 25px;" />
+  </div>
+</body>
+</html>"""
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -292,6 +342,7 @@ def dual_origin_servers() -> Generator[dict[str, Any], None, None]:
         "scrolled_url": f"http://127.0.0.1:{p1}/scrolled_parent",
         "scrolled_cross_url": f"http://127.0.0.1:{p1}/scrolled_cross_parent",
         "dual_maneuver_url": f"http://127.0.0.1:{p1}/dual_maneuver_page",
+        "top_ira_calculator_url": f"http://127.0.0.1:{p1}/top_ira_calculator",
     }
 
     try:
@@ -833,4 +884,59 @@ def test_iframe_multi_maneuver_alternating_distant_oopifs(
             )
         finally:
             browser.close()
+
+
+def test_cross_origin_iframe_slider_label_extraction(dual_origin_servers: dict[str, Any]) -> None:
+    """Verify that sliders inside a cross-origin OOPIF extract container field labels and translated coordinates."""
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    top_url = dual_origin_servers["top_ira_calculator_url"]
+    with managed_isolated_browser(port=0) as cdp_url:
+        browser = Browser(top_url)
+        try:
+            page = browser.observe()
+            actions = page["actions"]
+
+            # Check that all 5 IRA calculator sliders from the OOPIF are present
+            slider_actions = [a for a in actions if a.get("role") == "slider"]
+            assert len(slider_actions) >= 4, f"Expected at least 4 sliders from OOPIF, got {len(slider_actions)}"
+
+            for a in slider_actions:
+                assert a.get("is_iframe") is True
+                assert a.get("label") != "slider", f"Slider {a.get('id')} has generic fallback 'slider' instead of field label"
+                # Coordinates must be translated to top-level space (y >= top-level iframe offset 200)
+                assert a["rect"]["y"] >= 200
+
+            labels = [a.get("label", "") for a in slider_actions]
+            assert any("Current age" in l or "Age" in l for l in labels)
+            assert any("Retirement age" in l for l in labels)
+            assert any("Starting balance" in l or "Balance" in l for l in labels)
+        finally:
+            browser.close()
+
+
+def test_cross_origin_iframe_visible_text_and_headings_merged(dual_origin_servers: dict[str, Any]) -> None:
+    """Verify that visible text and h1-h4 headings inside OOPIF are merged into page['headings'] and page['text']."""
+    if not is_chromium_available():
+        pytest.skip("Chromium required for isolated browser test")
+
+    top_url = dual_origin_servers["top_ira_calculator_url"]
+    with managed_isolated_browser(port=0) as cdp_url:
+        browser = Browser(top_url)
+        try:
+            page = browser.observe()
+
+            # Headings verification
+            headings = page.get("headings") or []
+            assert any("Traditional vs Roth IRA" in h or "Retirement Calculator" in h for h in headings), \
+                f"OOPIF headings must be merged into page['headings'], got: {headings}"
+
+            # Visible text verification
+            text = page.get("text") or ""
+            assert "Compare Traditional and Roth IRA returns" in text, \
+                "Visible explanatory text from OOPIF must be present in page['text']"
+        finally:
+            browser.close()
+
 

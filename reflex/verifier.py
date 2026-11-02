@@ -114,24 +114,50 @@ def verify_step(
         after_y = int((after_page.get("scroll") or {}).get("y", 0) or 0)
         scroll_moved = abs(after_y - before_y) >= 4
 
-        # 1. Check for newly revealed interactive elements
-        before_nodes = {a.get("node") for a in before_page.get("actions", []) if a.get("node") is not None}
-        after_nodes = {a.get("node") for a in after_page.get("actions", []) if a.get("node") is not None}
-        new_nodes = after_nodes - before_nodes
+        # 1. Check for newly revealed interactive elements using semantic signatures (role, label, href)
+        def is_content_action(a: dict[str, Any]) -> bool:
+            if not isinstance(a, dict):
+                return False
+            if a.get("kind") in ("scroll", "wait"):
+                return False
+            if str(a.get("id", "")).lower() in ("scroll_up", "scroll_down", "wait"):
+                return False
+            return True
 
-        before_sigs = {(a.get("role"), str(a.get("label", "")).strip(), a.get("href")) for a in before_page.get("actions", [])}
-        after_sigs = {(a.get("role"), str(a.get("label", "")).strip(), a.get("href")) for a in after_page.get("actions", [])}
+        before_sigs = {
+            (a.get("role"), str(a.get("label", "")).strip(), a.get("href"))
+            for a in before_page.get("actions", [])
+            if is_content_action(a)
+        }
+        after_sigs = {
+            (a.get("role"), str(a.get("label", "")).strip(), a.get("href"))
+            for a in after_page.get("actions", [])
+            if is_content_action(a)
+        }
         new_sigs = after_sigs - before_sigs
-        new_elements = bool(new_nodes or new_sigs)
+        new_elements = bool(new_sigs)
 
         # 2. Check for newly revealed text
-        before_lines = {l.strip() for l in before_page.get("text", "").splitlines() if len(l.strip()) >= 3}
-        after_lines = {l.strip() for l in after_page.get("text", "").splitlines() if len(l.strip()) >= 3}
-        new_lines = after_lines - before_lines
+        before_full = before_page.get("full_text") or before_page.get("text", "")
+        after_full = after_page.get("full_text") or after_page.get("text", "")
 
-        before_words = set(re.findall(r"\b\w{3,}\b", before_page.get("text", "").lower()))
-        after_words = set(re.findall(r"\b\w{3,}\b", after_page.get("text", "").lower()))
-        new_words = after_words - before_words
+        full_text_identical = bool(
+            before_page.get("full_text")
+            and after_page.get("full_text")
+            and str(before_page.get("full_text")).strip() == str(after_page.get("full_text")).strip()
+        )
+
+        if full_text_identical:
+            new_lines = set()
+            new_words = set()
+        else:
+            before_all_lines = {l.strip() for l in before_full.splitlines() if len(l.strip()) >= 3}
+            after_lines = {l.strip() for l in after_page.get("text", "").splitlines() if len(l.strip()) >= 3}
+            new_lines = after_lines - before_all_lines
+
+            before_all_words = set(re.findall(r"\b\w{3,}\b", before_full.lower()))
+            after_words = set(re.findall(r"\b\w{3,}\b", after_page.get("text", "").lower()))
+            new_words = after_words - before_all_words
 
         before_headings = set(before_page.get("headings", []))
         after_headings = set(after_page.get("headings", []))
@@ -155,7 +181,7 @@ def verify_step(
 
         details["scroll_moved"] = scroll_moved
         details["scroll_revealed_content"] = scroll_revealed_content
-        details["new_elements_count"] = len(new_nodes or new_sigs)
+        details["new_elements_count"] = len(new_sigs)
         details["new_text_lines"] = len(new_lines)
 
     elif kind in {"wait", "press_escape", "press_enter", "go_back", "goto_url"}:

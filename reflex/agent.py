@@ -282,6 +282,7 @@ class ReflexSession:
         self._no_progress_steps: int = 0
         self._stuck_finish_count: int = 0
         self._fruitless_scroll_count: int = 0
+        self._fruitless_scrolls_by_dir: dict[str, int] = {"up": 0, "down": 0}
         self._last_scroll_direction: str | None = None
         self._locked_scroll_direction: str | None = None
         self._404_domains: set[str] = set()
@@ -1754,9 +1755,13 @@ class ReflexSession:
             self.page.get("actions", []),
             max_elements=MAX_SUPERVISOR_ELEMENTS,
         )
-        if getattr(self, "_locked_scroll_direction", None) == "down":
+        locked_dir = getattr(self, "_locked_scroll_direction", None)
+        if locked_dir == "down":
             controls.pop("SCROLL_DOWN", None)
-        elif getattr(self, "_locked_scroll_direction", None) == "up":
+        elif locked_dir == "up":
+            controls.pop("SCROLL_UP", None)
+        elif locked_dir == "both":
+            controls.pop("SCROLL_DOWN", None)
             controls.pop("SCROLL_UP", None)
         existing_href_keys: set[str] = set()
         for el in elements:
@@ -1832,7 +1837,6 @@ class ReflexSession:
             return self.snapshot()
 
         s2_ms = int(sup.latency_ms or round((time.perf_counter() - s2_t0) * 1000))
-        self._locked_scroll_direction = None
         cur_url = str(self.page.get("url", "")).strip()
         step_num = len(self.history) + 1
         self._s1_steps_since_s2 = 0
@@ -2123,6 +2127,9 @@ class ReflexSession:
             self.status = "ready"
             return self.snapshot()
 
+        if sup.operation not in {"SCROLL_DOWN", "SCROLL_UP"}:
+            self._locked_scroll_direction = None
+
         esc_note = (
             f"[{trigger_type}] (queue +{len(accepted_queue_urls)}, rej {rejected_queue_delta}) {sup.reasoning}"
             if isinstance(raw_queue_urls, (list, tuple)) and raw_queue_urls
@@ -2255,14 +2262,17 @@ class ReflexSession:
             return {"id": op.lower(), "kind": op.lower(), "label": op.replace("_", " ").title()}
 
         if op in {"SCROLL_DOWN", "SCROLL_UP", "WAIT"}:
-            if op == "SCROLL_DOWN" and getattr(self, "_locked_scroll_direction", None) == "down":
+            locked_dir = getattr(self, "_locked_scroll_direction", None)
+            if op == "SCROLL_DOWN" and locked_dir in {"down", "both"}:
                 return None
-            if op == "SCROLL_UP" and getattr(self, "_locked_scroll_direction", None) == "up":
+            if op == "SCROLL_UP" and locked_dir in {"up", "both"}:
                 return None
             if op in controls:
                 return controls[op]
             if op == "WAIT":
                 return {"id": "wait", "kind": "wait", "label": "Wait for the page to update"}
+            if op in {"SCROLL_DOWN", "SCROLL_UP"}:
+                return None
             delta = 560 if op == "SCROLL_DOWN" else -560
             return {"id": op.lower(), "kind": "scroll", "label": op.replace("_", " ").title(), "delta": delta}
 
@@ -2785,18 +2795,25 @@ class ReflexSession:
                 if int(action.get("delta", 560) or 560) > 0 or "down" in str(action.get("id", "")).lower()
                 else "up"
             )
-            if self._last_scroll_direction is not None and scroll_dir != self._last_scroll_direction:
-                self._fruitless_scroll_count = 0
             self._last_scroll_direction = scroll_dir
 
             scroll_revealed = bool(
                 verification.details.get("scroll_revealed_content", False)
-                or verification.effective_progress
+                or (verification.effective_progress and verification.details.get("new_elements_count", 0) > 0)
+                or (verification.effective_progress and verification.details.get("new_text_lines", 0) > 0)
             )
+            if not hasattr(self, "_fruitless_scrolls_by_dir"):
+                self._fruitless_scrolls_by_dir = {"up": 0, "down": 0}
+
             if not scroll_revealed:
-                self._fruitless_scroll_count += 1
-                if self._fruitless_scroll_count >= 4:
-                    self._locked_scroll_direction = scroll_dir
+                self._fruitless_scrolls_by_dir[scroll_dir] = self._fruitless_scrolls_by_dir.get(scroll_dir, 0) + 1
+                self._fruitless_scroll_count = self._fruitless_scrolls_by_dir[scroll_dir]
+                if self._fruitless_scrolls_by_dir[scroll_dir] >= 4:
+                    opp_dir = "up" if scroll_dir == "down" else "down"
+                    if self._fruitless_scrolls_by_dir.get(opp_dir, 0) >= 4:
+                        self._locked_scroll_direction = "both"
+                    else:
+                        self._locked_scroll_direction = scroll_dir
                     warning_msg = (
                         "4 consecutive scrolls revealed no new content; target element may not be in this document "
                         "(frame, popup, or another page)"
@@ -2804,14 +2821,25 @@ class ReflexSession:
                     self.ctx.scroll_warning = warning_msg
                     self.pending_escalation_reason = ("fruitless_scroll", warning_msg)
             else:
+                self._fruitless_scrolls_by_dir[scroll_dir] = 0
                 self._fruitless_scroll_count = 0
-                self._locked_scroll_direction = None
+                if getattr(self, "_locked_scroll_direction", None) == scroll_dir:
+                    self._locked_scroll_direction = None
+                elif getattr(self, "_locked_scroll_direction", None) == "both":
+                    self._locked_scroll_direction = "up" if scroll_dir == "down" else "down"
                 self.ctx.scroll_warning = ""
         else:
-            self._fruitless_scroll_count = 0
-            self._last_scroll_direction = None
             if verification.url_changed:
+                self._fruitless_scrolls_by_dir = {"up": 0, "down": 0}
+                self._fruitless_scroll_count = 0
                 self._locked_scroll_direction = None
+                self._last_scroll_direction = None
+                self.ctx.scroll_warning = ""
+            elif verification.effective_progress:
+                self._fruitless_scrolls_by_dir = {"up": 0, "down": 0}
+                self._fruitless_scroll_count = 0
+                self._locked_scroll_direction = None
+                self._last_scroll_direction = None
                 self.ctx.scroll_warning = ""
 
         # Non-progress budget tracking

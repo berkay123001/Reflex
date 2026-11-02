@@ -1256,6 +1256,7 @@ class Browser:
 
         iframe_actions: list[dict[str, Any]] = []
         extra_texts: list[str] = []
+        extra_full_texts: list[str] = []
         unmatched_targets = list(child_targets)
 
         for candidate in candidates:
@@ -1329,9 +1330,21 @@ class Browser:
             if not frame_state or not isinstance(frame_state, dict):
                 continue
 
+            f_headings = frame_state.get("headings", [])
+            if f_headings and isinstance(f_headings, list):
+                cur_headings = info.setdefault("headings", [])
+                for h in f_headings:
+                    if h and h not in cur_headings:
+                        cur_headings.append(h)
+                if len(cur_headings) > 80:
+                    info["headings"] = cur_headings[:80]
+
             ftxt = str(frame_state.get("text", "")).strip()
+            ffull = str(frame_state.get("full_text", "")).strip() or ftxt
             if ftxt and ftxt not in info.get("text", ""):
                 extra_texts.append(ftxt)
+            if ffull and ffull not in info.get("full_text", ""):
+                extra_full_texts.append(ffull)
 
             frame_guards = frame_state.get("guards") or {}
             frame_pk = frame_state.get("page_key")
@@ -1411,12 +1424,63 @@ class Browser:
                         guards[str(unified_node)] = orig_guard
                         guards[unified_node] = orig_guard
 
+            f_controls = frame_state.get("page_controls", [])
+            if f_controls and isinstance(f_controls, list):
+                cur_controls = info.setdefault("page_controls", [])
+                max_ctrls = 150
+                for c in f_controls:
+                    if len(cur_controls) >= max_ctrls:
+                        break
+                    if not isinstance(c, dict):
+                        continue
+                    c_node = c.get("node")
+                    unified_c_node = None
+                    for u_node, meta in self._iframe_node_map.items():
+                        if meta.get("orig_node") == c_node and meta.get("session_id") == sid:
+                            unified_c_node = u_node
+                            break
+                    if unified_c_node is None:
+                        unified_c_node = next_node
+                        next_node += 1
+                        self._iframe_node_map[unified_c_node] = {
+                            "session_id": sid,
+                            "frame_index": frame_index,
+                            "dom_frame_index": dom_frame_index,
+                            "orig_node": c_node,
+                            "frame_rect": f_rect,
+                            "frame_page_key": frame_pk,
+                        }
+                    m_ctrl = dict(c)
+                    m_ctrl["node"] = unified_c_node
+                    m_ctrl["orig_node"] = c_node
+                    m_ctrl["is_iframe"] = True
+                    cur_controls.append(m_ctrl)
+
         if extra_texts:
             combo = "\n".join(extra_texts)
             cur_txt = str(info.get("text", "")).strip()
+            if cur_txt:
+                if len(cur_txt) + len(combo) + 1 > 6000:
+                    iframe_budget = min(len(combo), 2500)
+                    top_budget = 6000 - iframe_budget - 1
+                    info["text"] = f"{cur_txt[:top_budget]}\n{combo[:iframe_budget]}"
+                else:
+                    info["text"] = f"{cur_txt}\n{combo}"
+            else:
+                info["text"] = combo[:6000]
+
+        if extra_full_texts:
+            combo_full = "\n".join(extra_full_texts)
             cur_full = str(info.get("full_text", "")).strip()
-            info["text"] = f"{cur_txt}\n{combo}"[:6000] if cur_txt else combo[:6000]
-            info["full_text"] = f"{cur_full}\n{combo}"[:30000] if cur_full else combo[:30000]
+            if cur_full:
+                if len(cur_full) + len(combo_full) + 1 > 30000:
+                    iframe_full_budget = min(len(combo_full), 10000)
+                    top_full_budget = 30000 - iframe_full_budget - 1
+                    info["full_text"] = f"{cur_full[:top_full_budget]}\n{combo_full[:iframe_full_budget]}"
+                else:
+                    info["full_text"] = f"{cur_full}\n{combo_full}"
+            else:
+                info["full_text"] = combo_full[:30000]
 
         all_actions = main_actions + iframe_actions
         if wait_action:

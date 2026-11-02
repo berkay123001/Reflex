@@ -839,3 +839,224 @@ def test_mock_architecture_runs_offline_under_5_seconds() -> None:
 
     elapsed = time.perf_counter() - t0
     assert elapsed < 1.0, f"Expected < 1.0s runtime, took {elapsed:.3f}s"
+
+
+def test_verifier_scroll_without_new_elements_or_text_yields_effective_progress_false() -> None:
+    """Verify that scrolling with no new elements and no new text lines returns effective_progress=False."""
+    before_page = {
+        "url": "https://example.com/calculator",
+        "fingerprint": "fp1",
+        "scroll": {"y": 0, "height": 2000},
+        "text": "Retirement Calculator\nCurrent Age: 30\nRetirement Age: 65",
+        "actions": [
+            {"node": 1, "role": "slider", "label": "Current Age", "value": "30", "href": None},
+            {"node": 2, "role": "slider", "label": "Retirement Age", "value": "65", "href": None},
+        ],
+    }
+    # Page scrolled 420px, but same elements and exact same text in view
+    after_page = {
+        "url": "https://example.com/calculator",
+        "fingerprint": "fp2",  # fp changes due to scroll.y
+        "scroll": {"y": 420, "height": 2000},
+        "text": "Retirement Calculator\nCurrent Age: 30\nRetirement Age: 65",
+        "actions": [
+            {"node": 1, "role": "slider", "label": "Current Age", "value": "30", "href": None},
+            {"node": 2, "role": "slider", "label": "Retirement Age", "value": "65", "href": None},
+        ],
+    }
+    action = {"kind": "scroll", "id": "scroll_down", "delta": 420}
+
+    res = verify_step(
+        action=action,
+        before_page=before_page,
+        after_page=after_page,
+    )
+
+    assert res.effective_progress is False, "Fruitless scroll must have effective_progress=False"
+    assert res.element_state_changed is False
+    assert res.page_changed is False
+    assert res.details.get("scroll_revealed_content") is False
+
+
+def test_verifier_shifting_ephemeral_node_ids_do_not_fool_scroll_verifier() -> None:
+    """Verify that ephemeral integer node ID re-indexing does not register as new elements."""
+    before_page = {
+        "url": "https://example.com/calculator",
+        "fingerprint": "fp1",
+        "scroll": {"y": 0, "height": 2000},
+        "text": "Retirement Calculator\nCurrent Age: 30",
+        "actions": [
+            {"node": 10, "role": "slider", "label": "Current Age", "value": "30", "href": None},
+        ],
+    }
+    # Node integer shifted from 10 to 11 due to iframe unified_node re-indexing
+    after_page = {
+        "url": "https://example.com/calculator",
+        "fingerprint": "fp2",
+        "scroll": {"y": 420, "height": 2000},
+        "text": "Retirement Calculator\nCurrent Age: 30",
+        "actions": [
+            {"node": 11, "role": "slider", "label": "Current Age", "value": "30", "href": None},
+        ],
+    }
+    action = {"kind": "scroll", "id": "scroll_down", "delta": 420}
+
+    res = verify_step(
+        action=action,
+        before_page=before_page,
+        after_page=after_page,
+    )
+
+    assert res.effective_progress is False, "Re-indexed node integers must not be counted as new elements"
+    assert res.details.get("new_elements_count", 0) == 0
+
+
+def test_four_consecutive_fruitless_scrolls_removes_direction_from_s2_controls() -> None:
+    """Verify that after 4 fruitless scrolls down, SCROLL_DOWN is omitted from S2 action space controls."""
+    from reflex.agent import action_space
+
+    sess = _make_mock_session()
+    sess._fruitless_scroll_count = 4
+    sess._locked_scroll_direction = "down"
+
+    page_actions = [
+        {"id": "e1", "role": "slider", "label": "Current Age", "kind": "fill", "node": 1},
+        {"id": "scroll_down", "role": None, "label": "Scroll down", "kind": "scroll"},
+        {"id": "scroll_up", "role": None, "label": "Scroll up", "kind": "scroll"},
+    ]
+
+    elements, targets, controls = action_space(page_actions)
+    if sess._locked_scroll_direction == "down":
+        controls.pop("SCROLL_DOWN", None)
+
+    assert "SCROLL_DOWN" not in controls, "Locked scroll direction 'down' must be removed from S2 controls"
+    assert "SCROLL_UP" in controls, "Opposite scroll direction 'up' should remain available"
+
+
+def test_alternating_scroll_bounce_does_not_reset_fruitless_budget() -> None:
+    """Verify that alternating scroll directions without new content does not indefinitely reset the fruitless scroll budget."""
+    sess = _make_mock_session()
+
+    p_static = {
+        "url": "https://example.com/page",
+        "fingerprint": "fp",
+        "text": "Fixed text",
+        "actions": [],
+        "scroll": {"y": 0},
+    }
+    sess.page = p_static
+    sess._observe_settled = lambda: p_static
+
+    # 3 scrolls down
+    for _ in range(3):
+        sess._execute_and_verify(
+            action={"kind": "scroll", "id": "scroll_down", "delta": 560, "label": "Scroll down"},
+            actor="S1",
+            operation="SCROLL_DOWN",
+            target=None,
+            confidence=0.9,
+            target_confidence=None,
+            joint_confidence=0.9,
+            target_margin=0.9,
+            latency_ms=10,
+            model_name="mock-model",
+            usage={},
+            preset_text=None,
+            escalation_note=None,
+        )
+    assert sess._fruitless_scrolls_by_dir["down"] == 3
+
+    # 1 scroll up
+    sess._execute_and_verify(
+        action={"kind": "scroll", "id": "scroll_up", "delta": -560, "label": "Scroll up"},
+        actor="S1",
+        operation="SCROLL_UP",
+        target=None,
+        confidence=0.9,
+        target_confidence=None,
+        joint_confidence=0.9,
+        target_margin=0.9,
+        latency_ms=10,
+        model_name="mock-model",
+        usage={},
+        preset_text=None,
+        escalation_note=None,
+    )
+    assert sess._fruitless_scrolls_by_dir["up"] == 1
+    # Down counter was NOT wiped to 0!
+    assert sess._fruitless_scrolls_by_dir["down"] == 3
+
+    # 1 more scroll down -> down reaches 4!
+    sess._execute_and_verify(
+        action={"kind": "scroll", "id": "scroll_down", "delta": 560, "label": "Scroll down"},
+        actor="S1",
+        operation="SCROLL_DOWN",
+        target=None,
+        confidence=0.9,
+        target_confidence=None,
+        joint_confidence=0.9,
+        target_margin=0.9,
+        latency_ms=10,
+        model_name="mock-model",
+        usage={},
+        preset_text=None,
+        escalation_note=None,
+    )
+    assert sess._fruitless_scrolls_by_dir["down"] == 4
+    assert sess._locked_scroll_direction == "down"
+
+
+def test_failing_type_text_does_not_reset_fruitless_scroll_budget() -> None:
+    """Verify that non-progress actions (failing TYPE_TEXT) do not reset _fruitless_scroll_count to 0."""
+    sess = _make_mock_session()
+    p_static = {
+        "url": "https://example.com/page",
+        "fingerprint": "fp",
+        "text": "Fixed text",
+        "actions": [{"id": "e4", "role": "slider", "label": "slider", "node": 4, "kind": "fill"}],
+        "scroll": {"y": 0},
+    }
+    sess.page = p_static
+    sess._observe_settled = lambda: p_static
+
+    # 2 scrolls down
+    for _ in range(2):
+        sess._execute_and_verify(
+            action={"kind": "scroll", "id": "scroll_down", "delta": 560, "label": "Scroll down"},
+            actor="S1",
+            operation="SCROLL_DOWN",
+            target=None,
+            confidence=0.9,
+            target_confidence=None,
+            joint_confidence=0.9,
+            target_margin=0.9,
+            latency_ms=10,
+            model_name="mock-model",
+            usage={},
+            preset_text=None,
+            escalation_note=None,
+        )
+    assert sess._fruitless_scroll_count == 2
+    assert sess._fruitless_scrolls_by_dir["down"] == 2
+
+    # Failing TYPE_TEXT (no progress)
+    sess._execute_and_verify(
+        action={"kind": "fill", "id": "e4", "node": 4, "text": "30", "label": "slider"},
+        actor="S1",
+        operation="TYPE_TEXT",
+        target="4",
+        confidence=0.9,
+        target_confidence=None,
+        joint_confidence=0.9,
+        target_margin=0.9,
+        latency_ms=10,
+        model_name="mock-model",
+        usage={},
+        preset_text="30",
+        escalation_note=None,
+    )
+
+    # Failing action must NOT wipe fruitless scroll budget
+    assert sess._fruitless_scroll_count == 2
+    assert sess._fruitless_scrolls_by_dir["down"] == 2
+

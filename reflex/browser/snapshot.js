@@ -46,24 +46,103 @@
     const w = iconRange.getBoundingClientRect().width;
     return w > 0 && w <= 1.2 * (parseFloat(st.fontSize) || 16);
   };
-  const name = (e,seen=new Set(),parentVis=null) => {
+  const getElementByScopedId = (startEl, id) => {
+    if (!id) return null;
+    const root = startEl?.getRootNode ? startEl.getRootNode() : document;
+    if (root?.getElementById) {
+      const el = root.getElementById(id);
+      if (el) return el;
+    }
+    const docEl = document.getElementById(id);
+    if (docEl) return docEl;
+    for (const r of allRoots) {
+      if (r !== root && r.getElementById) {
+        const el = r.getElementById(id);
+        if (el) return el;
+      }
+    }
+    return null;
+  };
+  const isGenericOrNumeric = s => {
+    if (!s) return true;
+    const trimmed = String(s).replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+    if (!trimmed) return true;
+    if (/^(slider|textbox|spinbutton|searchbox|combobox|input|field)$/i.test(trimmed)) return true;
+    if (/^[$€£¥]?\s*-?\d+([.,]\d+)?\s*[%]?$/.test(trimmed)) return true;
+    return false;
+  };
+  const controlFallbackLabel = (e, seen) => {
+    if (!e) return '';
+    if (e.id) {
+      const root = e.getRootNode ? e.getRootNode() : document;
+      try {
+        const lblEl = (root?.querySelector ? root : document).querySelector(`label[for="${CSS.escape(e.id)}"]`);
+        if (lblEl) {
+          const t = name(lblEl, seen, null, true);
+          if (t && !isGenericOrNumeric(t)) return t;
+        }
+      } catch (_) {}
+    }
+    const cl = e.closest('label');
+    if (cl) {
+      const t = name(cl, seen, null, true);
+      if (t && !isGenericOrNumeric(t)) return t;
+    }
+    const descAttr = e.getAttribute('aria-describedby');
+    if (descAttr) {
+      const descs = descAttr.split(/\s+/).map(id => {
+        const el = getElementByScopedId(e, id);
+        return el ? name(el, seen, null, true) : '';
+      }).filter(t => t && !isGenericOrNumeric(t)).join(' ');
+      if (descs) return descs;
+    }
+    let cur = e.parentElement;
+    for (let i = 0; cur && cur !== document.body && i < 4; i++, cur = cur.parentElement) {
+      if (cur.tagName === 'FIELDSET') {
+        const leg = cur.querySelector('legend');
+        if (leg) {
+          const t = name(leg, seen, null, true);
+          if (t && !isGenericOrNumeric(t)) return t;
+        }
+      }
+      const candidates = cur.querySelectorAll('label, [class*="label-name" i], [class*="label_name" i], [class*="field-title" i], [class*="field_title" i], [class*="microcopy" i], [class*="title" i], [class*="label" i], [class*="header" i], [role="heading"], legend, h1, h2, h3, h4');
+      for (const cand of candidates) {
+        if (cand === e || cand.contains(e)) continue;
+        const t = (cand.innerText || cand.textContent || '').replace(/\s+/g, ' ').trim();
+        if (t && t.length <= 90 && !isGenericOrNumeric(t)) return t;
+      }
+    }
+    let prev = e.previousElementSibling;
+    while (prev) {
+      const t = (prev.innerText || prev.textContent || '').replace(/\s+/g, ' ').trim();
+      if (t && t.length <= 80 && !isGenericOrNumeric(t)) return t;
+      prev = prev.previousElementSibling;
+    }
+    return '';
+  };
+  const name = (e,seen=new Set(),parentVis=null,allowHidden=false) => {
     if (!e || seen.has(e)) return '';
     const top = seen.size === 0;
     if (top && nameCache?.has(e)) return nameCache.get(e);
     seen.add(e);
     const referenced=(e.getAttribute('aria-labelledby')||'').split(/\s+/)
-      .map(id=>name(document.getElementById(id),seen)).filter(Boolean).join(' ');
-    const raw = referenced || e.getAttribute('aria-label') ||
-      [...(e.labels||[])].map(l=>name(l,seen)).filter(Boolean).join(' ') ||
+      .map(id=>name(getElementByScopedId(e,id),seen,null,true)).filter(Boolean).join(' ');
+    let raw = referenced || e.getAttribute('aria-label') ||
+      [...(e.labels||[])].map(l=>name(l,seen,null,true)).filter(Boolean).join(' ') ||
       choiceFallbackLabel(e,seen) ||
       (['button','submit','reset'].includes(e.type) ? e.value : '') || e.getAttribute('alt') ||
       (e.tagName==='INPUT' ? '' : [...e.childNodes].map(n => {
         if (n.nodeType===3) return n.textContent;
-        if (n.nodeType!==1 || ['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName) || n.getAttribute('aria-hidden')==='true' || ((parentVis ??= visible(e)) && !visible(n))) return '';
-        const sub = name(n,seen,parentVis);
+        if (n.nodeType!==1 || ['SCRIPT','STYLE','NOSCRIPT','TEMPLATE','SVG'].includes(n.tagName)) return '';
+        if (!allowHidden && (n.getAttribute('aria-hidden')==='true' || ((parentVis ??= visible(e)) && !visible(n)))) return '';
+        const sub = name(n,seen,parentVis,allowHidden);
         return sub && isIconEl(n, sub) ? '' : sub;
       }).join(' ').trim()) ||
       e.getAttribute('title') || e.getAttribute('placeholder') || '';
+    if (isGenericOrNumeric(raw) && (role(e) === 'slider' || e.type === 'range' || e.getAttribute('role') === 'slider')) {
+      const fallback = controlFallbackLabel(e, seen);
+      if (fallback) raw = fallback;
+    }
     const res = raw.replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, '').replace(/\s+/g, ' ').trim();
     if (top && nameCache) nameCache.set(e, res);
     return res;
@@ -237,7 +316,11 @@
     return '';
   };
   const computeControlLabel = (e, rname) => {
-    const accessibleName = name(e) || '';
+    let accessibleName = name(e) || '';
+    if (isGenericOrNumeric(accessibleName) && (rname === 'slider' || e.type === 'range' || e.getAttribute('role') === 'slider')) {
+      const fallback = controlFallbackLabel(e, new Set());
+      if (fallback) accessibleName = fallback;
+    }
     let lbl = (e.tagName === 'IFRAME' ? 'Verify you are human (Security Challenge)' : accessibleName) || rname;
     if (rname === 'link' && lbl.length > 35) {
       const hEl = e.querySelector('h1,h2,h3,h4,[class*="title"],[class*="Title"]');
@@ -442,6 +525,14 @@
     clipCache.set(el,b);
     return b;
   };
+  const visuallyRendered = e => {
+    if (!e || e.closest('[inert]')) return false;
+    if (e.checkVisibility) {
+      return e.checkVisibility({checkOpacity: true, checkVisibilityCSS: true});
+    }
+    const st = window.getComputedStyle(e);
+    return st.display !== 'none' && st.visibility !== 'hidden' && parseFloat(st.opacity || '1') > 0;
+  };
   const words=[], fullWords=[];
   const range=document.createRange(); let length=0,fullLength=0;
   for (const root of allRoots) {
@@ -451,7 +542,7 @@
     let node;
     while ((node=walker.nextNode()) && (length<6000 || fullLength<30000)) {
       const value=node.textContent.trim(), parent=node.parentElement;
-      if (!value || !parent || parent.closest('script,style,noscript,template') || !visible(parent)) continue;
+      if (!value || !parent || parent.closest('script,style,noscript,template') || !visuallyRendered(parent)) continue;
       range.selectNodeContents(node); const r=range.getBoundingClientRect();
       if (r.width<=0 || r.height<=0 || r.top>=getClipBottom(parent)-2) continue;
       if (fullLength<30000) {
@@ -463,7 +554,7 @@
     }
   }
   const isUnclipped=el=>{
-    if (!visible(el)) return false;
+    if (!visuallyRendered(el)) return false;
     const r=el.getBoundingClientRect();
     return r.width>0 && r.height>0 && r.top<getClipBottom(el.parentElement)-2;
   };
