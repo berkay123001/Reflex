@@ -211,6 +211,16 @@ def get_default_light_stealth() -> bool:
     return val in {"1", "true", "yes", "on"}
 
 
+DEFAULT_BROWSER_LANGUAGE = "tr-TR"
+
+
+def get_default_browser_language() -> str:
+    """Return browser language from REFLEX_BROWSER_LANG, defaulting to 'tr-TR'."""
+    load_env()
+    val = os.environ.get("REFLEX_BROWSER_LANG", DEFAULT_BROWSER_LANGUAGE).strip()
+    return val or DEFAULT_BROWSER_LANGUAGE
+
+
 def save_env_key(key_name: str, key_value: str) -> None:
     """Persist an API key (`META_API_KEY`, `LLAMA_API_KEY`, `OPENROUTER_API_KEY`) into `.env` and `os.environ`."""
     if "\n" in key_name or "\r" in key_name:
@@ -290,6 +300,15 @@ class ReflexConfig(BaseModel):
     trace_path: str | None = Field(default_factory=get_default_trace_path)
     ax_supplement: bool = Field(default_factory=get_default_ax_supplement)
     light_stealth: bool = Field(default_factory=get_default_light_stealth)
+    browser_language: str = Field(default_factory=get_default_browser_language)
+
+    @field_validator("browser_language", mode="before")
+    @classmethod
+    def _normalize_browser_language(cls, v: Any) -> str:
+        if v is None:
+            return get_default_browser_language()
+        val = str(v).strip()
+        return val or DEFAULT_BROWSER_LANGUAGE
 
     @field_validator("trace_path", mode="before")
     @classmethod

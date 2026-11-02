@@ -86,6 +86,7 @@ def _restore_harness_daemon_name(previous: dict[str, str]) -> None:
 def managed_isolated_browser(
     port: int | None = 9444,
     headless: bool = True,
+    browser_language: str | None = None,
 ) -> Generator[str, None, None]:
     """Provide an isolated Chromium browser instance and environment lifecycle.
 
@@ -126,6 +127,9 @@ def managed_isolated_browser(
     old_bu_name = os.environ.get("BU_NAME")
     os.environ["BU_CDP_URL"] = cdp_url
     os.environ["BU_NAME"] = daemon_name
+    lang = (browser_language or os.environ.get("REFLEX_BROWSER_LANG", "tr-TR")).strip() or "tr-TR"
+    old_lang = os.environ.get("REFLEX_BROWSER_LANG")
+    os.environ["REFLEX_BROWSER_LANG"] = lang
     # browser_harness reads BU_NAME once at import; without this the client keeps talking to the
     # "default" daemon (which may be attached to the shared 9333 browser) instead of eval_{port}.
     harness_names = _set_harness_daemon_name(daemon_name)
@@ -166,7 +170,7 @@ def managed_isolated_browser(
                     "--disk-cache-size=1048576",
                     "--media-cache-size=1048576",
                     "--window-size=1280,900",
-                    "--lang=tr-TR",
+                    f"--lang={lang}",
                 ]
                 if headless:
                     cmd.insert(1, "--headless=new")
@@ -235,4 +239,9 @@ def managed_isolated_browser(
             os.environ["BU_NAME"] = old_bu_name
         else:
             os.environ.pop("BU_NAME", None)
+
+        if old_lang is not None:
+            os.environ["REFLEX_BROWSER_LANG"] = old_lang
+        else:
+            os.environ.pop("REFLEX_BROWSER_LANG", None)
         _restore_harness_daemon_name(harness_names)

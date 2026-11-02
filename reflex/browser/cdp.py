@@ -56,41 +56,117 @@ INTERACTIVE_AX_ROLES: set[str] = {
     "menuitem", "menuitemcheckbox", "menuitemradio", "tab", "treeitem",
 }
 
-_STEALTH_INIT_SCRIPT = """(() => {
-  try {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    window.chrome = window.chrome || { runtime: {}, app: {}, csi: () => ({}), loadTimes: () => ({}) };
-    Object.defineProperty(navigator, 'languages', { get: () => ['tr-TR', 'tr', 'en-US', 'en'] });
-    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-    if (!window.outerWidth) Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth || 1280 });
-    if (!window.outerHeight) Object.defineProperty(window, 'outerHeight', { get: () => (window.innerHeight || 800) + 85 });
+
+def format_browser_languages(tag: str | None) -> list[str]:
+    """Return ordered list of language tags for navigator.languages.
+
+    Given a BCP 47 language tag (e.g. 'tr-TR', 'en-US', 'de-DE', 'tr'):
+    - Normalizes underscores to hyphens (e.g. 'tr_TR' -> 'tr-TR')
+    - Standardizes case (lower-case language, upper-case 2-letter region)
+    - Appends base language if tag has a region (e.g. 'tr-TR' -> 'tr')
+    - If primary language is not English, appends English fallbacks (['en-US', 'en'])
+    - Deduplicates while preserving order.
+    """
+    clean = (tag or "").strip().replace("_", "-")
+    if not clean:
+        clean = "tr-TR"
+
+    parts = clean.split("-")
+    base = parts[0].lower()
+    if len(parts) == 2 and len(parts[1]) == 2:
+        normalized_tag = f"{base}-{parts[1].upper()}"
+    else:
+        normalized_tag = clean
+
+    langs: list[str] = [normalized_tag]
+    if base != normalized_tag.lower() and base not in langs:
+        langs.append(base)
+
+    if base != "en":
+        for fallback in ("en-US", "en"):
+            if fallback not in langs:
+                langs.append(fallback)
+    elif normalized_tag == "en":
+        if "en-US" not in langs:
+            langs.append("en-US")
+
+    return langs
+
+
+def format_accept_language(languages: list[str] | str) -> str:
+    """Format an Accept-Language HTTP header string with descending q-values.
+
+    Example:
+        ['tr-TR', 'tr', 'en-US', 'en'] -> 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
+        ['en-US', 'en'] -> 'en-US,en;q=0.9'
+    """
+    if isinstance(languages, str):
+        langs = format_browser_languages(languages)
+    else:
+        langs = list(languages)
+    if not langs:
+        return "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+
+    entries: list[str] = [langs[0]]
+    q = 0.9
+    for lang in langs[1:]:
+        entries.append(f"{lang};q={q:.1f}")
+        q = max(0.1, round(q - 0.1, 1))
+    return ",".join(entries)
+
+
+def build_accept_language_header(languages: list[str] | str) -> str:
+    """Format an Accept-Language HTTP header string with descending q-values (alias)."""
+    return format_accept_language(languages)
+
+
+def build_stealth_init_script(languages: list[str] | str | None = None) -> str:
+    """Generate the stealth initialization script with dynamic navigator.languages."""
+    if isinstance(languages, str):
+        langs = format_browser_languages(languages)
+    elif languages is not None:
+        langs = list(languages)
+    else:
+        langs = ["tr-TR", "tr", "en-US", "en"]
+    langs_repr = "[" + ", ".join(repr(x) for x in langs) + "]"
+    return f"""(() => {{
+  try {{
+    Object.defineProperty(navigator, 'webdriver', {{ get: () => undefined }});
+    window.chrome = window.chrome || {{ runtime: {{}}, app: {{}}, csi: () => ({{}}), loadTimes: () => ({{}}) }};
+    Object.defineProperty(navigator, 'languages', {{ get: () => {langs_repr} }});
+    Object.defineProperty(navigator, 'plugins', {{ get: () => [1, 2, 3, 4, 5] }});
+    if (!window.outerWidth) Object.defineProperty(window, 'outerWidth', {{ get: () => window.innerWidth || 1280 }});
+    if (!window.outerHeight) Object.defineProperty(window, 'outerHeight', {{ get: () => (window.innerHeight || 800) + 85 }});
     const getParam = WebGLRenderingContext.prototype.getParameter;
-    WebGLRenderingContext.prototype.getParameter = function(p) {
+    WebGLRenderingContext.prototype.getParameter = function(p) {{
       if (p === 37445) return 'Intel Inc.';
       if (p === 37446) return 'Intel Iris OpenGL Engine';
       return getParam.apply(this, arguments);
-    };
-    window.open = function(url) {
-      if (url && typeof url === 'string' && url !== 'about:blank' && !url.startsWith('javascript:')) {
+    }};
+    window.open = function(url) {{
+      if (url && typeof url === 'string' && url !== 'about:blank' && !url.startsWith('javascript:')) {{
         window.location.assign(url);
-      }
+      }}
       return window;
-    };
+    }};
     window.__reflexDialogs = window.__reflexDialogs || [];
-    const recordDialog = (kind, msg) => {
-      try {
+    const recordDialog = (kind, msg) => {{
+      try {{
         const m = String(msg ?? '').replace(/\\s+/g, ' ').trim();
-        if (m) {
+        if (m) {{
           window.__reflexDialogs.push('[' + kind + '] ' + m.slice(0, 400));
           if (window.__reflexDialogs.length > 5) window.__reflexDialogs.shift();
-        }
-      } catch (_) {}
-    };
-    window.alert = function(msg) { recordDialog('Alert', msg); };
-    window.confirm = function(msg) { recordDialog('Confirm', msg); return false; };
-    window.prompt = function(msg) { recordDialog('Prompt', msg); return null; };
-  } catch (_) {}
-})();"""
+        }}
+      }} catch (_) {{}}
+    }};
+    window.alert = function(msg) {{ recordDialog('Alert', msg); }};
+    window.confirm = function(msg) {{ recordDialog('Confirm', msg); return false; }};
+    window.prompt = function(msg) {{ recordDialog('Prompt', msg); return null; }};
+  }} catch (_) {{}}
+}})();"""
+
+
+_STEALTH_INIT_SCRIPT = build_stealth_init_script(["tr-TR", "tr", "en-US", "en"])
 
 
 def _port_open(host: str, port: int) -> bool:
@@ -99,7 +175,10 @@ def _port_open(host: str, port: int) -> bool:
         return sock.connect_ex((host, port)) == 0
 
 
-def ensure_chromium_cdp(port: int | None = None) -> None:
+def ensure_chromium_cdp(
+    port: int | None = None,
+    browser_language: str | None = None,
+) -> None:
     """Ensure a headless Chromium instance is listening on `port` and `BU_CDP_URL` is set."""
     target_port = port if port is not None else DEFAULT_CDP_PORT
     expected_url = f"http://127.0.0.1:{target_port}"
@@ -127,6 +206,7 @@ def ensure_chromium_cdp(port: int | None = None) -> None:
     )
     if not binary:
         return
+    lang = (browser_language or os.environ.get("REFLEX_BROWSER_LANG", "tr-TR")).strip() or "tr-TR"
     profile_dir = Path("/tmp/reflex_chromium_profile")
     profile_dir.mkdir(parents=True, exist_ok=True)
     log_file = Path("/tmp/reflex_chromium.log").open("a", encoding="utf-8")
@@ -141,7 +221,7 @@ def ensure_chromium_cdp(port: int | None = None) -> None:
         "--disk-cache-size=1048576",
         "--media-cache-size=1048576",
         "--window-size=1280,900",
-        "--lang=tr-TR",
+        f"--lang={lang}",
     ]
     if os.environ.get("REFLEX_HEADED") not in ("1", "true", "True"):
         cmd.insert(1, "--headless=new")
@@ -341,6 +421,9 @@ class Browser:
     _iframe_node_map: dict[int, dict[str, Any]] = {}
     ax_supplement: bool = False
     light_stealth: bool = False
+    browser_language: str = "tr-TR"
+    browser_languages: list[str] = ["tr-TR", "tr", "en-US", "en"]
+    accept_language: str = "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
 
     def __init__(
         self,
@@ -351,6 +434,7 @@ class Browser:
         port: int | None = None,
         ax_supplement: bool | None = None,
         light_stealth: bool | None = None,
+        browser_language: str | None = None,
         config: Any = None,
     ):
         if ax_supplement is not None:
@@ -367,6 +451,17 @@ class Browser:
         else:
             val = os.environ.get("REFLEX_LIGHT_STEALTH", "").strip().lower()
             self.light_stealth = val in {"1", "true", "yes", "on"}
+
+        if browser_language is not None:
+            self.browser_language = str(browser_language).strip() or "tr-TR"
+        elif config is not None and hasattr(config, "browser_language"):
+            self.browser_language = str(config.browser_language).strip() or "tr-TR"
+        else:
+            self.browser_language = os.environ.get("REFLEX_BROWSER_LANG", "tr-TR").strip() or "tr-TR"
+
+        self.browser_languages = format_browser_languages(self.browser_language)
+        self.accept_language = format_accept_language(self.browser_languages)
+
         cdp_port = port or DEFAULT_CDP_PORT
         if port is None:
             bu_cdp = os.environ.get("BU_CDP_URL")
@@ -377,7 +472,10 @@ class Browser:
                         cdp_port = p
                 except (ValueError, AttributeError):
                     pass
-        ensure_chromium_cdp(port=cdp_port)
+        try:
+            ensure_chromium_cdp(port=cdp_port, browser_language=self.browser_language)
+        except TypeError:
+            ensure_chromium_cdp(port=cdp_port)
         ensure_daemon()
         self.cdp_port: int = cdp_port
         self._cdp_lock = threading.Lock()
@@ -410,10 +508,12 @@ class Browser:
         try:
             self.call("Network.enable")
             self.call("Network.setBlockedURLs", urls=_AD_BLOCK_URLS)
+            self.call("Network.setExtraHTTPHeaders", headers={"Accept-Language": self.accept_language})
         except Exception:
             pass
         try:
-            self.call("Page.addScriptToEvaluateOnNewDocument", source=_STEALTH_INIT_SCRIPT)
+            init_script = build_stealth_init_script(self.browser_languages)
+            self.call("Page.addScriptToEvaluateOnNewDocument", source=init_script)
         except Exception:
             pass
         try:
@@ -428,7 +528,7 @@ class Browser:
                 self.call(
                     "Emulation.setUserAgentOverride",
                     userAgent=clean_ua,
-                    acceptLanguage="tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                    acceptLanguage=self.accept_language,
                     platform="Linux x86_64",
                 )
         except Exception:

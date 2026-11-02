@@ -116,7 +116,7 @@ def _is_search_url(url: str) -> bool:
 
 from .browser import Browser, NavigationTimeout, StalePage, TargetCoveredError
 from .browser.cdp import canonical_url
-from .config import ReflexConfig, run_mode_of
+from .config import DEFAULT_BROWSER_LANGUAGE, ReflexConfig, run_mode_of
 from .context import DualTierContext, _url_match_keys, extract_domain
 from .gate import GateEvaluation, evaluate_decision
 from .memory import SiteMemoryStore
@@ -312,6 +312,11 @@ class ReflexSession:
                 browser_kwargs["light_stealth"] = True
             if not getattr(self.config, "ax_supplement", True):
                 browser_kwargs["ax_supplement"] = False
+            if (
+                getattr(self.config, "browser_language", None)
+                and self.config.browser_language != DEFAULT_BROWSER_LANGUAGE
+            ):
+                browser_kwargs["browser_language"] = self.config.browser_language
             self.browser = Browser(self.url, **browser_kwargs)
             try:
                 self.page = self._observe_settled() or self.browser.observe(screenshot=self.config.screenshots)
