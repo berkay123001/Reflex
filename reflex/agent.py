@@ -344,11 +344,15 @@ class ReflexSession:
                         self.ctx.active_subgoal = active_sg.text
                     if self.ctx.plan.clarify:
                         clarify = self.ctx.plan.clarify
+                        q_is_tr = any(c in "çğıöşüÇĞİÖŞÜ" for c in clarify.question) or any(
+                            w in clarify.question.lower() for w in ("kaç", "kaynak", "hangi", "nerede", "nasıl")
+                        )
+                        def_label = "Varsayılan" if q_is_tr else "Default"
                         if self.config.interactive:
                             self.status = "waiting_user"
                             self.pending_fact_key = "clarify_scope"
                             opts_str = f" ({', '.join(clarify.options)})" if clarify.options else ""
-                            def_str = f" [Varsayılan: {clarify.default}]" if clarify.default else ""
+                            def_str = f" [{def_label}: {clarify.default}]" if clarify.default else ""
                             q_msg = f"{clarify.question}{opts_str}{def_str}"
                             self.last_asked_question = q_msg
                             self.ctx.add_agent_message(q_msg, kind="ask_user")
@@ -361,8 +365,13 @@ class ReflexSession:
                                         self.ctx.plan.budget.sources = max(1, int(match.group(0)))
                                     except (ValueError, TypeError):
                                         pass
+                                accepted_msg = (
+                                    f"Varsayılan kapsam kabul edildi: {clarify.default} ({clarify.question})"
+                                    if q_is_tr
+                                    else f"Default scope accepted: {clarify.default} ({clarify.question})"
+                                )
                                 self.ctx.add_agent_message(
-                                    f"Varsayılan kapsam kabul edildi: {clarify.default} ({clarify.question})",
+                                    accepted_msg,
                                     kind="chat",
                                 )
                             self.status = "ready"
@@ -462,22 +471,7 @@ class ReflexSession:
         return (results_cnt, cands_cnt, notes_cnt)
 
     def _build_honest_failure_summary(self) -> str:
-        """Construct an honest termination failure summary in the language of the Primary Goal."""
-        goal = self.ctx.primary_goal or ""
-        tr_chars = set("çğıöşüÇĞİÖŞÜ")
-        is_tr = any(c in tr_chars for c in goal)
-        if not is_tr:
-            lower = goal.lower()
-            tr_words = {"ve", "veya", "ile", "için", "olan", "bir", "bu", "şu", "bul", "getir", "git", "tıkla", "seç"}
-            words = set(re.findall(r"\b\w+\b", lower))
-            is_tr = len(words & tr_words) >= 1
-
-        if is_tr:
-            return (
-                "Görev tamamlanamadı: Art arda 24 adım boyunca ilerleme sağlanamadı "
-                "(yeni URL'ye ulaşılamadı, sayfada etkili değişiklik görülmedi ve yeni bulgu kaydedilemedi). "
-                "Denenen adımlar sonuç vermediği için oturum dürüstçe sonlandırıldı."
-            )
+        """Construct an honest termination failure summary."""
         return (
             "Task could not be completed: No progress was made for 24 consecutive steps "
             "(no new URL reached, no effective page change observed, and no new findings recorded). "
@@ -1045,7 +1039,7 @@ class ReflexSession:
             role = str(action.get("role", "button")).strip().lower() or "button"
             return self._handle_escalation(
                 trigger_type="no_effect_repeat",
-                reason=f"Target '{lbl}' ({role}) had no effect on this page — bu buton işe yaramadı",
+                reason=f"Target '{lbl}' ({role}) had no effect on this page (ineffective click repeated)",
                 s1_decision=s1_decision,
                 gate_eval=gate_eval,
                 step_t0=step_t0,
@@ -2802,8 +2796,8 @@ class ReflexSession:
                 if self._fruitless_scroll_count >= 4:
                     self._locked_scroll_direction = scroll_dir
                     warning_msg = (
-                        "4 kaydırmada yeni bir şey çıkmadı; aradığın öğe bu belgede görünmüyor olabilir "
-                        "(çerçeve, açılır pencere ya da başka bir sayfa)"
+                        "4 consecutive scrolls revealed no new content; target element may not be in this document "
+                        "(frame, popup, or another page)"
                     )
                     self.ctx.scroll_warning = warning_msg
                     self.pending_escalation_reason = ("fruitless_scroll", warning_msg)
@@ -2928,7 +2922,7 @@ class ReflexSession:
         # Case 1: User is asking the Supervisor a question or chatting (do NOT touch the browser!)
         if interp.intent == "CHAT_ONLY":
             self.ctx.add_user_message(text, kind="chat")
-            reply_msg = interp.direct_reply or "Mevcut sayfa durumunu inceledim."
+            reply_msg = interp.direct_reply or "I inspected the current page state."
             self.ctx.add_agent_message(reply_msg, kind="chat")
             if self.status == "ready":
                 self.status = "waiting_user"

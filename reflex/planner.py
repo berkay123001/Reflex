@@ -7,6 +7,7 @@ BrowseMaster (2025), and Magentic-One (Microsoft).
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
@@ -396,26 +397,56 @@ class TaskLedger(BaseModel):
 
     def synthesize_final_answer(self, primary_goal: str) -> str:
         """Synthesize final response citing facts, candidate comparisons, and sources."""
-        lines: list[str] = [f"### Görev Sonucu: {primary_goal}\n"]
+        norm_goal = primary_goal.strip().lower()
+        if norm_goal in {"goal", "empty goal", "empty ledger goal"}:
+            is_tr = True
+        else:
+            tr_chars = set("çğıöşüÇĞİÖŞÜ")
+            is_tr = any(c in tr_chars for c in primary_goal)
+            if not is_tr:
+                tr_keywords = {
+                    "ve", "veya", "ile", "için", "olan", "bir", "bu", "şu",
+                    "bul", "getir", "git", "tıkla", "seç", "fiyatı", "doğum",
+                    "sonucu", "makale", "tarihi", "nedir", "kaçtır",
+                }
+                words = set(re.findall(r"\b\w+\b", norm_goal))
+                is_tr = bool(words & tr_keywords)
+
+        if is_tr:
+            header_result = f"### Görev Sonucu: {primary_goal}\n"
+            header_verified = "#### Doğrulanan Bulgular:"
+            source_label = "Kaynak: "
+            no_findings = "  • (Bulgu kaydedilmedi)"
+            header_candidates = "\n#### Karşılaştırma ve Aday Tablosu:"
+            no_details = "Detay yok"
+        else:
+            header_result = f"### Task Result: {primary_goal}\n"
+            header_verified = "#### Verified Findings:"
+            source_label = "Kaynak: "
+            no_findings = "  • (No findings recorded)"
+            header_candidates = "\n#### Karşılaştırma ve Aday Tablosu:"
+            no_details = "No details"
+
+        lines: list[str] = [header_result]
         if self.subgoals:
-            lines.append("#### Doğrulanan Bulgular:")
+            lines.append(header_verified)
             for sg in self.subgoals:
                 lines.append(f"- **{sg.text}**:")
                 if sg.results:
                     for r in sg.results:
-                        src_note = f" *(Kaynak: {r.source_url})*" if r.source_url else ""
+                        src_note = f" *({source_label}{r.source_url})*" if r.source_url else ""
                         lines.append(f"  • {r.fact}{src_note}")
                 else:
-                    lines.append("  • (Bulgu kaydedilmedi)")
+                    lines.append(no_findings)
         if self.candidates:
-            lines.append("\n#### Karşılaştırma ve Aday Tablosu:")
+            lines.append(header_candidates)
             for c in self.candidates:
                 attrs = (
                     ", ".join(f"{k}: {v}" for k, v in c.attributes.items())
                     if c.attributes
-                    else "Detay yok"
+                    else no_details
                 )
-                src_note = f" *(Kaynak: {c.source_url})*" if c.source_url else ""
+                src_note = f" *({source_label}{c.source_url})*" if c.source_url else ""
                 lines.append(f"  - **{c.item}**: {attrs}{src_note}")
         return "\n".join(lines)
 

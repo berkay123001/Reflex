@@ -406,6 +406,7 @@ class DualTierContext(BaseModel):
         """
         lines: list[str] = [
             f"Primary Goal: {self.primary_goal}",
+            "Language Mandate: Answer and reasoning must strictly match the language of the Primary Goal / user task, regardless of internal context notes.",
         ]
         if self.constraints:
             lines.append(f"Active Constraints: {'; '.join(self.constraints)}")
@@ -449,7 +450,7 @@ class DualTierContext(BaseModel):
                 for _, lbl, role in self.ineffective_clicks[-10:]
             ]
             lines.append(
-                f"Ineffective Clicks on Current Page — bu buton işe yaramadı (DO NOT CLICK THESE AGAIN): {ineff_items}"
+                f"Ineffective Clicks on Current Page (had no effect; DO NOT CLICK THESE AGAIN): {ineff_items}"
             )
 
         if self.visited_urls:

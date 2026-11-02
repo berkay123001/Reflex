@@ -280,7 +280,7 @@ def test_all_original_sections_present() -> None:
         "Structured Task Ledger:",
         "Cumulative Working Memory:",
         "Already Visited & Rejected Links (DO NOT CLICK THESE AGAIN):",
-        "Ineffective Clicks on Current Page — bu buton işe yaramadı (DO NOT CLICK THESE AGAIN):",
+        "Ineffective Clicks on Current Page (had no effect; DO NOT CLICK THESE AGAIN):",
         "Visited Pages (already opened; re-open only if needed):",
         "Queued URLs (collected earlier; open with GOTO_URL directly, no need to return to the source page):",
         "Active Subgoal:",

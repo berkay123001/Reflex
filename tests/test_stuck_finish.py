@@ -559,14 +559,14 @@ def test_four_consecutive_fruitless_scrolls_warns_s2_and_locks_direction() -> No
 
     assert sess._fruitless_scroll_count == 4
     assert sess._locked_scroll_direction == "down"
-    assert "4 kaydırmada yeni bir şey çıkmadı" in sess.ctx.scroll_warning
+    assert "4 consecutive scrolls revealed no new content" in sess.ctx.scroll_warning
     assert sess.pending_escalation_reason is not None
     assert sess.pending_escalation_reason[0] == "fruitless_scroll"
 
     # Context block for S2 contains the warning
     s2_block = sess.ctx.build_supervisor_context_block([])
     assert "Scroll Warning:" in s2_block
-    assert "4 kaydırmada yeni bir şey çıkmadı" in s2_block
+    assert "4 consecutive scrolls revealed no new content" in s2_block
 
 
 def test_opposite_direction_scroll_resets_fruitless_scroll_counter() -> None:

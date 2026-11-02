@@ -270,7 +270,7 @@ def test_l1_moving_scrolls_never_trigger_loop_and_trigger_scroll_budget_at_12():
     assert res_12.effective_progress is True
     assert res_12.loop_detected is False
     assert res_12.scroll_budget_exceeded is True
-    assert res_12.reason == "12 kez kaydırıldı; hedef sayfa metninden cevaplanabilir mi?"
+    assert res_12.reason == "12 scrolls performed; can goal be answered from page text?"
 
 
 def test_action_space_caps_at_60_elements():

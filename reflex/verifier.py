@@ -289,7 +289,7 @@ def verify_step(
         else:
             reason = f"{no_progress_streak} consecutive steps with no element or page progress"
     elif scroll_budget_exceeded:
-        reason = "12 kez kaydırıldı; hedef sayfa metninden cevaplanabilir mi?"
+        reason = "12 scrolls performed; can goal be answered from page text?"
     elif not effective_progress:
         reason = "No observable element or page state change"
 

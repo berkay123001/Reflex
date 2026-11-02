@@ -131,7 +131,7 @@ def test_f16_dead_button_escalates_on_second_selection_and_never_clicks_third_ti
                 assert session.escalations[0]["trigger_type"] == "no_effect_repeat"
                 assert len(captured_s2_calls) == 1
                 assert captured_s2_calls[0]["trigger_type"] == "no_effect_repeat"
-                assert "bu buton işe yaramadı" in captured_s2_calls[0]["s2_context_block"]
+                assert "had no effect" in captured_s2_calls[0]["s2_context_block"]
                 assert "Bir pim kaydet" in captured_s2_calls[0]["s2_context_block"]
 
                 # 3rd selection: S1 selects "Bir pim kaydet" a 3rd time -> still NOT clicked; S2 clicks working link
