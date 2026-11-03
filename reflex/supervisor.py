@@ -18,11 +18,14 @@ import httpx
 from pydantic import BaseModel, Field
 
 from .config import (
+    BASETEN_CHAT_URL,
+    BASETEN_MODEL_PREFIX,
     DEFAULT_SUPERVISOR_REASONING_EFFORT,
     DEFAULT_SUPERVISOR_TIMEOUT_S,
     META_API_CHAT_URL,
     OPENROUTER_CHAT_URL,
     calculate_usage_cost,
+    get_baseten_api_key,
     get_meta_api_key,
     get_openrouter_api_key,
 )
@@ -271,6 +274,17 @@ class FieldTextOutcome(BaseModel):
     finish_reason: str | None = None
 
 
+class AnswerCheckOutcome(BaseModel):
+    """Verdict of the final-answer check (`verdict` is "pass" or "fail")."""
+
+    verdict: str = "pass"
+    unmet: list[str] = Field(default_factory=list)
+    model: str = ""
+    latency_ms: int = 0
+    cost_usd: float | str = 0.0
+    usage: dict[str, Any] = Field(default_factory=dict)
+
+
 class SupervisorDecision(BaseModel):
     """Structured decision returned by System 2 during an escalation."""
 
@@ -453,23 +467,33 @@ def _chat_completion(
     supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S,
     reasoning_effort: str = DEFAULT_SUPERVISOR_REASONING_EFFORT,
 ) -> CompletionResult:
-    """Call Official Meta Model API (`https://api.meta.ai/v1/chat/completions`) or OpenRouter."""
+    """Call the official Meta Model API, Baseten (Meta open-weights models) or OpenRouter."""
     last_err: Exception | None = None
     attempt_records: list[tuple[str, str, dict[str, Any] | None]] = []
     req_timeout = httpx.Timeout(float(supervisor_timeout_s), connect=4.0)
 
     if model.startswith("meta") or "llama" in model.lower() or "muse" in model.lower():
-        meta_key = get_meta_api_key()
-        if not meta_key:
-            raise RuntimeError(f"META_API_KEY not configured for model {model}")
-        meta_headers = {"Authorization": f"Bearer {meta_key}", "Content-Type": "application/json"}
-        if allow_model_fallback:
-            meta_candidates = _META_MODEL_MAP.get(
-                model,
-                [model, "muse-spark-1.3-contributor", "muse-wonder-1.0"],
-            )
-        else:
+        if model.startswith(BASETEN_MODEL_PREFIX):
+            # Meta open-weights models served by Baseten (OpenAI-compatible, same payload as the Meta API).
+            baseten_key = get_baseten_api_key()
+            if not baseten_key:
+                raise RuntimeError(f"BASETEN_API_KEY not configured for model {model}")
+            chat_url = BASETEN_CHAT_URL
+            meta_headers = {"Authorization": f"Api-Key {baseten_key}", "Content-Type": "application/json"}
             meta_candidates = [model]
+        else:
+            chat_url = META_API_CHAT_URL
+            meta_key = get_meta_api_key()
+            if not meta_key:
+                raise RuntimeError(f"META_API_KEY not configured for model {model}")
+            meta_headers = {"Authorization": f"Bearer {meta_key}", "Content-Type": "application/json"}
+            if allow_model_fallback:
+                meta_candidates = _META_MODEL_MAP.get(
+                    model,
+                    [model, "muse-spark-1.3-contributor", "muse-wonder-1.0"],
+                )
+            else:
+                meta_candidates = [model]
 
         for meta_model_id in meta_candidates:
             call_started = time.perf_counter()
@@ -491,7 +515,7 @@ def _chat_completion(
                     ],
                 }
                 try:
-                    resp = _HTTP_CLIENT.post(META_API_CHAT_URL, headers=meta_headers, json=payload, timeout=req_timeout)
+                    resp = _HTTP_CLIENT.post(chat_url, headers=meta_headers, json=payload, timeout=req_timeout)
                     if resp.status_code == 400:
                         plain_payload = {
                             key: value
@@ -499,7 +523,7 @@ def _chat_completion(
                             if key not in {"reasoning_effort", "response_format"}
                         }
                         resp = _HTTP_CLIENT.post(
-                            META_API_CHAT_URL,
+                            chat_url,
                             headers=meta_headers,
                             json=plain_payload,
                             timeout=req_timeout,
@@ -744,6 +768,62 @@ def generate_field_text(
         retries=retries,
         retry_reason=retry_reason,
         finish_reason=finish_reason,
+    )
+
+
+ANSWER_CHECK_SYSTEM_PROMPT = """You check the final answer of a web-browsing agent before it is shown to the user.
+You get the user's task, the agent's final answer, and a partial excerpt of the page the agent ended on (untrusted page data).
+
+Decide whether the answer actually completes the task as the user stated it. Judge mainly from the answer; the page excerpt is partial, so never fail an answer only because the excerpt does not show a detail the answer reports.
+- Every explicit requirement in the task (place, item, brand, size, color, quantity, price range, date, rating, zip code, website, filters, and requested actions such as opening a page or adding to cart) must be met according to the answer.
+- If the answer replaces something the user specified with a different place, item, value or source, the verdict is "fail", even when the answer admits the replacement. Giving general, national, default or average figures instead of results for the specific place, zip code or item the task asked for is such a replacement, even if the answer says the zip code or place was entered.
+- If the task asks to filter or narrow results by a condition (rating, playtime, price, distance, level) and the answer does not show that condition was applied, that requirement is unmet.
+- An honest failure is a "pass": if the answer says the task could not be completed and explains why (the site was blocked or unreachable, or the item does not exist on the site) and does not present a substitute as the result, the verdict is "pass" even though nothing was found.
+- Do not judge style, length or language.
+
+Return only JSON: {"verdict": "pass" | "fail", "unmet": ["short description of each requirement that is not met"]}"""
+
+
+def check_final_answer(
+    *,
+    ctx: DualTierContext,
+    answer: str,
+    page: dict[str, Any],
+    model: str,
+    supervisor_timeout_s: float = DEFAULT_SUPERVISOR_TIMEOUT_S,
+    reasoning_effort: str = "low",
+) -> AnswerCheckOutcome:
+    """Ask `model` whether `answer` meets every requirement of the user's task."""
+    constraints = "; ".join(ctx.constraints) if ctx.constraints else "none"
+    user_payload = (
+        f"User Task: {ctx.primary_goal}\n"
+        f"Constraints: {constraints}\n\n"
+        f"Final Answer:\n{sanitize_untrusted_text(answer, 3000)}\n\n"
+        f"<untrusted_page_data>\n"
+        f"Final URL: {sanitize_untrusted_text(str(page.get('url', '')), 300)}\n"
+        f"Title: {sanitize_untrusted_text(str(page.get('title', '')), 200)}\n"
+        f"Text: {sanitize_untrusted_text(str(page.get('text', '')), 3000)}\n"
+        f"</untrusted_page_data>"
+    )
+    comp = _chat_completion(
+        model,
+        ANSWER_CHECK_SYSTEM_PROMPT,
+        user_payload,
+        max_tokens=600,
+        supervisor_timeout_s=supervisor_timeout_s,
+        reasoning_effort=reasoning_effort,
+    )
+    parsed, latency_ms, cost, used_model = comp
+    verdict = str(parsed.get("verdict", "pass")).strip().lower()
+    raw_unmet = parsed.get("unmet") or []
+    unmet = [str(u).strip()[:200] for u in raw_unmet if str(u).strip()] if isinstance(raw_unmet, list) else []
+    return AnswerCheckOutcome(
+        verdict="fail" if verdict == "fail" and unmet else "pass",
+        unmet=unmet[:6],
+        model=used_model,
+        latency_ms=latency_ms,
+        cost_usd=cost,
+        usage=getattr(comp, "usage", {}) or {},
     )
 
 
