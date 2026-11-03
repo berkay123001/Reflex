@@ -1,0 +1,58 @@
+{
+  "task_id": "ba2a469af584f16da93ce6a7430cf7e5_070826",
+  "task": "Search for a beginner’s course in computer science that includes python programming skills.",
+  "final_result_response": "Found beginner course on Coursera: 'Python for Data Science & AI: Hands-On Development' by IBM. Beginner level, no prior programming required. 1,587,574 learners, 4.6 stars (43,876 reviews). Skills: Python Programming, Data Analysis, NumPy, Pandas, Jupyter Notebooks, REST APIs, BeautifulSoup. 5 modules (25 hours total, ~2 weeks at 10h/week), 22 assignments, shareable certificate, taught in English. Covers Python basics, data structures, programming fundamentals, working with data, APIs and data collection. URL: https://www.coursera.org/learn/python-for-applied-data-science-ai",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search the catalog for Python computer science courses.",
+      "url": "https://www.coursera.org/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Query is entered, need to submit search.",
+      "url": "https://www.coursera.org/search?query=python%20computer%20science",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will open the top-rated beginner course to verify details.",
+      "url": "https://www.coursera.org/learn/python-for-applied-data-science-ai",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.00517,
+  "maliyet": 0.00517,
+  "elapsed_s": 36.3,
+  "sure_sn": 36.3,
+  "level": "medium",
+  "website": "https://www.coursera.org/",
+  "domain": "www.coursera.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0019667
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

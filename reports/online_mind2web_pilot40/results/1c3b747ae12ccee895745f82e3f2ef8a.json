@@ -1,0 +1,78 @@
+{
+  "task_id": "1c3b747ae12ccee895745f82e3f2ef8a",
+  "task": "Identify the ongoing competition that offers the highest prize and find the code that received the most votes in that competition.",
+  "final_result_response": "Highest-prize ongoing competition is ARC Prize 2026 - ARC-AGI-3 with $850,000 prize (https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-3).\n\nSorted Code by Most Votes, the most-voted code is:\n- Title: ARC-AGI-3 Milestone 2 Solution (copied with edits from Jeroen Cottaar, by Daniel Franzen)\n- Votes: 1197 (Gold), Score 34.3, 13 comments, updated 1 month ago\n- Note: 3 pinned sample submissions have 770, 751, 131 votes, but among unpinned community notebooks this is the top. If including pinned, it is still the overall top with 1197 votes.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to list ongoing competitions sorted by prize to confirm highest.",
+      "url": "https://www.kaggle.com/competitions",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Highest prize is ARC Prize 2026 ARC-AGI-3, so I open it.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-3",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open Code tab to see most-voted notebooks.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-3/code",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need most-voted code, so change sorting from Hotness.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-3/code",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Selecting Most Votes will reveal highest-voted code.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-3/code?competitionId=133468&sortBy=voteCount&excludeNonAccessedDatasources=true",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.00571,
+  "maliyet": 0.00571,
+  "elapsed_s": 52.3,
+  "sure_sn": 52.3,
+  "level": "hard",
+  "website": "https://www.kaggle.com/",
+  "domain": "www.kaggle.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0021536
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}
