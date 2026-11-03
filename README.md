@@ -31,6 +31,17 @@ You give Reflex a website and a goal in plain language, for example *"find the c
 | Cost per task | $0.009 | $0.006–0.009 |
 | Invented results on blocked sites | 0 | 0 |
 
+How this compares with the agents in the benchmark paper (their numbers are human-judged on all 300 tasks; ours are Claude-judged on 40, so read it as a rough comparison):
+
+| | Reflex (Muse Spark 1.3), four runs | Agents in the paper |
+|---|---|---|
+| Success | 61–70% of reachable tasks | Operator 61.3%, Claude Computer Use 3.7 56.3%, SeeAct 30.7%, Browser Use 30.0%, Agent-E 28.0% |
+| Easy tasks | 78–89% of reachable easy tasks | Claude Computer Use 3.7 90.4%, Operator 83.1% |
+| Steps on solved tasks, relative to the human reference | median 0.8×, mean 1.1× | about 1.0× for most agents; 2.6× for Operator |
+| Time per task | median 51 s, longest 5.7 min | Operator: up to 44 min on hard tasks |
+| Step limit | 40 | 25 (SeeAct, Browser Use, Agent-E), 50 (Claude Computer Use 3.7) |
+| Cost per task | under $0.01 | not reported (Operator has no API) |
+
 Fixes we measured on these tasks while building Reflex:
 - Runs that left the task website for a guessed address on another site: 17 → 5 of 40 (the remaining ones followed the site's own links).
 - Runs that ended waiting for a user who is not there: 2 → 0.
