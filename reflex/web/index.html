@@ -1,210 +1,182 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reflex Studio · Hybrid System-1 / System-2 Web Agent</title>
+  <title>Reflex · Autonomous Web Agent</title>
   <link rel="stylesheet" href="/style.css" />
   <script>window.__REFLEX_TOKEN__ = "__TOKEN__";</script>
 </head>
 <body>
+<!-- SOFT SILK WAVE ANIMATION CANVAS (Pinterest Minimal White Silk Style) -->
+<div class="ambient-canvas" aria-hidden="true">
+  <canvas id="silk-canvas"></canvas>
+</div>
+
 <div class="app">
 
   <!-- LEFT RAIL -->
   <aside class="rail">
-    <div class="brand" id="brand-home" title="Reflex Studio">R</div>
-    <button class="rail-btn active" data-view="launch" title="New Task / Launch">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    </button>
-    <button class="rail-btn" data-view="live" title="Live Run & Real-Time Browser">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M2 5.5h12" stroke="currentColor" stroke-width="1.3"/><circle cx="4.2" cy="4" r="0.6" fill="currentColor"/><circle cx="6.2" cy="4" r="0.6" fill="currentColor"/></svg>
-    </button>
-    <button class="rail-btn" data-view="trajectory" title="Trajectory & Step Inspector">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 4h11M2.5 8h7.5M2.5 12h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.5" cy="8" r="1.4" fill="currentColor"/></svg>
-    </button>
-    <button class="rail-btn" data-view="context" title="Dual-Tier Context & Provenance">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="11" r="2.2" stroke="currentColor" stroke-width="1.3"/><path d="M6.8 6.4l2.4 3.2" stroke="currentColor" stroke-width="1.3"/></svg>
-    </button>
-    <button class="rail-btn" id="rail-safety" data-view="safety" title="Irreversible Action Safety Guard">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2l5 2v4.2c0 3-2.1 4.9-5 5.8-2.9-.9-5-2.8-5-5.8V4l5-2z" stroke="currentColor" stroke-width="1.3"/></svg>
-    </button>
-    <button class="rail-btn" data-view="memory" title="Site Memory Store">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M3 3.5h10v9H3z" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6.5h5M5.5 9.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-    </button>
+    <div class="brand" id="brand-home" title="Reflex Home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M2.5 12h4.2l2.4-6.5 4.2 13 2.7-6.5h5.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="rail-dock">
+      <button class="rail-btn active" data-view="launch" title="New Task">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+      <button class="rail-btn" data-view="live" title="Live Browser">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="1.8" y="2.2" width="12.4" height="11.6" rx="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 5.5h12.4" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <button class="rail-btn" data-view="scenarios" title="Quick Scenarios">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5.2" height="5.2" rx="1.3" stroke="currentColor" stroke-width="1.4"/><rect x="8.8" y="2" width="5.2" height="5.2" rx="1.3" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="8.8" width="5.2" height="5.2" rx="1.3" stroke="currentColor" stroke-width="1.4"/><rect x="8.8" y="8.8" width="5.2" height="5.2" rx="1.3" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <button class="rail-btn" data-view="trajectory" title="Trajectory &amp; Steps">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M1.8 8.5h3l1.8-4.5 3 8 2-3.5h2.6" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="rail-btn" data-view="context" title="Context &amp; Memory">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="4.8" cy="4.8" r="2.4" stroke="currentColor" stroke-width="1.4"/><circle cx="11.2" cy="11.2" r="2.4" stroke="currentColor" stroke-width="1.4"/><path d="M6.8 6.4l2.4 3.2" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <button class="rail-btn" id="rail-safety" data-view="safety" title="Safety Guard">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1.8l5.4 2.2v4.4c0 3.2-2.2 5.2-5.4 6.2-3.2-1-5.4-3-5.4-6.2V4L8 1.8z" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <button class="rail-btn" data-view="memory" title="Site Memory">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="2.8" y="2.8" width="10.4" height="10.4" rx="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 6.3h5M5.5 9.5h3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
     <div class="rail-spacer"></div>
-    <button class="rail-btn" data-view="settings" title="API Keys (Meta / OpenRouter) & Calibration">
-      <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v1.6M8 12.4V14M2 8h1.6M12.4 8H14M3.8 3.8l1.1 1.1M11.1 11.1l1.1 1.1M12.2 3.8l-1.1 1.1M4.9 11.1l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+
+    <!-- Theme Toggle Button (Moved up from bottom, with Sun/Moon icon) -->
+    <button class="rail-btn rail-theme-btn" id="btn-theme-toggle" type="button" title="Toggle Light / Dark Theme">
+      <svg class="icon-sun" width="20" height="20" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M12.5 3.5l-1.3 1.3M4.8 11.2l-1.3 1.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="icon-moon" width="20" height="20" viewBox="0 0 16 16" fill="none" style="display:none">
+        <path d="M13.2 10.2A5.8 5.8 0 0 1 5.8 2.8a5.8 5.8 0 1 0 7.4 7.4Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <!-- Proper Toothed Gear Wheel Icon for Settings -->
+    <button class="rail-btn rail-settings" data-view="settings" title="Settings &amp; API Keys">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </button>
   </aside>
 
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="crumb">
-      <span>Reflex Studio</span>
-      <span class="slash">/</span>
-      <span class="sub" id="top-goal-crumb">Hybrid System-1 / System-2 Autonomous Runtime</span>
-    </div>
-
-    <div class="status-pill" id="status-badge">
-      <span class="dot"></span>
-      <span id="status-text">IDLE</span>
-    </div>
-
-    <div class="top-spacer"></div>
-
-    <!-- Live Mode, S1 & S2 Switchers -->
-    <div class="SysSwitch mode" title="Run mode: who decides each step">
-      <span class="tag">MOD</span>
-      <select id="top-mode-select">
-        <option value="s2_only" selected>Sadece S2 (önerilen)</option>
-        <option value="strict">Katı hibrit (S1 yalnız emin tıklama/yazma)</option>
-        <option value="hybrid">Hibrit</option>
-        <option value="package">Eylem paketi (S2 planlar, S1 uygular)</option>
-      </select>
-    </div>
-
-    <div class="SysSwitch s1" title="System 1 Fast Reflex Model (unused in S2-only mode)">
-      <span class="tag">S1</span>
-      <select id="top-s1-select">
-        <option value="local_turnike">Turnike-4B · Web3 FP8 (:8794)</option>
-        <option value="openrouter_jev" selected>OpenRouter · Jev (~typesafe)</option>
-      </select>
-    </div>
-
-    <div class="SysSwitch s2" title="System 2 Supervisor Model">
-      <span class="tag">S2</span>
-      <select id="top-s2-select">
-        <option value="muse-spark-1.3-contributor">Meta Muse Spark 1.3 (muse-spark-1.3-contributor)</option>
-        <option value="muse-wonder-1.0">Meta Muse Wonder 1.0 Fast (muse-wonder-1.0)</option>
-        <option value="muse-spark-1.3">Meta Muse Spark 1.3 (muse-spark-1.3)</option>
-        <option value="qwen/qwen3.8-flash">Qwen 3.8 Flash (OpenRouter)</option>
-        <option value="qwen/qwen3.8-omni-flash">Qwen 3.8 Omni Flash (OpenRouter)</option>
-        <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5 (OpenRouter)</option>
-      </select>
-    </div>
-
-    <div class="stat-strip">
-      <div class="kv"><span class="k">steps</span><span class="v" id="m-steps">0</span></div>
-      <div class="kv"><span class="k">s1</span><span class="v s1" id="m-s1">0</span></div>
-      <div class="kv"><span class="k">s2</span><span class="v s2" id="m-s2">0</span></div>
-      <div class="kv"><span class="k">p50</span><span class="v" id="m-lat">0 ms</span></div>
-      <div class="kv"><span class="k">cost</span><span class="v" id="m-cost">$0.0000</span></div>
-    </div>
-  </header>
-
-  <!-- VIEW 1: LAUNCH -->
+  <!-- VIEW 1: LAUNCH (Large Reflex Hero + Chatbox + Start) -->
   <section class="view-pane active" id="view-launch">
-    <div class="launch-wrap">
-      <div class="launch-col">
-        <div>
-          <div class="eyebrow">Hybrid System-1 / System-2 Runtime · Meta AI Hackathon</div>
-          <h1 class="hero-h1">
-            Fast reflex by <span class="s1-w">Turnike-4B</span>.<br/>
-            Deliberate supervision by <span class="s2-w">Meta Muse Spark &amp; Llama 4</span>.
-          </h1>
+    <div class="launch-center">
+
+      <div class="launch-header">
+        <div class="reflex-hero-brand">
+          <svg class="hero-wave-icon" width="54" height="34" viewBox="0 0 36 22" fill="none">
+            <path d="M2 11h7l3.5-8 5.5 16 4.2-11 2.8 3H34" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="reflex-giant-title">Reflex</span>
+        </div>
+        <h1 class="hero-h1">Where would you like to go and what should we do?</h1>
+      </div>
+
+      <!-- LARGE SAAS COMPOSER -->
+      <div class="composer-card">
+        <div class="url-row">
+          <span class="url-badge">Target URL</span>
+          <input type="text" id="input-url" value="https://www.google.com" placeholder="https://www.google.com" spellcheck="false" />
         </div>
 
-        <div class="composer-card">
-          <div class="url-row">
-            <span class="lbl">Target URL</span>
-            <input type="text" id="input-url" value="https://www.google.com" placeholder="https://www.google.com" />
-          </div>
-          <textarea class="goal-area" id="input-goal" placeholder="Örn: Özal Yıldırım'ın kişisel sitesine gir, blog yazılarına bak ve sayfada paylaştığı tüm blog yazılarını bana getir.">Özal Yıldırım'ın kişisel sitesine gir, blog yazılarına bak ve sayfada paylaştığı tüm blog yazılarını bana getir.</textarea>
-          <div class="composer-foot">
-            <div class="composer-chips">
-              <span class="mini-badge"><span class="dot-s1"></span> S1: Turnike 4B (Web3 FP8)</span>
-              <span class="mini-badge"><span class="dot-s2"></span> S2: Stateful Anti-Loop Supervisor</span>
-              <span class="mini-badge" id="launch-meta-badge">Meta API Ready</span>
+        <textarea class="goal-area" id="input-goal" placeholder="Describe your task in natural language... (e.g., Search Wikipedia for 'Hagia Sophia', open the article, and summarize its architectural history and dome dimensions.)">Search Wikipedia for 'Hagia Sophia', open the article, and summarize its architectural history and dome dimensions.</textarea>
+
+        <div class="composer-foot">
+          <!-- Inline Model & Mode Selectors -->
+          <div class="model-deck">
+            <div class="SysSwitch mode" title="Execution Mode">
+              <span class="tag">Mode</span>
+              <select id="top-mode-select">
+                <option value="s2_only" selected>S2 Only (Recommended)</option>
+                <option value="strict">Strict Hybrid (Confident S1)</option>
+                <option value="hybrid">Flexible Hybrid (S1+S2)</option>
+                <option value="package">Action Package (S2→S1)</option>
+              </select>
             </div>
-            <button class="btn-primary" id="btn-launch">
-              <span>▶ Launch &amp; Run</span>
-            </button>
-          </div>
-        </div>
 
-        <div>
-          <div class="sec-head">
-            <span class="t">Quick Scenarios (Live Web &amp; Obstacle Tests)</span>
-            <span class="t" style="color:var(--ink-4)">Click to load &amp; launch</span>
+            <div class="SysSwitch s1" title="System 1 Fast Reflex Model">
+              <span class="tag">S1</span>
+              <select id="top-s1-select">
+                <option value="local_turnike">Turnike-4B · Local FP8</option>
+                <option value="openrouter_jev" selected>Jev · Cloud Reflex</option>
+              </select>
+            </div>
+
+            <div class="SysSwitch s2" title="System 2 Supervisor Model">
+              <span class="tag">S2</span>
+              <select id="top-s2-select">
+                <option value="muse-spark-1.3-contributor">Meta Muse Spark 1.3 (Contributor)</option>
+                <option value="muse-wonder-1.0">Meta Muse Wonder 1.0 Fast</option>
+                <option value="muse-spark-1.3">Meta Muse Spark 1.3</option>
+                <option value="qwen/qwen3.8-flash">Qwen 3.8 Flash</option>
+                <option value="qwen/qwen3.8-omni-flash">Qwen 3.8 Omni</option>
+                <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
+              </select>
+            </div>
           </div>
-          <div class="scenario-grid">
-            <button class="scen-card" data-preset="ozal">
-              <div class="scen-top"><span>google.com → ozalyildirim.com</span><span class="scen-tag s2">S1+S2</span></div>
-              <div class="scen-title">📝 Özal Yıldırım · Kişisel Blog</div>
-              <div class="scen-desc">Google'da aratır, üniversite profilini atlayıp kişisel blog yazılarını çıkarır.</div>
-            </button>
-            <button class="scen-card" data-preset="gemini_chat">
-              <div class="scen-top"><span>gemini.google.com</span><span class="scen-tag s2">MULTI-TURN</span></div>
-              <div class="scen-title">🤖 Gemini · 2 Tur Sohbet</div>
-              <div class="scen-desc">Gemini ile bilmece ve felsefi soru üzerine 2 tur canlı sohbet yapar.</div>
-            </button>
-            <button class="scen-card" data-preset="books">
-              <div class="scen-top"><span>books.toscrape.com</span><span class="scen-tag s1">S1 FAST</span></div>
-              <div class="scen-title">📚 Books · Sharp Objects</div>
-              <div class="scen-desc">Mystery kategorisine girip Sharp Objects kitabının fiyat ve stok bilgisini doğrular.</div>
-            </button>
-            <button class="scen-card" data-preset="wiki">
-              <div class="scen-top"><span>wikipedia.org</span><span class="scen-tag s1">S1 + VERIFY</span></div>
-              <div class="scen-title">🌐 Wiki · Hagia Sophia</div>
-              <div class="scen-desc">Hagia Sophia makalesini aratıp mimari ve kubbe detaylarını özetler.</div>
-            </button>
-            <button class="scen-card" data-preset="fixture_modal">
-              <div class="scen-top"><span>/fixture.html</span><span class="scen-tag s2">RECOVERY</span></div>
-              <div class="scen-title">🚧 Modal Obstacle + Stay</div>
-              <div class="scen-desc">Promosyon modalını kapatır, Tokyo ve Stay 2026-05-14 seçip arama yapar.</div>
-            </button>
-            <button class="scen-card" data-preset="fixture_ask">
-              <div class="scen-top"><span>/fixture.html</span><span class="scen-tag s2">ASK_USER</span></div>
-              <div class="scen-title">💬 Missing Email (HITL)</div>
-              <div class="scen-title" style="display:none"></div>
-              <div class="scen-desc">Eksik e-posta bilgisini uydurmak yerine durup kullanıcıya sorar.</div>
-            </button>
-            <button class="scen-card" data-preset="fixture_guard">
-              <div class="scen-top"><span>/fixture.html</span><span class="scen-tag guard">SAFETY GUARD</span></div>
-              <div class="scen-title">🛡️ Pay $420 (Safety Guard)</div>
-              <div class="scen-desc">Geri döndürülemez $420 ödeme aksiyonunu yakalayıp insan onayı ister.</div>
-            </button>
-          </div>
+
+          <button class="btn-primary" id="btn-launch">
+            <span>Start Task</span>
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3.5 8h9M8.5 4l4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
       </div>
 
-      <!-- Right Config Column on Launch -->
-      <div class="cfg-card">
-        <div class="sec-head" style="margin-bottom:2px">
-          <span class="t">Runtime Gates &amp; Safety</span>
-        </div>
-        <label class="cfg-row">
-          <div>
-            <div class="cfg-lbl">Irreversible Safety Guard</div>
-            <div class="cfg-sub">Hold payment / delete actions for human approval</div>
-          </div>
-          <input type="checkbox" id="chk-safety" checked />
-        </label>
-        <label class="cfg-row">
-          <div>
-            <div class="cfg-lbl">Verify DONE with Supervisor</div>
-            <div class="cfg-sub">System 2 verifies completion &amp; writes summary</div>
-          </div>
-          <input type="checkbox" id="chk-verify-done" checked />
-        </label>
-        <label class="cfg-row">
-          <div>
-            <div class="cfg-lbl">Domain Site Memory</div>
-            <div class="cfg-sub">Persist learned structural rules per domain</div>
-          </div>
-          <input type="checkbox" id="chk-memory" />
-        </label>
-        <div class="cfg-row">
-          <div>
-            <div class="cfg-lbl">Max Steps Limit</div>
-            <div class="cfg-sub">Hard cap per task trajectory</div>
-          </div>
-          <input type="number" id="input-max-steps" value="60" min="5" max="200" style="width:68px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:12px;text-align:center;" />
-        </div>
-        <div style="margin-top:6px;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line-soft);font-size:11.5px;color:var(--ink-2);">
-          <div style="font-family:var(--mono);font-size:10px;color:var(--s2);text-transform:uppercase;margin-bottom:4px;">Meta Model API ($150 Credits)</div>
-          <div id="launch-key-status">Sol alttaki ⚙ Settings sekmesinden Meta API Key (`META_API_KEY`) girebilirsin.</div>
-        </div>
+    </div>
+  </section>
+
+  <!-- VIEW: SCENARIOS -->
+  <section class="view-pane" id="view-scenarios">
+    <div class="page-scroll">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="page-title">Quick Scenarios &amp; Obstacle Benchmarks</div>
+        <span style="font-family:var(--mono);font-size:13px;color:var(--ink-2)">Click any card to load &amp; launch immediately</span>
+      </div>
+      <div class="scenario-grid">
+        <button class="scen-card" data-preset="ozal">
+          <div class="scen-top"><span>google.com → ozalyildirim.com</span><span class="scen-tag s2">S1 + S2</span></div>
+          <div class="scen-title">Personal Blog Extraction</div>
+          <div class="scen-desc">Searches Google, skips academic profile results, and extracts all personal blog posts.</div>
+        </button>
+        <button class="scen-card" data-preset="gemini_chat">
+          <div class="scen-top"><span>gemini.google.com</span><span class="scen-tag s2">MULTI-TURN</span></div>
+          <div class="scen-title">Gemini · 2-Turn Live Dialogue</div>
+          <div class="scen-desc">Conducts a 2-turn live conversation with Gemini on a riddle and philosophy of mind.</div>
+        </button>
+        <button class="scen-card" data-preset="books">
+          <div class="scen-top"><span>books.toscrape.com</span><span class="scen-tag s1">S1 FAST</span></div>
+          <div class="scen-title">Books · Sharp Objects</div>
+          <div class="scen-desc">Navigates to the Mystery category and verifies exact price and stock availability.</div>
+        </button>
+        <button class="scen-card" data-preset="wiki">
+          <div class="scen-top"><span>wikipedia.org</span><span class="scen-tag s1">S1 + VERIFY</span></div>
+          <div class="scen-title">Wikipedia · Hagia Sophia</div>
+          <div class="scen-desc">Searches Wikipedia for Hagia Sophia and summarizes its architecture and dome dimensions.</div>
+        </button>
+        <button class="scen-card" data-preset="fixture_modal">
+          <div class="scen-top"><span>/fixture.html</span><span class="scen-tag s2">RECOVERY</span></div>
+          <div class="scen-title">Modal Obstacle + Stay Search</div>
+          <div class="scen-desc">Dismisses promo modal obstacle, selects Tokyo &amp; 2026-05-14, and runs search.</div>
+        </button>
+        <button class="scen-card" data-preset="fixture_ask">
+          <div class="scen-top"><span>/fixture.html</span><span class="scen-tag s2">ASK_USER</span></div>
+          <div class="scen-title">Missing Passenger Email (HITL)</div>
+          <div class="scen-desc">Pauses and asks the human user instead of hallucinating a missing email address.</div>
+        </button>
+        <button class="scen-card" data-preset="fixture_guard">
+          <div class="scen-top"><span>/fixture.html</span><span class="scen-tag guard">SAFETY GUARD</span></div>
+          <div class="scen-title">Pay $420 (Irreversible Guard)</div>
+          <div class="scen-desc">Intercepts an irreversible $420 payment action and holds for human confirmation.</div>
+        </button>
       </div>
     </div>
   </section>
@@ -212,13 +184,24 @@
   <!-- VIEW 2: LIVE RUN -->
   <section class="view-pane" id="view-live">
     <div class="live-grid">
-      <!-- Left: Browser Stage -->
+      <!-- Left: Live Browser Stage -->
       <div class="stage">
         <div class="bbar">
-          <button class="bbar-btn" id="btn-toggle-boxes" title="Toggle DOM Bounding Boxes">🎯 DOM [<span id="dom-count">0</span>]</button>
+          <div class="status-pill" id="status-badge">
+            <span class="dot"></span>
+            <span id="status-text">IDLE</span>
+          </div>
+          <button class="bbar-btn" id="btn-toggle-boxes" title="Toggle DOM Bounding Boxes">DOM [<span id="dom-count">0</span>]</button>
           <div class="urlbar">
             <span class="lock">●</span>
             <span class="u-txt" id="page-url-badge">about:blank</span>
+          </div>
+          <div class="stat-strip">
+            <div class="kv"><span class="k">steps</span><span class="v" id="m-steps">0</span></div>
+            <div class="kv"><span class="k">s1</span><span class="v s1" id="m-s1">0</span></div>
+            <div class="kv"><span class="k">s2</span><span class="v s2" id="m-s2">0</span></div>
+            <div class="kv"><span class="k">p50</span><span class="v" id="m-lat">0 ms</span></div>
+            <div class="kv"><span class="k">cost</span><span class="v" id="m-cost">$0.0000</span></div>
           </div>
           <div class="stream-badge" id="stream-live-pill">
             <span class="s-dot"></span>
@@ -229,8 +212,8 @@
         <div class="viewport-wrap">
           <div class="viewport-stage" id="viewport-container">
             <div class="viewport-empty" id="viewport-empty">
-              <div class="big">Canlı Chromium Oturumu Hazır</div>
-              <div>Sol menüden yeni görev başlatın veya <b>▶ Run</b> tuşuna basın.</div>
+              <div class="big">Live Chromium Session Ready</div>
+              <div>Start a task from the Launch screen or press <b>▶ Run</b> in the top right.</div>
             </div>
             <img id="viewport-img" alt="Live Browser Stream" style="display:none;" />
             <div class="dom-overlay" id="dom-overlay"></div>
@@ -239,12 +222,12 @@
             <div class="rx-cursor" id="rx-cursor">
               <div class="rx-ripple"></div>
               <svg viewBox="0 0 24 24" fill="none">
-                <path d="M4 3L11.5 20L14.2 13.2L21 10.5L4 3Z" fill="#C8F169" stroke="#08090C" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M4 3L11.5 20L14.2 13.2L21 10.5L4 3Z" fill="#2A9D8F" stroke="#08090C" stroke-width="1.8" stroke-linejoin="round"/>
               </svg>
               <div class="rx-callout" id="rx-callout">S1 · CLICK</div>
             </div>
 
-            <!-- In-Viewport Safety Guard / ASK_USER Modal -->
+            <!-- Safety Guard Modal -->
             <div class="stage-modal" id="guard-modal">
               <div class="sm-head">
                 <span id="guard-modal-tag">🛡️ SAFETY GUARD HOLD · IRREVERSIBLE ACTION</span>
@@ -255,7 +238,7 @@
               <div class="sm-actions">
                 <button class="btn-approve" id="btn-approve">✓ Approve &amp; Execute</button>
                 <button class="btn-reject" id="btn-reject">✕ Decline</button>
-                <input type="text" id="input-alt-instruction" class="inp-text" placeholder="Veya alternatif talimat yaz..." style="flex:1;padding:5px 9px;font-size:11.5px;" />
+                <input type="text" id="input-alt-instruction" class="inp-text" placeholder="Or type an alternative instruction..." style="flex:1;padding:7px 11px;font-size:13px;" />
               </div>
             </div>
           </div>
@@ -268,7 +251,7 @@
             <div class="scrub-track" id="scrubber-track"></div>
           </div>
           <div class="aspace-row" id="aspace-row">
-            <span class="aspace-chip">Waiting for first System 1 distribution…</span>
+            <span class="aspace-chip" id="top-goal-crumb">Waiting for first step decision…</span>
           </div>
         </div>
       </div>
@@ -280,7 +263,7 @@
           <button class="cbtn" id="btn-step">⏭ Step</button>
           <button class="cbtn pause" id="btn-pause" disabled>⏸ Pause</button>
           <div style="flex:1"></div>
-          <button class="cbtn" id="btn-new-task" title="Open Launch Screen">+ New</button>
+          <button class="cbtn" id="btn-new-task" title="New Task">+ New</button>
           <button class="cbtn" id="btn-reset" title="Close Browser Session">✕</button>
         </div>
 
@@ -293,9 +276,9 @@
             <div class="dcard s1">
               <div class="dcard-top">
                 <span class="actor-badge s1">READY</span>
-                <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">3-Layer Verification</span>
+                <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">3-Layer Verification</span>
               </div>
-              <div class="dcard-reason">Henüz adım çalıştırılmadı. Canlı akışı başlatmak için <b>▶ Run</b> veya <b>⏭ Step</b> tuşuna basın.</div>
+              <div class="dcard-reason">No steps executed yet. Press <b>▶ Run</b> or <b>⏭ Step</b> to begin the live stream.</div>
             </div>
           </div>
         </div>
@@ -307,7 +290,7 @@
           </div>
           <div class="chat-log" id="chat-messages"></div>
           <form class="chat-form" id="chat-form">
-            <input type="text" id="input-chat" placeholder="Ajanı yönlendir, soru sor veya ASK_USER yanıtla..." autocomplete="off" />
+            <input type="text" id="input-chat" placeholder="Steer the agent, ask a question, or reply to ASK_USER..." autocomplete="off" />
             <button type="submit" class="chat-send">Send</button>
           </form>
         </div>
@@ -320,9 +303,9 @@
     <div class="page-scroll">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="page-title">Full Execution &amp; Escalation Trajectory</div>
-        <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)" id="traj-summary-lbl">0 steps</span>
+        <span style="font-family:var(--mono);font-size:13px;color:var(--ink-2)" id="traj-summary-lbl">0 steps</span>
       </div>
-      <div id="trajectory-full-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="trajectory-full-list" style="display:flex;flex-direction:column;gap:12px;"></div>
     </div>
   </section>
 
@@ -332,7 +315,7 @@
       <div class="page-title">Dual-Tier Bounded Context &amp; Provenance</div>
       <div class="grid-2">
         <div class="pbox">
-          <div class="pbox-h"><span>Compiled System 1 Goal (Turnike-4B Input)</span><span style="color:var(--s1)">S1 FAST</span></div>
+          <div class="pbox-h"><span>Compiled System 1 Goal</span><span style="color:var(--s1)">S1 FAST</span></div>
           <div class="mono-block" id="ctx-compiled-goal">-</div>
           <div class="pbox-h"><span>Active Subgoal &amp; Tactical Hint</span></div>
           <div class="mono-block" id="ctx-subgoal-hint">-</div>
@@ -370,7 +353,7 @@
         </div>
       </div>
       <div class="pbox">
-        <div class="pbox-h"><span>Guarded Financial &amp; Destructive Patterns (TR + EN)</span></div>
+        <div class="pbox-h"><span>Guarded Financial &amp; Destructive Patterns</span></div>
         <div class="mono-block">pay now | complete purchase/order/payment | place order | buy now | confirm payment/transfer/deletion | delete account/repository/permanently | siparişi tamamla/onayla | ödemeyi yap/onayla | hemen satın al | kalıcı olarak sil | hesabı sil</div>
       </div>
     </div>
@@ -390,29 +373,74 @@
     </div>
   </section>
 
-  <!-- VIEW 7: SETTINGS & API KEYS -->
+  <!-- VIEW 7: SETTINGS, RUNTIME GATES & API KEYS -->
   <section class="view-pane" id="view-settings">
     <div class="page-scroll">
-      <div class="page-title">API Keys (Meta Model API $150 Credits &amp; OpenRouter) &amp; Runtime Calibration</div>
+      <div class="page-title">Settings, Runtime Gates &amp; API Keys</div>
       <div class="grid-2">
         <div class="pbox">
-          <div class="pbox-h"><span>Official Meta Model API (`api.llama.com`)</span><span style="color:var(--s2)" id="meta-key-badge">CHECKING</span></div>
-          <div style="font-size:12px;color:var(--ink-2)">
-            Meta AI Developer Hackathon $150 ücretsiz kredisini (`META_API_KEY` / `LLAMA_API_KEY`) buraya girdiğinde System 2 Supervisor doğrudan resmi `https://api.llama.com/compat/v1/chat/completions` üzerinden çalışır.
-          </div>
-          <input type="password" id="input-meta-key" class="inp-text" placeholder="LLM|... veya meta-... API anahtarını yapıştır" />
-          <div class="pbox-h" style="margin-top:8px;"><span>OpenRouter API Key (`OPENROUTER_API_KEY`)</span><span style="color:var(--s1)" id="or-key-badge">CHECKING</span></div>
-          <input type="password" id="input-or-key" class="inp-text" placeholder="sk-or-v1-..." />
-          <div style="display:flex;gap:10px;align-items:center;margin-top:6px;">
-            <button class="btn-primary" id="btn-save-keys">💾 Save API Keys to .env</button>
-            <span id="save-keys-msg" style="font-family:var(--mono);font-size:11px;color:var(--ok);"></span>
+          <div class="pbox-h"><span>Runtime &amp; Safety Gates</span></div>
+
+          <label class="cfg-row" for="chk-safety">
+            <div>
+              <div class="cfg-lbl">Irreversible Safety Guard</div>
+              <div class="cfg-sub">Hold payment &amp; delete actions for human approval</div>
+            </div>
+            <span class="ui-switch">
+              <input type="checkbox" id="chk-safety" checked />
+              <span class="ui-switch-slider"></span>
+            </span>
+          </label>
+
+          <label class="cfg-row" for="chk-verify-done">
+            <div>
+              <div class="cfg-lbl">Verify DONE with Supervisor</div>
+              <div class="cfg-sub">System 2 verifies completion and writes final summary</div>
+            </div>
+            <span class="ui-switch">
+              <input type="checkbox" id="chk-verify-done" checked />
+              <span class="ui-switch-slider"></span>
+            </span>
+          </label>
+
+          <label class="cfg-row" for="chk-memory">
+            <div>
+              <div class="cfg-lbl">Domain Site Memory</div>
+              <div class="cfg-sub">Persist learned structural rules per domain</div>
+            </div>
+            <span class="ui-switch">
+              <input type="checkbox" id="chk-memory" />
+              <span class="ui-switch-slider"></span>
+            </span>
+          </label>
+
+          <div class="cfg-row">
+            <div>
+              <div class="cfg-lbl">Max Steps Limit</div>
+              <div class="cfg-sub">Hard cap on steps per task trajectory</div>
+            </div>
+            <input type="number" id="input-max-steps" class="cfg-num-input" value="60" min="5" max="200" />
           </div>
         </div>
 
         <div class="pbox">
-          <div class="pbox-h"><span>Active Calibration Thresholds</span></div>
-          <div class="mono-block" id="settings-thresholds-box">CLICK: 0.42 | TYPE_TEXT: 0.42 | SELECT: 0.42 | SCROLL_DOWN: 0.15 (Never Escalate on low_op_conf) | DONE: Verified by System 2 Supervisor</div>
+          <div class="pbox-h"><span>Official Meta Model API (`api.llama.com`)</span><span style="color:var(--s2)" id="meta-key-badge">CHECKING</span></div>
+          <div style="font-size:14px;color:var(--ink-2)">
+            Enter your Meta AI (`META_API_KEY` / `LLAMA_API_KEY`) key to run System 2 Supervisor directly on `api.llama.com`.
+          </div>
+          <input type="password" id="input-meta-key" class="inp-text" placeholder="Paste LLM|... or meta-... API key" />
+          <div class="pbox-h" style="margin-top:10px;"><span>OpenRouter API Key (`OPENROUTER_API_KEY`)</span><span style="color:var(--s1)" id="or-key-badge">CHECKING</span></div>
+          <input type="password" id="input-or-key" class="inp-text" placeholder="sk-or-v1-..." />
+          <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
+            <button class="btn-primary" id="btn-save-keys">Save Keys (.env)</button>
+            <span id="save-keys-msg" style="font-family:var(--mono);font-size:13px;color:var(--ok);"></span>
+          </div>
         </div>
+      </div>
+
+      <div class="pbox">
+        <div class="pbox-h"><span>Active Calibration Thresholds</span></div>
+        <div class="mono-block" id="settings-thresholds-box">CLICK: 0.42 | TYPE_TEXT: 0.42 | SELECT: 0.42 | SCROLL_DOWN: 0.15 (Never Escalate on low_op_conf) | DONE: Verified by System 2 Supervisor</div>
       </div>
     </div>
   </section>
