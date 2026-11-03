@@ -675,8 +675,21 @@
   const omitted_actions=Math.max(0,actions.length-250);
   actions.splice(250);
   actions.forEach((a,i)=>a.id='e'+(i+1));
-  if (scrollY+innerHeight<height-2) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
-  if (scrollY>0) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
+  // App layouts scroll an inner box and leave the window still; the wheel lands at (550,450) (cdp.py),
+  // so the box under that point decides whether scrolling is possible.
+  let innerDown=false, innerUp=false;
+  if (!(scrollY+innerHeight<height-2) && !(scrollY>0)) {
+    let el=document.elementFromPoint(Math.min(550,innerWidth-1),Math.min(450,innerHeight-1));
+    for (let i=0; el && el!==document.body && el!==document.documentElement && i<25; i++, el=el.parentElement) {
+      if (['auto','scroll','overlay'].includes(getComputedStyle(el).overflowY) && el.scrollHeight>el.clientHeight+2) {
+        innerDown=el.scrollTop+el.clientHeight<el.scrollHeight-2;
+        innerUp=el.scrollTop>0;
+        break;
+      }
+    }
+  }
+  if (scrollY+innerHeight<height-2 || innerDown) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
+  if (scrollY>0 || innerUp) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
   actions.push({id:'wait',kind:'wait',label:'Wait for the page to update'});
   return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,page_links,page_controls,
     scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions,has_iframes:!!document.querySelector('iframe')};
