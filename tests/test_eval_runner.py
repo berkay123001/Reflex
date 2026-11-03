@@ -562,9 +562,9 @@ def test_l3_step_duration_breakdown_and_summary_task_elapsed():
     assert "Task Durations:" in report
     assert "task_a: 12000 ms" in report
 
-    # Verify Studio app.js uses step_ms and median_step_ms
+    # Verify Studio app.js shows step_ms in the step deck and reads median_step_ms
     app_js = (Path(__file__).resolve().parent.parent / "reflex" / "web" / "app.js").read_text(encoding="utf-8")
-    assert "lastStep.step_ms" in app_js
+    assert "last.step_ms" in app_js
     assert "m.median_step_ms" in app_js
 
 
