@@ -122,9 +122,14 @@ Tests run offline: `uv run pytest -q`.
 - When a site does not have exactly what was asked, the agent sometimes still answers with the closest match. The answer check is meant to catch these, but it does so only some of the time.
 - Sites behind Cloudflare or geo-blocks cannot be used. Reflex reports the block and does not try to get around it.
 
-## Experimental modes (not used by default)
+## The hybrid we set out to build (experimental, not the default)
 
-Reflex started as a two-system design: a fast "System 1" for confident clicks and typing, with Muse Spark as "System 2" for everything else. System 1 runs either through Jev (OpenRouter) or through Turnike, a locally fine-tuned Qwen3.5-4B. On our tasks neither hybrid mode beat Muse alone, so the default mode is Muse-only (`s2_only`). The hybrid modes stay selectable (`MOD` in Studio, `--mode` in `scripts/eval.py`). Turnike is not a Meta model and has no part in the default pipeline.
+We set out to pair Muse Spark with a fast local action model, and built it. In the hybrid modes, a small model proposes each step as probabilities over operations and page elements, and a calibrated confidence gate lets it act only when it is sure; everything else goes to Muse Spark. The local model is Turnike, a Qwen3.5-4B fine-tune that we trained before the hackathon in independent experiments (Oct 14–25); during the hackathon we connected it to Reflex through the gate, measured it, and trained one more version on human demonstrations. A cloud model (Jev, via OpenRouter) can take its place.
+
+- On 19 real-site tasks run twice, Muse alone finished 36/38, strict hybrid 33/38, and the original flexible hybrid 14/19: the small model's confident mistakes cost extra recovery steps, and Muse Spark 1.3 answers in about 3 s per step, so there is little time left to save.
+- On 6 tasks run twice, strict hybrid with Turnike finished 12/12, Turnike took about one step in five, and the runs were about 10–15% faster than Muse alone (small sample).
+
+So Muse-only (`s2_only`) is the default, and the hybrid modes stay selectable (`Mode` in Studio, `--mode` in `scripts/eval.py`). Turnike is not a Meta model and has no part in the default pipeline. Its weights are not part of this submission; it is a research preview. Training data, gate thresholds and measurements: [`docs/turnike.md`](docs/turnike.md).
 
 ## MCP Server (Claude Code / Antigravity)
 
