@@ -195,6 +195,106 @@ function renderDomOverlay(state) {
   }
 }
 
+// Minimal, safe Markdown for chat and answers: everything is HTML-escaped first, then a small set of
+// constructs is turned into tags (headings, lists, tables, code, quotes, bold/italic, http(s) links).
+function mdInline(raw) {
+  const codes = [];
+  let s = escapeHtml(raw).replace(/`([^`\n]+)`/g, (_, c) => {
+    codes.push(c);
+    return `\u0000${codes.length - 1}\u0000`;
+  });
+  const link = (url, text) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, text, url) => link(url, text));
+  s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g, (_, pre, url) => pre + link(url, url));
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<em>$2</em>");
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[Number(i)]}</code>`);
+}
+
+// One-line plain text for previews: Markdown markers and table pipes removed.
+function plainPreview(text) {
+  return String(text ?? "")
+    .replace(/^\s*(#{1,4}|>|[-*•+]|\d+[.)])\s+/gm, "")
+    .replace(/^\s*\|?\s*:?-{2,}.*$/gm, "")
+    .replace(/[*_`|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 220);
+}
+
+function renderMarkdown(text) {
+  const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const out = [];
+  let para = [];
+  const flush = () => {
+    if (para.length) out.push(`<p>${para.map(mdInline).join("<br>")}</p>`);
+    para = [];
+  };
+  const cells = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  const isSep = (line) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) {
+      flush();
+      const body = [];
+      for (i += 1; i < lines.length && !/^\s*```/.test(lines[i]); i += 1) body.push(lines[i]);
+      out.push(`<pre><code>${escapeHtml(body.join("\n"))}</code></pre>`);
+      continue;
+    }
+    if (!line.trim()) {
+      flush();
+      continue;
+    }
+    const h = line.match(/^\s*(#{1,4})\s+(.*)$/);
+    if (h) {
+      flush();
+      out.push(`<h${h[1].length}>${mdInline(h[2])}</h${h[1].length}>`);
+      continue;
+    }
+    if (/^\s*([-*_])\s*\1\s*\1[\s\1]*$/.test(line)) {
+      flush();
+      out.push("<hr>");
+      continue;
+    }
+    if (line.includes("|") && i + 1 < lines.length && isSep(lines[i + 1])) {
+      flush();
+      const head = cells(line);
+      const rows = [];
+      for (i += 2; i < lines.length && lines[i].includes("|") && lines[i].trim(); i += 1) rows.push(cells(lines[i]));
+      i -= 1;
+      out.push(
+        `<div class="md-table"><table><thead><tr>${head.map((c) => `<th>${mdInline(c)}</th>`).join("")}</tr></thead>` +
+          `<tbody>${rows.map((r) => `<tr>${head.map((_, k) => `<td>${mdInline(r[k] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
+      );
+      continue;
+    }
+    const listRe = /^\s*([-*•+]|\d+[.)])\s+(.*)$/;
+    if (listRe.test(line)) {
+      flush();
+      const ordered = /^\s*\d/.test(line);
+      const items = [];
+      for (; i < lines.length && listRe.test(lines[i]) && /^\s*\d/.test(lines[i]) === ordered; i += 1) {
+        items.push(`<li>${mdInline(lines[i].match(listRe)[2])}</li>`);
+      }
+      i -= 1;
+      out.push(ordered ? `<ol>${items.join("")}</ol>` : `<ul>${items.join("")}</ul>`);
+      continue;
+    }
+    if (/^\s*>\s?/.test(line)) {
+      flush();
+      const quote = [];
+      for (; i < lines.length && /^\s*>\s?/.test(lines[i]); i += 1) quote.push(mdInline(lines[i].replace(/^\s*>\s?/, "")));
+      i -= 1;
+      out.push(`<blockquote>${quote.join("<br>")}</blockquote>`);
+      continue;
+    }
+    para.push(line);
+  }
+  flush();
+  return out.join("");
+}
+
 // Plain-language labels for browser operations shown in the step deck.
 const STEP_VERBS = {
   CLICK: ["Clicked", "↖"],
@@ -296,7 +396,18 @@ function renderPlanCard(state) {
   const answer = finalAnswer(state);
   const badgeSlot = $("answer-check-badge");
   if (badgeSlot) badgeSlot.innerHTML = "";
-  if (answer) {
+  // In conversation mode the answer is already in the chat, so the card keeps the plan and lists sources.
+  const chatMode = $("live-bento")?.dataset.mode === "chat";
+  if (answer && chatMode) {
+    const checks = state.answer_checks || [];
+    const failed = checks.find((c) => c.verdict === "fail");
+    if (badgeSlot && checks.length) {
+      badgeSlot.innerHTML = failed
+        ? `<span class="ans-check sent-back" title="${escapeHtml(failed.unmet.join("; "))}">↺ Muse Spark Open sent it back once</span>`
+        : `<span class="ans-check">✓ Checked by Muse Spark Open</span>`;
+    }
+  }
+  if (answer && !chatMode) {
     if (head) head.textContent = "Answer";
     const checks = state.answer_checks || [];
     const failed = checks.find((c) => c.verdict === "fail");
@@ -306,23 +417,32 @@ function renderPlanCard(state) {
         : `<span class="ans-check">✓ Checked by Muse Spark Open</span>`;
     }
     const why = failed ? `<div class="lb-muted" style="margin-top:8px">Sent back because: ${escapeHtml(failed.unmet.join("; "))}</div>` : "";
-    body.innerHTML = `<div class="ans-fan"><div class="ans-card">${escapeHtml(answer)}</div></div>${why}`;
+    body.innerHTML = `<div class="ans-fan"><div class="ans-card md">${renderMarkdown(answer)}</div></div>${why}`;
     return;
   }
 
   if (head) head.textContent = "Plan";
   const subgoals = state.context?.plan?.subgoals || [];
+  const visited = [...new Set((state.context?.visited_urls || []).filter((u) => /^https?:\/\//.test(u)))].slice(-6).reverse();
+  const sources =
+    chatMode && visited.length
+      ? `<div class="pl-sources"><div class="lb-label" style="margin-bottom:4px">Pages visited</div>${visited
+          .map((u) => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(u)}">${escapeHtml(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`)
+          .join("")}</div>`
+      : "";
   if (subgoals.length) {
     const mark = { completed: "✓", failed: "✕" };
-    body.innerHTML = subgoals
-      .map((sg) => `<div class="pl-item ${escapeHtml(sg.status)}"><span class="pl-dot">${mark[sg.status] || ""}</span><span>${escapeHtml(sg.text)}</span></div>`)
-      .join("");
+    body.innerHTML =
+      subgoals
+        .map((sg) => `<div class="pl-item ${escapeHtml(sg.status)}"><span class="pl-dot">${mark[sg.status] || ""}</span><span>${escapeHtml(sg.text)}</span></div>`)
+        .join("") + sources;
     return;
   }
   const active = state.context?.active_subgoal;
-  body.innerHTML = active && state.history?.length
-    ? `<div class="pl-item active"><span class="pl-dot"></span><span>${escapeHtml(active)}</span></div>`
-    : `<div class="lb-muted">Muse Spark writes a short plan when the task starts.</div>`;
+  body.innerHTML =
+    (active && state.history?.length
+      ? `<div class="pl-item active"><span class="pl-dot"></span><span>${escapeHtml(active)}</span></div>`
+      : `<div class="lb-muted">Muse Spark writes a short plan when the task starts.</div>`) + sources;
 }
 
 function formatElapsed(ms) {
@@ -333,17 +453,30 @@ function formatElapsed(ms) {
 function initLiveLayout() {
   const bento = $("live-bento");
   if (!bento) return;
-  const saved = localStorage.getItem("reflex_live_layout");
-  if (saved === "browser" || saved === "chat") bento.dataset.layout = saved;
-  const toggle = (mode) => {
-    bento.dataset.layout = bento.dataset.layout === mode ? "normal" : mode;
-    localStorage.setItem("reflex_live_layout", bento.dataset.layout);
-    const growing = bento.dataset.layout === mode;
-    const btn = $(mode === "browser" ? "btn-browser-size" : "btn-chat-size");
-    if (btn) btn.title = `${growing ? "Shrink" : "Enlarge"} ${mode}`;
+  const layout = localStorage.getItem("reflex_live_layout");
+  const mode = localStorage.getItem("reflex_live_mode");
+  if (layout === "browser") bento.dataset.layout = "browser";
+  if (mode === "chat") bento.dataset.mode = "chat";
+
+  const setMode = (next) => {
+    bento.dataset.mode = next;
+    localStorage.setItem("reflex_live_mode", next);
+    if (currentState) renderPlanCard(currentState);
+    const knob = $("btn-live-mode");
+    if (knob) knob.title = next === "chat" ? "Show the browser again" : "Hide the browser and open the conversation";
+    if (next === "chat") {
+      const box = $("chat-messages");
+      if (box) box.scrollTop = box.scrollHeight;
+      $("input-chat")?.focus();
+    }
   };
-  $("btn-browser-size")?.addEventListener("click", () => toggle("browser"));
-  $("btn-chat-size")?.addEventListener("click", () => toggle("chat"));
+  $("btn-live-mode")?.addEventListener("click", () => setMode(bento.dataset.mode === "chat" ? "browser" : "chat"));
+  $("chat-peek")?.addEventListener("click", () => setMode("chat"));
+  $("btn-browser-size")?.addEventListener("click", () => {
+    bento.dataset.layout = bento.dataset.layout === "browser" ? "normal" : "browser";
+    localStorage.setItem("reflex_live_layout", bento.dataset.layout);
+    $("btn-browser-size").title = bento.dataset.layout === "browser" ? "Shrink browser" : "Enlarge browser";
+  });
 }
 
 function renderScrubberAndActionSpace(state) {
@@ -394,20 +527,31 @@ function renderGuardAndChat(state) {
   }
 
   const chatBox = $("chat-messages");
+  const log = state.context?.chat_log || [];
   if (chatBox) {
-    const log = state.context?.chat_log || [];
     if (log.length === 0) {
-      chatBox.innerHTML = `<div class="cmsg assistant"><div class="cmsg-role">REFLEX CO-PILOT</div>Ask questions during execution, steer the goal, or reply to human-in-the-loop prompts here.</div>`;
+      chatBox.innerHTML = `<div class="cmsg assistant"><div class="cmsg-role">Reflex</div>Ask questions while the task runs, steer the goal, or answer when Reflex asks you something.</div>`;
     } else {
+      const atBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 40;
       chatBox.innerHTML = log
         .map((m) => {
           const cls = m.kind === "ask_user" ? "ask_user" : m.kind === "confirm_action" ? "confirm_action" : m.role === "user" ? "user" : "assistant";
-          const roleLbl = m.role === "user" ? "YOU" : m.kind === "ask_user" ? "❓ ASK_USER PROMPT" : m.kind === "confirm_action" ? "🛡️ SAFETY GUARD" : "🤖 REFLEX AGENT";
-          return `<div class="cmsg ${cls}"><div class="cmsg-role">${roleLbl}</div>${escapeHtml(m.content)}</div>`;
+          const roleLbl = m.role === "user" ? "You" : m.kind === "ask_user" ? "Reflex asks" : m.kind === "confirm_action" ? "Safety guard" : "Reflex";
+          const body = m.role === "user" ? escapeHtml(m.content) : `<div class="md">${renderMarkdown(m.content)}</div>`;
+          return `<div class="cmsg ${cls}"><div class="cmsg-role">${roleLbl}</div>${body}</div>`;
         })
         .join("");
-      chatBox.scrollTop = chatBox.scrollHeight;
+      if (atBottom) chatBox.scrollTop = chatBox.scrollHeight;
     }
+  }
+
+  // One-line preview of the latest message from Reflex, shown under the browser.
+  const peek = $("chat-peek");
+  if (peek) {
+    const last = [...log].reverse().find((m) => m.role !== "user" && (m.kind || "chat") !== "escalation_note");
+    const asks = last?.kind === "ask_user";
+    peek.classList.toggle("ask", Boolean(asks));
+    peek.innerHTML = last ? `<b>${asks ? "Reflex asks:" : "Reflex:"}</b> ${escapeHtml(plainPreview(last.content))}` : "";
   }
 }
 
