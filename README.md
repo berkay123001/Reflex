@@ -1,7 +1,7 @@
 # Reflex — a cheap, honest browser agent on Muse Spark
 
 > **Meta Global AI Hackathon 2026 · Indie Developer track · Problem statement: TODO(Berkay)**
-> - **Provenance:** TODO(Berkay): one line on what existed before Oct 26 and what was built during Oct 26 – Nov 4. The repository was created on 2026-10-27.
+> - **Provenance:** The Muse Spark agent in this repository (supervisor, browser layer, guards, answer check and benchmark) was built during the hackathon, Oct 26 – Nov 4, 2026.
 > - **Meta models at runtime:**
 >   - `muse-spark-1.3-contributor` (Meta Model API) is the supervisor: it reads each page and decides every browser step.
 >   - `meta-models/muse-spark-open-1026` (**Muse Spark Open**, open weights, served by Baseten) checks every final answer against the user's task before it is shown. If a requirement is unmet, the agent is sent back once.
@@ -15,17 +15,20 @@ You give Reflex a website and a goal in plain language, for example *"find the c
 
 ### Online-Mind2Web: 40 live tasks
 
-[Online-Mind2Web](https://arxiv.org/abs/2504.01382) has 300 tasks on 136 live websites. We drew 40 of them with a fixed seed, stratified by difficulty (11 easy, 19 medium, 10 hard), after excluding the 8 tasks we had used to diagnose failures ([`scripts/benchmark/sample_online_mind2web.py`](scripts/benchmark/sample_online_mind2web.py)). The same 40 tasks were run three times while we fixed general bugs:
+[Online-Mind2Web](https://arxiv.org/abs/2504.01382) has 300 tasks on 136 live websites. We drew 40 of them with a fixed seed, stratified by difficulty (11 easy, 19 medium, 10 hard), after excluding the 8 tasks we had used to diagnose failures ([`scripts/benchmark/sample_online_mind2web.py`](scripts/benchmark/sample_online_mind2web.py)). The same 40 tasks were run four times while we fixed general bugs. **Across the four runs, 19–21 of 40 tasks succeeded, and 19–21 of the 30 reachable ones (61–70%).**
 
 | Run (same 40 tasks, max 40 steps) | Success | Success on reachable sites | Cost per task |
 |---|---|---|---|
-| **Final code** (answer check with Muse Spark Open) | **20/40 (50%)** | **20/30 (67%)** | $0.008 |
+| **Final code** (+ no waiting on an absent user, ARIA slider keys) | **19/40 (48%)** | **19/30 (63%)** | $0.009 |
+| Answer check with Muse Spark Open | 20/40 (50%) | 20/30 (67%) | $0.008 |
 | Answer check, first prompt | 21/40 (53%) | 21/30 (70%) | $0.008 |
 | No answer check | 19/40 (48%) | 19/31 (61%) | $0.006 |
 
-Final code by difficulty (reachable tasks in brackets): easy 8/11 (8/9), medium 9/19 (9/15), hard 3/10 (3/6).
+Final code by difficulty (reachable tasks in brackets): easy 7/11 (7/9), medium 9/19 (9/15), hard 3/10 (3/6).
 
-The three runs are within noise of each other: 40 tasks give roughly ±15 points of uncertainty. On these 40 tasks the answer check did not measurably raise the success rate. In the final run it sent the agent back once (a false alarm on a correct Compass answer; the agent re-checked and finished correctly), and it missed a substituted place (AccuWeather, Cork) that it had caught in the previous run, where the agent then answered honestly that the place was not listed. It adds 1–4 s per finished task.
+The runs are within noise of each other: 40 tasks give roughly ±15 points of uncertainty, and the same task can pass in one run and fail in the next (Birkenstock redirected us to its German store in the last run). The last two fixes did what they were meant to: no run ended waiting for a user who is not there (two did before), and a Steam task that needs a playtime slider passed for the first time. Other tasks went the other way, so the total did not move.
+
+The answer check did not measurably raise the success rate either. In the last two runs it sent back two answers: one that gave general prices instead of prices for the zip code asked for (the agent could not find local prices and kept them), and one correct Compass answer (a false alarm). It passed a Compass listing that was not the cheapest and an AccuWeather answer about a nearby place. In an earlier run it caught that AccuWeather substitute, and the agent then said plainly that the place was not listed. It adds 1–4 s per finished task.
 
 "Reachable" excludes sites that refused our network before the agent could do anything: geo-blocks (CVS, Healthgrades, Adopt-a-Pet), Cloudflare and bot checks (cars.com, StubHub, BBB, JCPenney) and dead hosts. In all of these the agent reported the block instead of inventing a result.
 
@@ -36,7 +39,7 @@ For context, the paper's human-judged success rates on all 300 tasks: OpenAI Ope
 
 Per-task answers, verdicts and final screenshots of the final run: [`reports/online_mind2web_pilot40/`](reports/online_mind2web_pilot40/).
 
-Where it still fails: long multi-step forms and filter chains (a six-topic newsletter signup, setting a Trader Joe's home store) run out of the 40-step budget (4 of 40), it stopped to ask the user twice, and three answers gave something close to but not what was asked (a nearby place, national averages instead of a zip code, a data science course instead of computer science).
+Where it still fails (final run): long multi-step forms and filter chains (a six-topic newsletter signup, setting a Trader Joe's home store) run out of the 40-step budget (4 of 40); twice the agent could not act on a filter option it needed (on Birkenstock the size was hidden behind "show more") and stopped honestly after six attempts; and three answers gave something close to, but not, what was asked (a nearby place, general prices instead of a zip code, a listing that was not the cheapest).
 
 ### Our own tasks
 
@@ -67,7 +70,7 @@ On 20 tasks recorded from real users (Turkish, mostly research, quizzes and shop
 Each guard came from a failure we observed and was measured before and after:
 - **Stay on the task website.** Muse often jumped to a guessed URL on another site (StubHub → Eventbrite, AccuWeather → Windy). Following links shown on pages is still allowed. Runs that left the task site: 17 → 5 of 40, and the remaining 4 followed the site's own links.
 - **No silent dead ends.** When an element is covered or off-screen, the supervisor is told why the action failed; before this fix it kept choosing the same element. Supervisor calls that never turn into a browser step are capped.
-- **Answer check (Muse Spark Open).** Tested offline on 64 answers from our runs, labelled by us: it caught 3 of 4 answers that substituted a different place or general figures for the one asked for, with 1–2 false alarms among 60 good answers. The prompt was tuned on these same answers, so this is optimistic; on the live runs it caught one of two substitutes in one run and neither in the other (see above). It is bounded: one rejection per task, a 20 s timeout, and any error accepts the answer.
+- **Answer check (Muse Spark Open).** Tested offline on 64 answers from our runs, labelled by us: it caught 3 of 4 answers that substituted a different place or general figures for the one asked for, with 1–2 false alarms among 60 good answers. The prompt was tuned on these same answers, so this is optimistic; on the live runs it caught some substitutes and missed others (see above). It is bounded: one rejection per task, a 20 s timeout, and any error accepts the answer.
 
 ## Quickstart
 
