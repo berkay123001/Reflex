@@ -11,11 +11,11 @@ let streamConnected = false;
 const PRESETS = {
   ozal: {
     url: "https://www.google.com",
-    goal: "Özal Yıldırım'ın kişisel sitesine gir, blog yazılarına bak ve sayfada paylaştığı tüm blog yazılarını bana getir.",
+    goal: "Search Google for Özal Yıldırım's personal website, navigate to his blog section, and extract all blog post titles he has published.",
   },
   gemini_chat: {
-    url: "https://gemini.google.com/app?hl=tr",
-    goal: "Gemini ile Türkçe 2 tur sohbet et: İlk turda kısa ve eğlenceli bir bilmece sor, cevabını bekle; ikinci turda verdiği cevaba yorum yapıp yapay zeka bilinci hakkında kısa bir soru sor ve yanıtını özetle.",
+    url: "https://gemini.google.com/app",
+    goal: "Have a 2-turn conversation with Gemini: First, ask a short riddle and wait for its answer; second, comment on its answer and ask a brief question about philosophy of mind, then summarize the reply.",
   },
   books: {
     url: "https://books.toscrape.com/",
@@ -210,9 +210,9 @@ function renderDecisionStack(state) {
       <div class="dcard s1">
         <div class="dcard-top">
           <span class="actor-badge s1">READY</span>
-          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">3-Layer Verification</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">3-Layer Verification</span>
         </div>
-        <div class="dcard-reason">Oturum hazır. Canlı akışı başlatmak için <b>▶ Run</b> veya <b>⏭ Step</b> tuşuna basın.</div>
+        <div class="dcard-reason">Session ready. Press <b>▶ Run</b> or <b>⏭ Step</b> to begin the live stream.</div>
       </div>`;
     return;
   }
@@ -232,13 +232,13 @@ function renderDecisionStack(state) {
 
     const matchingEsc = isS2 ? escalations.find((e) => e.step === lastStep.step) || lastEsc : null;
     const stepDur = lastStep.step_ms ?? lastStep.latency_ms ?? 0;
-    const stepBreakdownTitle = `S1: ${lastStep.s1_ms ?? 0}ms | S2: ${lastStep.s2_ms ?? 0}ms | Act: ${lastStep.act_ms ?? 0}ms | Obs: ${lastStep.observe_ms ?? 0}ms`;
+    const stepBreakdownTitle = `S1: ${lastStep.s1_ms ?? 0}ms | S2: ${lastStep.s2_ms ?? 0}ms | Act: ${lastStep.act_ms ?? 0}ms | Observe: ${lastStep.observe_ms ?? 0}ms`;
 
     html += `
       <div class="dcard ${isS2 ? "s2" : "s1"}">
         <div class="dcard-top">
           <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${lastStep.step} ${isS2 ? "🧠 S2 SUPERVISOR" : "⚡ S1 REFLEX"} · ${escapeHtml(lastStep.operation)}</span>
-          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)" title="${stepBreakdownTitle}">${stepDur} ms</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)" title="${stepBreakdownTitle}">${stepDur} ms</span>
         </div>
         <div class="dcard-act">${lastStep.target ? `[${escapeHtml(lastStep.target)}] ` : ""}${escapeHtml(lastStep.action)}</div>
         ${lastStep.text ? `<div class="dcard-reason">✎ Typed: <b>"${escapeHtml(lastStep.text)}"</b></div>` : ""}
@@ -248,13 +248,13 @@ function renderDecisionStack(state) {
             ? `<div class="s2-state-box">
                 ${matchingEsc.evaluation_previous_goal ? `<div><b>Eval:</b> ${escapeHtml(matchingEsc.evaluation_previous_goal)}</div>` : ""}
                 ${matchingEsc.memory ? `<div><b>Memory:</b> ${escapeHtml(matchingEsc.memory)}</div>` : ""}
-                ${matchingEsc.next_goal ? `<div><b>Next:</b> ${escapeHtml(matchingEsc.next_goal)}</div>` : ""}
+                ${matchingEsc.next_goal ? `<div><b>Next Goal:</b> ${escapeHtml(matchingEsc.next_goal)}</div>` : ""}
               </div>`
             : ""
         }
         <div class="bars-grid">
           <div class="cbar">
-            <div class="cbar-top"><span>Operation</span><span>${opPct}%</span></div>
+            <div class="cbar-top"><span>Action</span><span>${opPct}%</span></div>
             <div class="cbar-track"><div class="cbar-fill ${isS2 ? "s2" : ""}" style="width:${opPct}%"></div></div>
           </div>
           <div class="cbar">
@@ -271,9 +271,9 @@ function renderDecisionStack(state) {
           </div>
         </div>
         <div class="ver-row">
-          <span class="v-chip ok">Exec ✓</span>
-          <span class="v-chip ${v.effective_progress ? "ok" : ""}">${v.url_changed ? "URL Changed ✓" : v.page_changed ? "DOM Diff ✓" : "In-Place"}</span>
-          <span class="v-chip ${v.loop_detected || v.oscillation_detected ? "warn" : "ok"}">${v.oscillation_detected ? "Oscillation ⚠" : v.loop_detected ? "Loop ⚠" : "Loop-Free ✓"}</span>
+          <span class="v-chip ok">Applied ✓</span>
+          <span class="v-chip ${v.effective_progress ? "ok" : ""}">${v.url_changed ? "URL Changed ✓" : v.page_changed ? "DOM Updated ✓" : "Same Page"}</span>
+          <span class="v-chip ${v.loop_detected || v.oscillation_detected ? "warn" : "ok"}">${v.oscillation_detected ? "Oscillation ⚠" : v.loop_detected ? "Loop ⚠" : "No Loop ✓"}</span>
           <span class="v-chip">${escapeHtml(lastStep.model || "")}</span>
         </div>
       </div>`;
@@ -289,7 +289,7 @@ function renderDecisionStack(state) {
         </div>`;
     });
   } else if (lastDec) {
-    html += `<div class="dcard s1"><div class="dcard-act">Step #1 Decision</div></div>`;
+    html += `<div class="dcard s1"><div class="dcard-act">Step 1 Decision</div></div>`;
   }
 
   container.innerHTML = html;
@@ -313,13 +313,11 @@ function renderScrubberAndActionSpace(state) {
   }
 
   if (aspace) {
-    const lastDec = (state.decisions || []).slice(-1)[0];
-    const opProbs = lastDec?.gate ? null : null;
     const decProbs = (state.decisions || []).slice(-1)[0];
     if (decProbs) {
       aspace.innerHTML = `
         <span class="aspace-chip top"><span>S1 CHOICE: ${escapeHtml(decProbs.operation)} ${decProbs.target ? `[${escapeHtml(decProbs.target)}]` : ""}</span><span class="p">${Math.round((decProbs.confidence || 0) * 100)}%</span></span>
-        <span class="aspace-chip"><span>JOINT</span><span class="p">${Math.round((decProbs.joint_confidence || 0) * 100)}%</span></span>
+        <span class="aspace-chip"><span>CONF</span><span class="p">${Math.round((decProbs.joint_confidence || 0) * 100)}%</span></span>
         <span class="aspace-chip"><span>GATE</span><span class="p">${decProbs.gate?.should_escalate ? `ESCALATED (${escapeHtml(decProbs.gate.trigger_type)})` : "FAST PATH ✓"}</span></span>
         <span class="aspace-chip"><span>MODEL</span><span class="p">${escapeHtml(decProbs.model || "")}</span></span>
       `;
@@ -335,7 +333,7 @@ function renderGuardAndChat(state) {
       modal.classList.add("visible");
       modal.classList.remove("ask-mode");
       $("guard-modal-tag").textContent = "🛡️ SAFETY GUARD HOLD · IRREVERSIBLE ACTION";
-      $("guard-modal-summary").textContent = state.pending_confirmation.summary || "Approve action?";
+      $("guard-modal-summary").textContent = state.pending_confirmation.summary || "Confirm this action?";
       $("guard-modal-reason").textContent = state.pending_confirmation.reason || "";
       if (railSafety) railSafety.classList.add("has-alert");
     } else {
@@ -348,12 +346,12 @@ function renderGuardAndChat(state) {
   if (chatBox) {
     const log = state.context?.chat_log || [];
     if (log.length === 0) {
-      chatBox.innerHTML = `<div class="cmsg assistant"><div class="cmsg-role">REFLEX CO-PILOT</div>Görev sırasında bana soru sorabilir, hedefi değiştirebilir veya ASK_USER sorularını buradan yanıtlayabilirsin.</div>`;
+      chatBox.innerHTML = `<div class="cmsg assistant"><div class="cmsg-role">REFLEX CO-PILOT</div>Ask questions during execution, steer the goal, or reply to human-in-the-loop prompts here.</div>`;
     } else {
       chatBox.innerHTML = log
         .map((m) => {
           const cls = m.kind === "ask_user" ? "ask_user" : m.kind === "confirm_action" ? "confirm_action" : m.role === "user" ? "user" : "assistant";
-          const roleLbl = m.role === "user" ? "USER" : m.kind === "ask_user" ? "❓ ASK_USER" : m.kind === "confirm_action" ? "🛡️ SAFETY GUARD" : "🤖 REFLEX AGENT";
+          const roleLbl = m.role === "user" ? "YOU" : m.kind === "ask_user" ? "❓ ASK_USER PROMPT" : m.kind === "confirm_action" ? "🛡️ SAFETY GUARD" : "🤖 REFLEX AGENT";
           return `<div class="cmsg ${cls}"><div class="cmsg-role">${roleLbl}</div>${escapeHtml(m.content)}</div>`;
         })
         .join("");
@@ -367,10 +365,10 @@ function renderSecondaryViews(state) {
   const trajList = $("trajectory-full-list");
   const trajLbl = $("traj-summary-lbl");
   const history = state.history || [];
-  if (trajLbl) trajLbl.textContent = `${history.length} steps executed`;
+  if (trajLbl) trajLbl.textContent = `${history.length} steps completed`;
   if (trajList) {
     if (history.length === 0) {
-      trajList.innerHTML = `<div class="pbox">Henüz adım çalıştırılmadı.</div>`;
+      trajList.innerHTML = `<div class="pbox">No steps executed yet.</div>`;
     } else {
       trajList.innerHTML = history
         .slice()
@@ -382,7 +380,7 @@ function renderSecondaryViews(state) {
             <div class="dcard ${isS2 ? "s2" : "s1"}">
               <div class="dcard-top">
                 <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${h.step} ${h.actor} · ${escapeHtml(h.operation)}</span>
-                <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">${hDur} ms (S1:${h.s1_ms ?? 0} S2:${h.s2_ms ?? 0} Act:${h.act_ms ?? 0} Obs:${h.observe_ms ?? 0}) · ${escapeHtml(h.url || "")}</span>
+                <span style="font-family:var(--mono);font-size:12px;color:var(--ink-3)">${hDur} ms (S1:${h.s1_ms ?? 0} S2:${h.s2_ms ?? 0} Act:${h.act_ms ?? 0} Obs:${h.observe_ms ?? 0}) · ${escapeHtml(h.url || "")}</span>
               </div>
               <div class="dcard-act">${h.target ? `[${escapeHtml(h.target)}] ` : ""}${escapeHtml(h.action)}</div>
               ${h.text ? `<div class="dcard-reason">Typed: "${escapeHtml(h.text)}"</div>` : ""}
@@ -399,7 +397,7 @@ function renderSecondaryViews(state) {
     $("ctx-subgoal-hint").textContent = `Active Subgoal: ${state.context?.active_subgoal || "-"}\nTactical Hint: ${state.context?.tactical_hint || "(none)"}`;
   }
   if ($("ctx-working-memory")) {
-    $("ctx-working-memory").textContent = state.context?.working_memory || "(No Supervisor escalation memory recorded yet)";
+    $("ctx-working-memory").textContent = state.context?.working_memory || "(No System 2 working memory recorded yet)";
   }
   if ($("ctx-rejected-links")) {
     const rej = state.context?.rejected_links || [];
@@ -444,21 +442,25 @@ function renderSecondaryViews(state) {
   if (state.keys) {
     if ($("meta-key-badge")) {
       $("meta-key-badge").textContent = state.keys.meta_api_configured
-        ? `CONFIGURED (${state.keys.meta_api_masked})`
-        : "NOT SET (Using OpenRouter Fallback)";
+        ? `ACTIVE (${state.keys.meta_api_masked})`
+        : "NOT SET (OpenRouter Fallback)";
     }
     if ($("or-key-badge")) {
       $("or-key-badge").textContent = state.keys.openrouter_configured
-        ? `CONFIGURED (${state.keys.openrouter_masked})`
+        ? `ACTIVE (${state.keys.openrouter_masked})`
         : "NOT SET";
-    }
-    if ($("launch-meta-badge")) {
-      $("launch-meta-badge").textContent = state.keys.meta_api_configured
-        ? `Meta API Active (${state.keys.meta_api_masked})`
-        : "Meta API / OpenRouter Ready";
     }
   }
 }
+
+const STATUS_LABELS = {
+  idle: "IDLE",
+  ready: "READY",
+  done: "DONE",
+  waiting_user: "AWAITING USER",
+  waiting_confirmation: "CONFIRM HOLD",
+  blocked: "PAUSED",
+};
 
 function renderState(state) {
   currentState = state;
@@ -469,10 +471,10 @@ function renderState(state) {
   const stTxt = $("status-text");
   if (badge && stTxt) {
     if (st === "error") {
-      stTxt.textContent = "ERROR: " + (state.last_error || "Session halted");
+      stTxt.textContent = "ERROR: " + (state.last_error || "Session stopped");
       badge.className = "status-pill error";
     } else {
-      stTxt.textContent = runningLoop ? "RUNNING" : st.toUpperCase();
+      stTxt.textContent = runningLoop ? "RUNNING" : (STATUS_LABELS[st] || st.toUpperCase());
       badge.className =
         "status-pill " +
         (runningLoop || st === "ready"
@@ -496,8 +498,8 @@ function renderState(state) {
   if ($("m-lat")) $("m-lat").textContent = `${m.median_step_ms ?? m.median_decision_ms ?? 0} ms`;
   if ($("m-cost")) {
     $("m-cost").textContent =
-      m.total_cost_usd === "bilinmiyor"
-        ? "bilinmiyor"
+      m.total_cost_usd === "unknown"
+        ? "unknown"
         : `$${Number(m.total_cost_usd ?? 0).toFixed(4)}`;
   }
 
@@ -514,6 +516,7 @@ function renderState(state) {
     if ($("top-s2-select") && state.config.supervisor_model) {
       $("top-s2-select").value = state.config.supervisor_model;
     }
+    syncCustomSelects();
   }
 
   if ($("page-url-badge")) {
@@ -606,7 +609,176 @@ async function startSessionAndRun() {
   }
 }
 
+function initThemeToggle() {
+  const root = document.documentElement;
+  const btn = $("btn-theme-toggle");
+  const saved = localStorage.getItem("reflex_theme");
+  const initialTheme = saved === "dark" ? "dark" : "light";
+  root.dataset.theme = initialTheme;
+
+  const syncThemeIcons = () => {
+    const isDark = root.dataset.theme === "dark";
+    const sun = btn?.querySelector(".icon-sun");
+    const moon = btn?.querySelector(".icon-moon");
+    if (sun && moon) {
+      sun.style.display = isDark ? "block" : "none";
+      moon.style.display = isDark ? "none" : "block";
+    }
+  };
+
+  syncThemeIcons();
+
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("reflex_theme", next);
+      syncThemeIcons();
+    });
+  }
+}
+
+function initSilkCanvas() {
+  const canvas = $("silk-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+
+  const resize = () => {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  resize();
+  window.addEventListener("resize", resize);
+
+  // Soft volumetric silk ribbons flowing diagonally like smooth white porcelain/silk folds
+  const ribbons = [
+    { yStart: 0.20, yEnd: 0.04, cp1y: 0.34, cp2y: 0.02, amp: 24, speed: 0.00055, phase: 0.0 },
+    { yStart: 0.44, yEnd: 0.18, cp1y: 0.56, cp2y: 0.16, amp: 32, speed: 0.00048, phase: 1.4 },
+    { yStart: 0.66, yEnd: 0.38, cp1y: 0.48, cp2y: 0.54, amp: 28, speed: 0.00062, phase: 2.7 },
+    { yStart: 0.86, yEnd: 0.58, cp1y: 0.72, cp2y: 0.76, amp: 30, speed: 0.00042, phase: 4.1 },
+    { yStart: 1.06, yEnd: 0.78, cp1y: 0.88, cp2y: 0.96, amp: 22, speed: 0.00052, phase: 5.3 },
+  ];
+
+  const renderFrame = (now) => {
+    const isDark = document.documentElement.dataset.theme === "dark";
+
+    // 1. Base atmospheric canvas fill
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    if (!isDark) {
+      bgGrad.addColorStop(0.0, "#F8FAFC");
+      bgGrad.addColorStop(0.5, "#EDF2F8");
+      bgGrad.addColorStop(1.0, "#E1E9F2");
+    } else {
+      bgGrad.addColorStop(0.0, "#1A202C");
+      bgGrad.addColorStop(0.5, "#131720");
+      bgGrad.addColorStop(1.0, "#0D1017");
+    }
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Render each volumetric silk fold with soft cast shadow + luminous crest gradient
+    ribbons.forEach((r, idx) => {
+      const s1 = Math.sin(now * r.speed + r.phase) * r.amp;
+      const s2 = Math.cos(now * (r.speed * 0.85) + r.phase + 1.1) * r.amp;
+      const s3 = Math.sin(now * (r.speed * 1.15) + r.phase + 2.3) * (r.amp * 0.7);
+
+      const x0 = -width * 0.12;
+      const y0 = height * r.yStart + s1 * 0.6;
+      const cp1x = width * 0.34;
+      const cp1y = height * r.cp1y + s1;
+      const cp2x = width * 0.68;
+      const cp2y = height * r.cp2y + s2;
+      const x3 = width * 1.12;
+      const y3 = height * r.yEnd + s3;
+
+      const midY = (y0 + y3) * 0.5;
+      const foldHeight = Math.max(220, height * 0.34);
+
+      // Soft ambient shadow cast just above the silk ridge
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x0, y0 - 55);
+      ctx.bezierCurveTo(cp1x, cp1y - 55, cp2x, cp2y - 55, x3, y3 - 55);
+      ctx.lineTo(x3, y3 + 60);
+      ctx.bezierCurveTo(cp2x, cp2y + 60, cp1x, cp1y + 60, x0, y0 + 60);
+      ctx.closePath();
+
+      const shadowGrad = ctx.createLinearGradient(width * 0.45, midY - 65, width * 0.55, midY + 45);
+      if (!isDark) {
+        shadowGrad.addColorStop(0.0, "rgba(184, 198, 218, 0.0)");
+        shadowGrad.addColorStop(0.55, "rgba(176, 192, 214, 0.34)");
+        shadowGrad.addColorStop(1.0, "rgba(184, 198, 218, 0.0)");
+      } else {
+        shadowGrad.addColorStop(0.0, "rgba(6, 8, 12, 0.0)");
+        shadowGrad.addColorStop(0.55, "rgba(5, 7, 11, 0.52)");
+        shadowGrad.addColorStop(1.0, "rgba(6, 8, 12, 0.0)");
+      }
+      ctx.fillStyle = shadowGrad;
+      ctx.fill();
+      ctx.restore();
+
+      // Main volumetric silk sheet below the ridge
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x3, y3);
+      ctx.lineTo(x3, height + 100);
+      ctx.lineTo(x0, height + 100);
+      ctx.closePath();
+
+      const sheetGrad = ctx.createLinearGradient(
+        width * 0.42,
+        midY - 20,
+        width * 0.58,
+        midY + foldHeight
+      );
+      if (!isDark) {
+        sheetGrad.addColorStop(0.0, "rgba(255, 255, 255, 0.96)");
+        sheetGrad.addColorStop(0.16, "rgba(250, 252, 255, 0.90)");
+        sheetGrad.addColorStop(0.52, "rgba(230, 237, 246, 0.84)");
+        sheetGrad.addColorStop(1.0, "rgba(214, 224, 238, 0.90)");
+      } else {
+        const lift = idx % 2 === 0 ? 4 : 0;
+        sheetGrad.addColorStop(0.0, `rgba(${42 + lift}, ${52 + lift}, ${68 + lift}, 0.78)`);
+        sheetGrad.addColorStop(0.20, "rgba(28, 35, 47, 0.82)");
+        sheetGrad.addColorStop(0.60, "rgba(18, 23, 32, 0.90)");
+        sheetGrad.addColorStop(1.0, "rgba(13, 17, 24, 0.95)");
+      }
+      ctx.fillStyle = sheetGrad;
+      ctx.fill();
+
+      // Soft specular rim highlight along the silk fold crest
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x3, y3);
+      ctx.strokeStyle = !isDark
+        ? "rgba(255, 255, 255, 0.95)"
+        : "rgba(165, 190, 225, 0.14)";
+      ctx.lineWidth = !isDark ? 2.2 : 1.4;
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    requestAnimationFrame(renderFrame);
+  };
+
+  requestAnimationFrame(renderFrame);
+}
+
 function initUI() {
+  initThemeToggle();
+  initSilkCanvas();
+
   // Rail navigation
   document.querySelectorAll(".rail-btn[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
@@ -636,6 +808,7 @@ function initUI() {
   if ($("top-mode-select")) {
     $("top-mode-select").addEventListener("change", async (e) => {
       if ($("top-s1-select")) $("top-s1-select").disabled = e.target.value === "s2_only";
+      syncCustomSelects();
       try {
         const s = await apiPost("config", { mode: e.target.value });
         renderState(s);
@@ -803,6 +976,8 @@ function initUI() {
     });
   }
 
+  initCustomSelects();
+
   window.addEventListener("resize", () => {
     if (currentState) renderDomOverlay(currentState);
   });
@@ -816,6 +991,81 @@ function initUI() {
       }
     })
     .catch(() => {});
+}
+
+function syncCustomSelects() {
+  document.querySelectorAll(".SysSwitch.enhanced").forEach((wrap) => {
+    const sel = wrap.querySelector("select");
+    const lbl = wrap.querySelector(".saas-select-label");
+    const trig = wrap.querySelector(".saas-select-trigger");
+    if (!sel || !lbl || !trig) return;
+    const selectedOpt = sel.options[sel.selectedIndex];
+    lbl.textContent = selectedOpt ? selectedOpt.textContent : "";
+    trig.disabled = sel.disabled;
+    wrap.classList.toggle("is-disabled", sel.disabled);
+    wrap.querySelectorAll(".saas-select-opt").forEach((btn) => {
+      btn.classList.toggle("selected", btn.dataset.val === sel.value);
+    });
+  });
+}
+
+function initCustomSelects() {
+  document.querySelectorAll(".SysSwitch").forEach((wrap) => {
+    const sel = wrap.querySelector("select");
+    if (!sel || wrap.classList.contains("enhanced")) return;
+    wrap.classList.add("enhanced");
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "saas-select-trigger";
+    trigger.innerHTML = `
+      <span class="saas-select-label"></span>
+      <span class="saas-select-chev">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    `;
+
+    const menu = document.createElement("div");
+    menu.className = "saas-select-menu";
+
+    Array.from(sel.options).forEach((opt) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "saas-select-opt";
+      item.dataset.val = opt.value;
+      item.innerHTML = `
+        <span>${escapeHtml(opt.textContent)}</span>
+        <span class="saas-opt-check">✓</span>
+      `;
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (sel.disabled) return;
+        sel.value = opt.value;
+        wrap.classList.remove("open");
+        syncCustomSelects();
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      menu.appendChild(item);
+    });
+
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (sel.disabled) return;
+      const wasOpen = wrap.classList.contains("open");
+      document.querySelectorAll(".SysSwitch.open").forEach((w) => w.classList.remove("open"));
+      if (!wasOpen) wrap.classList.add("open");
+    });
+
+    wrap.appendChild(trigger);
+    wrap.appendChild(menu);
+    sel.addEventListener("change", syncCustomSelects);
+  });
+
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".SysSwitch.open").forEach((w) => w.classList.remove("open"));
+  });
+
+  syncCustomSelects();
 }
 
 document.addEventListener("DOMContentLoaded", initUI);
