@@ -332,6 +332,7 @@ button, input, textarea, select {
 
 /* Large Reflex Hero Brand in Upper Area */
 .reflex-hero-brand {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 18px;
@@ -344,6 +345,13 @@ button, input, textarea, select {
   height: 42px;
   color: var(--s1);
   filter: drop-shadow(0 6px 16px var(--s1-tint));
+}
+
+.logo-intro-canvas {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  image-rendering: pixelated;
 }
 
 .reflex-giant-title {

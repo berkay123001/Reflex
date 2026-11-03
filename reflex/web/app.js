@@ -669,6 +669,8 @@ function initSilkCanvas() {
     { yStart: 1.06, yEnd: 0.78, cp1y: 0.88, cp2y: 0.96, amp: 22, speed: 0.00052, phase: 5.3 },
   ];
 
+  const SEGMENTS = 48;
+
   const renderFrame = (now) => {
     const isDark = document.documentElement.dataset.theme === "dark";
 
@@ -687,19 +689,37 @@ function initSilkCanvas() {
     ctx.fillRect(0, 0, width, height);
 
     // 2. Render each volumetric silk fold with soft cast shadow + luminous crest gradient
+    // Keep the silk quiet: it is drawn at partial opacity over the base gradient.
+    ctx.save();
+    ctx.globalAlpha = isDark ? 0.55 : 0.5;
+    const t = now * 0.6;
     ribbons.forEach((r, idx) => {
-      const s1 = Math.sin(now * r.speed + r.phase) * r.amp;
-      const s2 = Math.cos(now * (r.speed * 0.85) + r.phase + 1.1) * r.amp;
-      const s3 = Math.sin(now * (r.speed * 1.15) + r.phase + 2.3) * (r.amp * 0.7);
-
+      // The ribbon's resting curve sways slowly; folds travel along its length like silk in a light breeze.
+      const sway = Math.sin(t * r.speed * 0.5 + r.phase) * r.amp * 0.5;
       const x0 = -width * 0.12;
-      const y0 = height * r.yStart + s1 * 0.6;
-      const cp1x = width * 0.34;
-      const cp1y = height * r.cp1y + s1;
-      const cp2x = width * 0.68;
-      const cp2y = height * r.cp2y + s2;
       const x3 = width * 1.12;
-      const y3 = height * r.yEnd + s3;
+      const y0 = height * r.yStart + sway;
+      const y3 = height * r.yEnd - sway * 0.6;
+      const cp1x = width * 0.34;
+      const cp2x = width * 0.68;
+      const cp1y = height * r.cp1y + Math.cos(t * r.speed * 0.4 + r.phase) * r.amp * 0.4;
+      const cp2y = height * r.cp2y - sway * 0.4;
+      const travel = t * r.speed * 0.9;
+      const pts = [];
+      for (let i = 0; i <= SEGMENTS; i += 1) {
+        const u = i / SEGMENTS;
+        const v = 1 - u;
+        const bx = v * v * v * x0 + 3 * v * v * u * cp1x + 3 * v * u * u * cp2x + u * u * u * x3;
+        const by = v * v * v * y0 + 3 * v * v * u * cp1y + 3 * v * u * u * cp2y + u * u * u * y3;
+        const fold =
+          0.65 * Math.sin(u * Math.PI * 2.4 - travel + r.phase) +
+          0.35 * Math.sin(u * Math.PI * 4.2 - travel * 1.6 + r.phase * 1.7);
+        pts.push([bx, by + fold * r.amp * 0.6 * (0.45 + 0.55 * Math.sin(Math.PI * u))]);
+      }
+      const trace = (offset, reverse) => {
+        const list = reverse ? [...pts].reverse() : pts;
+        list.forEach(([px, py], i) => (i === 0 && !reverse ? ctx.moveTo(px, py + offset) : ctx.lineTo(px, py + offset)));
+      };
 
       const midY = (y0 + y3) * 0.5;
       const foldHeight = Math.max(220, height * 0.34);
@@ -707,20 +727,18 @@ function initSilkCanvas() {
       // Soft ambient shadow cast just above the silk ridge
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(x0, y0 - 55);
-      ctx.bezierCurveTo(cp1x, cp1y - 55, cp2x, cp2y - 55, x3, y3 - 55);
-      ctx.lineTo(x3, y3 + 60);
-      ctx.bezierCurveTo(cp2x, cp2y + 60, cp1x, cp1y + 60, x0, y0 + 60);
+      trace(-55, false);
+      trace(60, true);
       ctx.closePath();
 
       const shadowGrad = ctx.createLinearGradient(width * 0.45, midY - 65, width * 0.55, midY + 45);
       if (!isDark) {
         shadowGrad.addColorStop(0.0, "rgba(184, 198, 218, 0.0)");
-        shadowGrad.addColorStop(0.55, "rgba(176, 192, 214, 0.34)");
+        shadowGrad.addColorStop(0.55, "rgba(176, 192, 214, 0.2)");
         shadowGrad.addColorStop(1.0, "rgba(184, 198, 218, 0.0)");
       } else {
         shadowGrad.addColorStop(0.0, "rgba(6, 8, 12, 0.0)");
-        shadowGrad.addColorStop(0.55, "rgba(5, 7, 11, 0.52)");
+        shadowGrad.addColorStop(0.55, "rgba(5, 7, 11, 0.22)");
         shadowGrad.addColorStop(1.0, "rgba(6, 8, 12, 0.0)");
       }
       ctx.fillStyle = shadowGrad;
@@ -730,8 +748,7 @@ function initSilkCanvas() {
       // Main volumetric silk sheet below the ridge
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x3, y3);
+      trace(0, false);
       ctx.lineTo(x3, height + 100);
       ctx.lineTo(x0, height + 100);
       ctx.closePath();
@@ -748,10 +765,10 @@ function initSilkCanvas() {
         sheetGrad.addColorStop(0.52, "rgba(230, 237, 246, 0.84)");
         sheetGrad.addColorStop(1.0, "rgba(214, 224, 238, 0.90)");
       } else {
-        const lift = idx % 2 === 0 ? 4 : 0;
-        sheetGrad.addColorStop(0.0, `rgba(${42 + lift}, ${52 + lift}, ${68 + lift}, 0.78)`);
-        sheetGrad.addColorStop(0.20, "rgba(28, 35, 47, 0.82)");
-        sheetGrad.addColorStop(0.60, "rgba(18, 23, 32, 0.90)");
+        const lift = idx % 2 === 0 ? 3 : 0;
+        sheetGrad.addColorStop(0.0, `rgba(${36 + lift}, ${45 + lift}, ${60 + lift}, 0.7)`);
+        sheetGrad.addColorStop(0.20, "rgba(27, 33, 44, 0.8)");
+        sheetGrad.addColorStop(0.60, "rgba(18, 23, 32, 0.9)");
         sheetGrad.addColorStop(1.0, "rgba(13, 17, 24, 0.95)");
       }
       ctx.fillStyle = sheetGrad;
@@ -759,15 +776,16 @@ function initSilkCanvas() {
 
       // Soft specular rim highlight along the silk fold crest
       ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x3, y3);
+      trace(0, false);
       ctx.strokeStyle = !isDark
-        ? "rgba(255, 255, 255, 0.95)"
-        : "rgba(165, 190, 225, 0.14)";
-      ctx.lineWidth = !isDark ? 2.2 : 1.4;
+        ? "rgba(255, 255, 255, 0.6)"
+        : "rgba(165, 190, 225, 0.07)";
+      ctx.lineWidth = !isDark ? 1.4 : 1.0;
       ctx.stroke();
       ctx.restore();
     });
+
+    ctx.restore();
 
     requestAnimationFrame(renderFrame);
   };
@@ -775,9 +793,180 @@ function initSilkCanvas() {
   requestAnimationFrame(renderFrame);
 }
 
+// Logo intro: a pixel arrow cursor draws the pulse line block by block, clicks its end, and the blocks resolve
+// into the vector logo. Plays once per page load and again when the logo is clicked.
+const PIXEL_ARROW = [
+  "X",
+  "XX",
+  "X.X",
+  "X..X",
+  "X...X",
+  "X....X",
+  "X.....X",
+  "X......X",
+  "X.......X",
+  "X........X",
+  "X.....XXXXX",
+  "X..X..X",
+  "X.X X..X",
+  "XX  X..X",
+  "X    X..X",
+  "     X..X",
+  "      X..X",
+  "      X..X",
+  "       XX",
+];
+
+function playLogoIntro() {
+  const brand = document.querySelector(".reflex-hero-brand");
+  const svg = brand?.querySelector(".hero-wave-icon");
+  const path = svg?.querySelector("path");
+  if (!brand || !svg || !path || brand.querySelector(".logo-intro-canvas")) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !svg.getScreenCTM()) return;
+
+  const BLOCK = 3; // trail block size, px
+  const CURSOR_PX = 2; // one cursor bitmap pixel, px
+  const PAD = { left: 12, top: 12, right: 44, bottom: 52 };
+  const T_APPEAR = 220;
+  const T_DRAW = 1300;
+  const T_CLICK = 260;
+  const T_RESOLVE = 520;
+  const total = T_APPEAR + T_DRAW + T_CLICK + T_RESOLVE;
+
+  const brandRect = brand.getBoundingClientRect();
+  const svgRect = svg.getBoundingClientRect();
+  const canvas = document.createElement("canvas");
+  canvas.className = "logo-intro-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  const cssW = svgRect.width + PAD.left + PAD.right;
+  const cssH = svgRect.height + PAD.top + PAD.bottom;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+  canvas.style.left = `${svgRect.left - brandRect.left - PAD.left}px`;
+  canvas.style.top = `${svgRect.top - brandRect.top - PAD.top}px`;
+  brand.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+
+  // Path points in canvas coordinates.
+  const ctm = svg.getScreenCTM();
+  const length = path.getTotalLength();
+  const toCanvas = (len) => {
+    const p = path.getPointAtLength(len);
+    const s = new DOMPoint(p.x, p.y).matrixTransform(ctm);
+    return { x: s.x - svgRect.left + PAD.left, y: s.y - svgRect.top + PAD.top };
+  };
+  const start = toCanvas(0);
+  const end = toCanvas(length);
+
+  const trail = color();
+  const cells = [];
+  const seen = new Set();
+  let drawnTo = 0;
+  const lay = (upTo) => {
+    for (; drawnTo <= upTo; drawnTo += 0.35) {
+      const p = toCanvas(Math.min(drawnTo, length));
+      const cx = Math.round(p.x / BLOCK) * BLOCK;
+      const cy = Math.round(p.y / BLOCK) * BLOCK;
+      const key = `${cx},${cy}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        cells.push([cx, cy]);
+      }
+    }
+  };
+
+  function color() {
+    return getComputedStyle(svg).color || "#0D9488";
+  }
+  const isDark = () => document.documentElement.dataset.theme === "dark";
+  const drawCursor = (x, y, alpha, scale) => {
+    const px = CURSOR_PX * scale;
+    const ox = Math.round(x);
+    const oy = Math.round(y);
+    ctx.globalAlpha = alpha;
+    PIXEL_ARROW.forEach((row, r) => {
+      [...row].forEach((ch, c) => {
+        if (ch === " ") return;
+        ctx.fillStyle = ch === "X" ? (isDark() ? "#0B0F16" : "#0F172A") : "#FFFFFF";
+        ctx.fillRect(ox + c * px, oy + r * px, Math.ceil(px), Math.ceil(px));
+      });
+    });
+    ctx.globalAlpha = 1;
+  };
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+  svg.style.transition = "none";
+  svg.style.opacity = "0";
+  const t0 = performance.now();
+
+  const frame = (now) => {
+    const t = now - t0;
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const drawT = clamp01((t - T_APPEAR) / T_DRAW);
+    const along = ease(drawT) * length;
+    lay(along);
+    const head = drawT > 0 ? toCanvas(along) : start;
+    const resolveT = clamp01((t - T_APPEAR - T_DRAW - T_CLICK) / T_RESOLVE);
+
+    // Trail blocks, fading out as the vector logo fades in.
+    ctx.fillStyle = trail;
+    ctx.globalAlpha = 1 - resolveT;
+    for (const [cx, cy] of cells) ctx.fillRect(cx - BLOCK / 2, cy - BLOCK / 2, BLOCK + 1, BLOCK + 1);
+    ctx.globalAlpha = 1;
+    if (resolveT > 0) {
+      svg.style.opacity = String(resolveT);
+    }
+
+    // Click: the cursor presses, and four blocks burst from the line's end.
+    const clickT = clamp01((t - T_APPEAR - T_DRAW) / T_CLICK);
+    const pressed = clickT > 0 && clickT < 0.45;
+    if (clickT > 0) {
+      const burst = clamp01((t - T_APPEAR - T_DRAW) / (T_CLICK + 260));
+      const r = 4 + burst * 12;
+      ctx.fillStyle = trail;
+      ctx.globalAlpha = 1 - burst;
+      for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        ctx.fillRect(Math.round((end.x + dx * r) / BLOCK) * BLOCK - 1.5, Math.round((end.y + dy * r) / BLOCK) * BLOCK - 1.5, BLOCK, BLOCK);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    const appear = clamp01(t / T_APPEAR);
+    const leave = clamp01((t - T_APPEAR - T_DRAW - T_CLICK) / (T_RESOLVE * 0.8));
+    drawCursor(head.x + (pressed ? 1 : 0) + leave * 6, head.y + (pressed ? 1 : 0) + leave * 6, appear * (1 - leave), pressed ? 0.9 : 1);
+
+    if (t < total) {
+      requestAnimationFrame(frame);
+    } else {
+      svg.style.opacity = "";
+      svg.style.transition = "";
+      canvas.remove();
+    }
+  };
+  requestAnimationFrame(frame);
+}
+
+function initLogoIntro() {
+  const svg = document.querySelector(".reflex-hero-brand .hero-wave-icon");
+  if (!svg) return;
+  svg.style.cursor = "pointer";
+  svg.addEventListener("click", playLogoIntro);
+  const go = () => requestAnimationFrame(() => requestAnimationFrame(playLogoIntro));
+  if (document.fonts?.ready) document.fonts.ready.then(go);
+  else go();
+}
+
 function initUI() {
   initThemeToggle();
   initSilkCanvas();
+  initLogoIntro();
 
   // Rail navigation
   document.querySelectorAll(".rail-btn[data-view]").forEach((btn) => {
