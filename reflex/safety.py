@@ -573,6 +573,12 @@ def wrap_untrusted_dom(
     if full_text and len(full_text) > len(text) + 40:
         extra_full_block = f"\n\nFull Page Text (Entire Document From Top to Bottom):\n{full_text}"
     headings_block = f"\nAll Page Headings (h1-h4): {headings_str}" if headings_str else ""
+    dialog = sanitize_untrusted_text(str(page.get("blocking_dialog") or ""), 90)
+    if dialog:
+        headings_block += (
+            f"\nOpen dialog over the page: {dialog} (elements behind it cannot be used while it is open; "
+            "use it if it is part of the task, otherwise close it with its close button or PRESS_ESCAPE)"
+        )
 
     return (
         "<untrusted_page_data>\n"

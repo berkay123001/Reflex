@@ -691,6 +691,27 @@
   if (scrollY+innerHeight<height-2 || innerDown) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
   if (scrollY>0 || innerUp) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
   actions.push({id:'wait',kind:'wait',label:'Wait for the page to update'});
+  // A dialog or overlay over the middle of the screen blocks the page behind it. System 2 reads text,
+  // not pixels, so it is told about it (safety.py). Small popups (date pickers) are left out.
+  const blocking_dialog=(()=>{
+    const c=document.elementFromPoint(innerWidth/2,innerHeight/2);
+    if (!c) return '';
+    const big=el=>{ const r=el.getBoundingClientRect(); return r.width*r.height>=innerWidth*innerHeight*0.2; };
+    let box=c.closest('dialog[open],[role="dialog"],[role="alertdialog"],[aria-modal="true"]');
+    if (box && !big(box)) return '';
+    if (!box) {
+      for (let el=c; el && el!==document.body && el!==document.documentElement; el=el.parentElement) {
+        if (getComputedStyle(el).position!=='fixed') continue;
+        const tag=((el.id||'')+' '+(el.getAttribute('class')||'')).toLowerCase();
+        if (big(el) && /modal|overlay|popup|lightbox|dialog/.test(tag)) box=el;
+        break;
+      }
+    }
+    if (!box) return '';
+    const h=box.querySelector('h1,h2,h3,h4,[role="heading"],legend');
+    const t=(box.getAttribute('aria-label')||h?.innerText||box.innerText||'').replace(/\s+/g,' ').trim();
+    return t.slice(0,90)||'dialog';
+  })();
   return {url:location.href,title:document.title,w:innerWidth,h:innerHeight,text,full_text,headings,page_links,page_controls,
-    scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions,has_iframes:!!document.querySelector('iframe')};
+    scroll:{y:scrollY,height},actions,marker,page_key,guards,omitted_actions,blocking_dialog,has_iframes:!!document.querySelector('iframe')};
 })()
