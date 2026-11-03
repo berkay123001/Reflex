@@ -656,6 +656,7 @@ def test_aria_slider_and_menuitemcheckbox_act_stress() -> None:
 <body>
   <div id="c_slider" role="slider" tabindex="0" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"
        aria-label="Display Brightness" style="display:block;width:150px;height:25px;"
+       onkeydown="let v=Number(this.getAttribute('aria-valuenow')); if(event.key==='ArrowRight') v=Math.min(100,v+1); else if(event.key==='ArrowLeft') v=Math.max(0,v-1); this.setAttribute('aria-valuenow',String(v));"
        onchange="document.getElementById('slider_out').textContent=this.getAttribute('aria-valuenow')">
   </div>
   <div id="slider_out">idle</div>

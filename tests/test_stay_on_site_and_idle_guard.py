@@ -141,3 +141,152 @@ def test_covered_target_for_s2_is_reported_back() -> None:
     assert trigger == "target_covered"
     assert "TYPE_TEXT" in reason and "Search" in reason
     assert sess.status == "ready"
+
+
+def test_unattended_noop_escalation_reports_rejected_link_instead_of_waiting_user() -> None:
+    from unittest.mock import patch
+
+    sess = _session_on("https://www.stubhub.com/")
+    sess.ctx.user_present = False
+    sess.page["fingerprint"] = "fp_stubhub"
+    bad_goto = _goto("https://www.ticketmaster.com/discover/theatre")
+
+    with patch("reflex.agent.resolve_escalation", return_value=bad_goto):
+        sess._handle_escalation(trigger_type="s2_every_step", reason="step 1", s1_decision=None)
+        assert sess.status == "ready"
+        assert sess.pending_escalation_reason is None
+
+        sess._handle_escalation(trigger_type="s2_every_step", reason="step 2", s1_decision=None)
+        assert sess.status == "ready"
+        assert sess.pending_fact_key is None
+        assert sess.last_asked_question is None
+        assert sess.pending_escalation_reason is not None
+        trig, reason = sess.pending_escalation_reason
+        assert trig == "action_rejected"
+        assert sess.ctx.rejected_links[-1] in reason
+
+
+def test_unattended_noop_escalation_reports_target_not_found_and_respects_user_present() -> None:
+    from unittest.mock import patch
+
+    # 1. Unattended OVERRIDE_ACTION with missing target -> target not found, stays ready
+    sess = _make_mock_session()
+    sess.ctx.user_present = False
+    sess.page["fingerprint"] = "fp_1"
+    bad_click = SupervisorDecision(action_type="OVERRIDE_ACTION", operation="CLICK", target="99", reasoning="click 99")
+
+    with patch("reflex.agent.resolve_escalation", return_value=bad_click):
+        sess._handle_escalation(trigger_type="s2_every_step", reason="step 1", s1_decision=None)
+        sess._handle_escalation(trigger_type="s2_every_step", reason="step 2", s1_decision=None)
+        assert sess.status == "ready"
+        assert sess.pending_escalation_reason is not None
+        assert "target not found" in sess.pending_escalation_reason[1]
+
+    # 2. Unattended UPDATE_SUBGOAL twice -> stays ready and sets pending_escalation_reason
+    sess_sub = _make_mock_session()
+    sess_sub.ctx.user_present = False
+    sess_sub.page["fingerprint"] = "fp_2"
+    upd = SupervisorDecision(action_type="UPDATE_SUBGOAL", updated_subgoal="new sg", reasoning="replan")
+
+    with patch("reflex.agent.resolve_escalation", return_value=upd):
+        sess_sub._handle_escalation(trigger_type="low_op_conf", reason="step 1", s1_decision=None)
+        sess_sub._handle_escalation(trigger_type="low_op_conf", reason="step 2", s1_decision=None)
+        assert sess_sub.status == "ready"
+        assert sess_sub.pending_escalation_reason is not None
+        assert "target not found" in sess_sub.pending_escalation_reason[1]
+
+    # 3. Interactive (user_present=True) -> still transitions to waiting_user
+    sess_int = _make_mock_session()
+    sess_int.ctx.user_present = True
+    sess_int.page["fingerprint"] = "fp_3"
+    with patch("reflex.agent.resolve_escalation", return_value=bad_click):
+        sess_int._handle_escalation(trigger_type="s2_every_step", reason="step 1", s1_decision=None)
+        sess_int._handle_escalation(trigger_type="s2_every_step", reason="step 2", s1_decision=None)
+        assert sess_int.status == "waiting_user"
+        assert sess_int.pending_fact_key == "user_guidance"
+
+
+def _run_offline_slider_act(
+    *,
+    now: int,
+    min_v: int,
+    max_v: int,
+    target_text: str,
+    step_delta: int,
+) -> tuple[int, list[str], list[str]]:
+    from reflex.browser.cdp import MARKER, Browser
+
+    node = 12
+    guard = [node, "slider", "Age", None, None, None, None, False, None, None, None, None, None, ""]
+    action = {"id": "e1", "node": node, "kind": "fill", "role": "slider", "label": "Age"}
+    page = {
+        "url": "https://example.test/calc",
+        "marker": "m1",
+        "page_key": ["o1", "https://example.test/calc"],
+        "guards": {str(node): guard, node: guard},
+        "actions": [action],
+    }
+    hit = {"x": 50, "y": 20, "rx": 10, "ry": 10, "rw": 80, "rh": 20, "jsClicked": False, "prevOrigin": 1}
+    state = {"phase": 0, "val": now}
+    eval_scripts: list[str] = []
+    key_downs: list[str] = []
+
+    def evaluate(expr: str):
+        if expr == MARKER:
+            return "m1"
+        eval_scripts.append(expr)
+        state["phase"] += 1
+        p = state["phase"]
+        if p == 1:
+            return [page["page_key"], guard]
+        if p == 2:
+            return dict(hit)
+        if p == 3:
+            return None  # clear_js
+        if p == 4:
+            return {"now": str(state["val"]), "min": str(min_v), "max": str(max_v)}
+        if "getAttribute('aria-valuenow')" in expr:
+            return str(state["val"])
+        return False
+
+    def call(method: str, **params):
+        if method == "Input.dispatchKeyEvent" and params.get("type") == "keyDown":
+            k = params["key"]
+            key_downs.append(k)
+            if k == "ArrowRight":
+                state["val"] = min(max_v, state["val"] + step_delta)
+            elif k == "ArrowLeft":
+                state["val"] = max(min_v, state["val"] - step_delta)
+        return {}
+
+    b = Browser.__new__(Browser)
+    b.after_input = None
+    b.last_action_rect = None
+    b.evaluate = evaluate  # type: ignore[method-assign]
+    b.call = call  # type: ignore[method-assign]
+    b.act(action, page, text=target_text)
+    return state["val"], key_downs, eval_scripts
+
+
+def test_aria_slider_dispatches_arrow_keys_and_stops_when_stuck_or_capped() -> None:
+    # 1. Step up with ArrowRight
+    val_up, keys_up, scripts_up = _run_offline_slider_act(now=30, min_v=18, max_v=100, target_text="35", step_delta=1)
+    assert val_up == 35
+    assert keys_up == ["ArrowRight"] * 5
+    assert not any("setAttribute('aria-valuenow'" in s for s in scripts_up)
+
+    # 2. Step down with ArrowLeft
+    val_dn, keys_dn, _ = _run_offline_slider_act(now=65, min_v=18, max_v=100, target_text="62", step_delta=1)
+    assert val_dn == 62
+    assert keys_dn == ["ArrowLeft"] * 3
+
+    # 3. Value does not change -> stops after 1st key press
+    val_st, keys_st, _ = _run_offline_slider_act(now=40, min_v=0, max_v=100, target_text="80", step_delta=0)
+    assert val_st == 40
+    assert keys_st == ["ArrowRight"]
+
+    # 4. Large distance -> capped at 200 presses
+    val_cap, keys_cap, _ = _run_offline_slider_act(now=0, min_v=0, max_v=1000, target_text="500", step_delta=1)
+    assert val_cap == 200
+    assert len(keys_cap) == 200
+

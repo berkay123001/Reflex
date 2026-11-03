@@ -2225,12 +2225,18 @@ class ReflexSession:
                 if trigger_type not in {"progress_milestone", "page_unsettled"}:
                     self._noop_escalation_counts[current_fp] = self._noop_escalation_counts.get(current_fp, 0) + 1
                     if self._noop_escalation_counts[current_fp] >= 2:
-                        self.status = "waiting_user"
-                        self.pending_fact_key = "user_guidance"
-                        ask_msg = f"I am stuck on this page ({sup.reasoning}). Could you clarify or provide a different instruction?"
-                        self.last_asked_question = ask_msg
-                        self.ctx.add_agent_message(ask_msg, kind="ask_user")
-                        return self.snapshot()
+                        if getattr(self.ctx, "user_present", True):
+                            self.status = "waiting_user"
+                            self.pending_fact_key = "user_guidance"
+                            ask_msg = f"I am stuck on this page ({sup.reasoning}). Could you clarify or provide a different instruction?"
+                            self.last_asked_question = ask_msg
+                            self.ctx.add_agent_message(ask_msg, kind="ask_user")
+                            return self.snapshot()
+                        rej = self.ctx.rejected_links[-1] if self.ctx.rejected_links else "target not found"
+                        self.pending_escalation_reason = (
+                            "action_rejected",
+                            f"Previous supervisor action could not be resolved ({rej}). Choose a valid element from Interactive Elements or use COMPLETE_TASK.",
+                        )
                 self.ctx.add_agent_message(
                     f"Supervisor updated subgoal: {self.ctx.active_subgoal} ({sup.reasoning})",
                     kind="escalation_note",
@@ -2250,12 +2256,18 @@ class ReflexSession:
                 return self.snapshot()
             self._noop_escalation_counts[current_fp] = self._noop_escalation_counts.get(current_fp, 0) + 1
             if self._noop_escalation_counts[current_fp] >= 2:
-                self.status = "waiting_user"
-                self.pending_fact_key = "user_guidance"
-                ask_msg = f"Supervisor could not resolve a valid browser action on this page ({sup.reasoning}). How should I proceed?"
-                self.last_asked_question = ask_msg
-                self.ctx.add_agent_message(ask_msg, kind="ask_user")
-                return self.snapshot()
+                if getattr(self.ctx, "user_present", True):
+                    self.status = "waiting_user"
+                    self.pending_fact_key = "user_guidance"
+                    ask_msg = f"Supervisor could not resolve a valid browser action on this page ({sup.reasoning}). How should I proceed?"
+                    self.last_asked_question = ask_msg
+                    self.ctx.add_agent_message(ask_msg, kind="ask_user")
+                    return self.snapshot()
+                rej = self.ctx.rejected_links[-1] if self.ctx.rejected_links else "target not found"
+                self.pending_escalation_reason = (
+                    "action_rejected",
+                    f"Previous supervisor action could not be resolved ({rej}). Choose a valid element from Interactive Elements or use COMPLETE_TASK.",
+                )
             # If supervisor gave a subgoal update or invalid target once, let System 1 try with updated hint
             self.ctx.add_agent_message(
                 f"Supervisor hint applied: {sup.reasoning}",

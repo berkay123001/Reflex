@@ -57,6 +57,29 @@ INTERACTIVE_AX_ROLES: set[str] = {
 }
 
 
+def _parse_slider_num(val: Any) -> float | None:
+    """Parse a numeric slider attribute or target string into a finite float."""
+    if val is None or isinstance(val, bool):
+        return None
+    if isinstance(val, (int, float)):
+        return float(val) if val == val and abs(val) != float("inf") else None
+    s = str(val).strip().replace(",", "")
+    if not s:
+        return None
+    try:
+        f = float(s)
+        return f if f == f and abs(f) != float("inf") else None
+    except ValueError:
+        m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
+        if m:
+            try:
+                f = float(m.group(0))
+                return f if f == f and abs(f) != float("inf") else None
+            except ValueError:
+                return None
+        return None
+
+
 def format_browser_languages(tag: str | None) -> list[str]:
     """Return ordered list of language tags for navigator.languages.
 
@@ -2002,7 +2025,7 @@ class Browser:
                 try:
                     setter_js = """((nodeId, textVal) => {
                       const e = window.__jevFast?.nodes.get(nodeId);
-                      if (!e) return;
+                      if (!e) return null;
                       const specialTypes = ['date', 'time', 'datetime-local', 'month', 'week', 'range'];
                       if (e.tagName === 'INPUT' && specialTypes.includes(e.type)) {
                         const proto = window.HTMLInputElement?.prototype;
@@ -2011,25 +2034,70 @@ class Browser:
                         else e.value = textVal;
                         e.dispatchEvent(new Event('input', {bubbles: true}));
                         e.dispatchEvent(new Event('change', {bubbles: true}));
+                        return null;
                       } else if (e.getAttribute('role') === 'slider' && !('value' in e)) {
-                        e.setAttribute('aria-valuenow', textVal);
-                        e.dispatchEvent(new Event('input', {bubbles: true}));
-                        e.dispatchEvent(new Event('change', {bubbles: true}));
+                        try { e.focus(); } catch (_) {}
+                        return {
+                          now: e.getAttribute('aria-valuenow'),
+                          min: e.getAttribute('aria-valuemin'),
+                          max: e.getAttribute('aria-valuemax'),
+                        };
                       }
+                      return null;
                     })"""
-                    if is_iframe and frame_index is not None:
-                        self.evaluate(
-                            f"document.querySelectorAll('iframe')[{frame_index}].contentWindow.eval({json.dumps(setter_js + '(' + json.dumps(lookup_node) + ', ' + json.dumps(text) + ')')})"
-                        )
-                    elif is_iframe:
-                        self.evaluate(
-                            setter_js + "(" + json.dumps(lookup_node) + ", " + json.dumps(text) + ")",
-                            session_id=session_id,
-                        )
-                    else:
-                        self.evaluate(
-                            setter_js + "(" + json.dumps(action.get("node")) + ", " + json.dumps(text) + ")"
-                        )
+
+                    def _eval_slider_js(js_expr: str) -> Any:
+                        if is_iframe and frame_index is not None:
+                            return self.evaluate(
+                                f"document.querySelectorAll('iframe')[{frame_index}].contentWindow.eval({json.dumps(js_expr)})"
+                            )
+                        if is_iframe:
+                            return self.evaluate(js_expr, session_id=session_id)
+                        return self.evaluate(js_expr)
+
+                    node_arg = json.dumps(lookup_node if is_iframe else action.get("node"))
+                    slider_info = _eval_slider_js(setter_js + "(" + node_arg + ", " + json.dumps(text) + ")")
+                    if isinstance(slider_info, dict):
+                        now_val = _parse_slider_num(slider_info.get("now"))
+                        min_val = _parse_slider_num(slider_info.get("min"))
+                        max_val = _parse_slider_num(slider_info.get("max"))
+                        target_val = _parse_slider_num(text)
+                        if now_val is not None and target_val is not None:
+                            if min_val is not None:
+                                target_val = max(target_val, min_val)
+                            if max_val is not None:
+                                target_val = min(target_val, max_val)
+                            if target_val != now_val:
+                                going_up = target_val > now_val
+                                key_name = "ArrowRight" if going_up else "ArrowLeft"
+                                vk_code = 39 if going_up else 37
+                                read_now_js = (
+                                    f"(() => {{ const e = window.__jevFast?.nodes.get({node_arg}); "
+                                    f"const el = (e && e.isConnected) ? e : (document.activeElement?.getAttribute?.('role') === 'slider' ? document.activeElement : e); "
+                                    f"if (!el) return null; try {{ el.focus(); }} catch (_) {{}} "
+                                    f"return el.getAttribute('aria-valuenow'); }})()"
+                                )
+                                for _ in range(200):
+                                    if (going_up and now_val >= target_val) or (not going_up and now_val <= target_val):
+                                        break
+                                    self.call(
+                                        "Input.dispatchKeyEvent",
+                                        type="keyDown",
+                                        key=key_name,
+                                        code=key_name,
+                                        windowsVirtualKeyCode=vk_code,
+                                    )
+                                    self.call(
+                                        "Input.dispatchKeyEvent",
+                                        type="keyUp",
+                                        key=key_name,
+                                        code=key_name,
+                                        windowsVirtualKeyCode=vk_code,
+                                    )
+                                    new_now = _parse_slider_num(_eval_slider_js(read_now_js))
+                                    if new_now is None or new_now == now_val:
+                                        break
+                                    now_val = new_now
                 except Exception:
                     pass
                 search_js = """(nodeId => {
