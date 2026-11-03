@@ -11,6 +11,14 @@
 
 You give Reflex a website and a goal in plain language, for example *"find the cheapest 2 bed and 3+ bath apartment for rent in New York"* on compass.com. Reflex drives a real Chromium over the DevTools protocol: it reads the page, picks one action, checks that the action changed something, and repeats until it can answer. It asks before irreversible actions (payments, submitting forms), never invents personal data, and says so plainly when a site blocks it instead of making up a result.
 
+![Reflex on remax.com: find the most experienced agent in St. Augustine, FL, and open the profile](docs/media/demo.gif)
+
+*A real run in Reflex Studio, sped up about 6×: 18 steps in 1 min 49 s for $0.015. Muse Spark 1.3 chose every step (the reason is shown in the step deck), and Muse Spark Open checked the final answer.*
+
+| Live view | Conversation mode |
+|---|---|
+| ![Live view: browser, step deck with reasons, checked answer](docs/media/live-view.jpg) | ![Conversation mode: browser hidden, answer with plan and pages visited](docs/media/conversation.jpg) |
+
 ## Results
 
 ### Online-Mind2Web: 40 live tasks

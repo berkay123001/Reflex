@@ -315,6 +315,13 @@ const STEP_VERBS = {
 };
 let lastDeckStep = 0;
 
+// What a step acted on: the typed text, else the element's label (history `target` is only its index).
+function stepObject(step) {
+  if (step.text) return `"${step.text}"`;
+  const target = step.target != null && !/^\d+$/.test(String(step.target)) ? step.target : "";
+  return step.action || target || "";
+}
+
 function stepVerb(op) {
   const key = String(op || "").toUpperCase();
   if (STEP_VERBS[key]) return STEP_VERBS[key];
@@ -359,7 +366,7 @@ function renderDecisionStack(state) {
         <div class="st-icon">${icon}</div>
         <div class="st-title">
           <div class="st-verb">${escapeHtml(verb)}</div>
-          <div class="st-target">${escapeHtml(last.text ? `"${last.text}"` : last.target || last.action || "")}</div>
+          <div class="st-target">${escapeHtml(stepObject(last))}</div>
         </div>
         <span class="st-num">#${last.step}</span>
       </div>
@@ -376,7 +383,7 @@ function renderDecisionStack(state) {
     .reverse()
     .forEach((ps, i) => {
       const [pVerb] = stepVerb(ps.operation);
-      html += `<div class="st-prev" style="--i:${i}"><b>#${ps.step} ${escapeHtml(pVerb)}</b><span>${escapeHtml(ps.text ? `"${ps.text}"` : ps.target || ps.action || "")}</span></div>`;
+      html += `<div class="st-prev" style="--i:${i}"><b>#${ps.step} ${escapeHtml(pVerb)}</b><span>${escapeHtml(stepObject(ps))}</span></div>`;
     });
   container.innerHTML = html;
 }
