@@ -185,6 +185,7 @@ class DualTierContext(BaseModel):
     # Domain blocking, domain guidance, and scroll limiter state (G12 M3 / R2)
     blocked_domains: set[str] = Field(default_factory=set)
     domain_guidance: dict[str, str] = Field(default_factory=dict)
+    site_rules: list[str] = Field(default_factory=list)
     scroll_warning: str = ""
 
     def is_domain_blocked(self, url: str) -> bool:
@@ -449,6 +450,10 @@ class DualTierContext(BaseModel):
         if self.domain_guidance:
             for dom, guide in sorted(self.domain_guidance.items()):
                 lines.append(f"Domain Guidance ({dom}): {guide}")
+        if self.site_rules:
+            lines.append("User Site Rules (written by the user for this website; follow them):")
+            for rule in self.site_rules[-10:]:
+                lines.append(f"  - {rule}")
 
         if self.rejected_links:
             lines.append(f"Already Visited & Rejected Links (DO NOT CLICK THESE AGAIN): {self.rejected_links[-10:]}")
@@ -546,5 +551,6 @@ class DualTierContext(BaseModel):
             "approved_actions": sorted(self.approved_actions),
             "blocked_domains": sorted(self.blocked_domains),
             "domain_guidance": dict(self.domain_guidance),
+            "site_rules": list(self.site_rules),
             "scroll_warning": self.scroll_warning,
         }

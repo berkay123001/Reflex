@@ -122,6 +122,7 @@
                 <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
               </select>
             </div>
+            <button class="info-btn" type="button" data-info="models" aria-label="What are Mode, S1 and S2?">?</button>
           </div>
 
           <button class="btn-primary" id="btn-launch">
@@ -285,7 +286,10 @@
         <div class="lb-card lb-steps">
           <div class="lb-head">
             <span class="lb-label">Steps</span>
-            <span class="lb-count" id="dstack-count">0</span>
+            <span style="display:flex;align-items:center;gap:6px;">
+              <button class="lb-icon-btn small" id="btn-export-steps" title="Download steps as JSON" aria-label="Download steps as JSON">⤓</button>
+              <span class="lb-count" id="dstack-count">0</span>
+            </span>
           </div>
           <div class="st-thinking" aria-live="polite">
             <span class="dots"><i></i><i></i><i></i></span>
@@ -308,7 +312,10 @@
     <div class="page-scroll">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="page-title">Full Execution &amp; Escalation Trajectory</div>
-        <span style="font-family:var(--mono);font-size:13px;color:var(--ink-2)" id="traj-summary-lbl">0 steps</span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-family:var(--mono);font-size:13px;color:var(--ink-2)" id="traj-summary-lbl">0 steps</span>
+          <button class="cbtn" id="btn-export-json" title="Download this session as JSON">⤓ Download JSON</button>
+        </div>
       </div>
       <div id="trajectory-full-list" style="display:flex;flex-direction:column;gap:12px;"></div>
     </div>
@@ -317,7 +324,7 @@
   <!-- VIEW 4: CONTEXT & PROVENANCE -->
   <section class="view-pane" id="view-context">
     <div class="page-scroll">
-      <div class="page-title">Dual-Tier Bounded Context &amp; Provenance</div>
+      <div class="page-title" style="display:flex;align-items:center;gap:10px;">Dual-Tier Bounded Context &amp; Provenance <button class="info-btn" data-info="models" aria-label="What are S1 and S2?">?</button></div>
       <div class="grid-2">
         <div class="pbox">
           <div class="pbox-h"><span>Compiled System 1 Goal</span><span style="color:var(--s1)">S1 FAST</span></div>
@@ -367,13 +374,25 @@
   <!-- VIEW 6: SITE MEMORY -->
   <section class="view-pane" id="view-memory">
     <div class="page-scroll">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="page-title">Persistent Domain Site Memory</div>
-        <button class="cbtn" id="btn-clear-memory">🗑️ Clear All Site Rules</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div class="page-title">Site Rules &amp; Memory</div>
+        <button class="cbtn" id="btn-clear-memory">🗑️ Clear all rules</button>
       </div>
       <div class="pbox">
-        <div class="pbox-h"><span>Learned Structural Rules per Domain</span></div>
-        <div class="mono-block" id="memory-rules-box">No domain rules recorded yet.</div>
+        <div class="pbox-h"><span>Add a rule for a website</span></div>
+        <p class="mem-help">Reflex gives your rules to Muse Spark at every step on that website and its subdomains. Example for <b>compass.com</b>: “Set beds and baths with the Filters button, not on the map.” Links and instructions about prompts are not accepted.</p>
+        <form class="mem-form" id="site-rule-form" autocomplete="off">
+          <input id="site-rule-target" class="inp-text" placeholder="Website, e.g. compass.com" spellcheck="false" />
+          <textarea id="site-rule-text" class="inp-text" rows="2" maxlength="300" placeholder="Your rule for this website…"></textarea>
+          <div class="mem-form-foot">
+            <span class="mem-msg" id="site-rule-msg"></span>
+            <button class="btn-primary mem-add" type="submit">Add rule</button>
+          </div>
+        </form>
+      </div>
+      <div class="pbox">
+        <div class="pbox-h"><span>Rules by website</span><span id="memory-count">0</span></div>
+        <div class="mem-list" id="memory-rules-box"><div class="lb-muted">No rules yet.</div></div>
       </div>
     </div>
   </section>
@@ -451,6 +470,7 @@
   </section>
 
 </div>
+<div class="info-pop" id="info-pop" role="dialog" aria-hidden="true"></div>
 <script src="/app.js"></script>
 </body>
 </html>

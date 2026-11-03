@@ -92,6 +92,18 @@ def _key_status() -> dict[str, Any]:
     }
 
 
+def apply_site_rule_request(store: SiteMemoryStore, body: dict[str, Any]) -> None:
+    """Add or delete a user-written site rule. Raises ValueError with a message for the user."""
+    action = body.get("action")
+    if action == "add":
+        store.add_user_rule(str(body.get("target") or ""), str(body.get("rule") or ""))
+    elif action == "delete":
+        if not store.delete_rule(str(body.get("domain") or ""), float(body.get("created_at") or 0)):
+            raise ValueError("That rule no longer exists.")
+    else:
+        raise ValueError("Unknown site rule action.")
+
+
 def current_state() -> dict[str, Any]:
     mem_store = _SESSION.site_memory if _SESSION is not None else SiteMemoryStore()
     if _SESSION is None:
@@ -315,6 +327,10 @@ class ReflexHTTPHandler(BaseHTTPRequestHandler):
                         _SESSION.config.verify_done_with_supervisor = bool(body["verify_done_with_supervisor"])
                     if "enable_site_memory" in body:
                         _SESSION.config.enable_site_memory = bool(body["enable_site_memory"])
+                return self._send(200, json.dumps(current_state(), ensure_ascii=False))
+
+            if endpoint == "site_rules":
+                apply_site_rule_request(_SESSION.site_memory if _SESSION is not None else SiteMemoryStore(), body)
                 return self._send(200, json.dumps(current_state(), ensure_ascii=False))
 
             result = handle_api_post(endpoint, body)

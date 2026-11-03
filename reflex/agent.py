@@ -1954,6 +1954,8 @@ class ReflexSession:
                 if op != "CLICK" and role in {"combobox", "textbox"}:
                     targets.setdefault("CLICK", {})[f_idx] = {**action_dict, "kind": "click"}
         self._remember_linked_sites(self.page)
+        store = getattr(self, "site_memory", None)
+        self.ctx.site_rules = store.user_rules_for(str(self.page.get("url", ""))) if store else []
         s2_t0 = time.perf_counter()
         try:
             sup: SupervisorDecision = resolve_escalation(

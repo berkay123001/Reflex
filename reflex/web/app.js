@@ -486,6 +486,137 @@ function initViewportAmbient() {
   }, 500);
 }
 
+// Site rules: grouped by website, the user's own rules first, each with a delete button.
+function renderSiteRules(mem) {
+  const box = $("memory-rules-box");
+  const domains = Object.keys(mem).sort();
+  const total = domains.reduce((n, d) => n + mem[d].length, 0);
+  if ($("memory-count")) $("memory-count").textContent = String(total);
+  if (!total) {
+    box.innerHTML = `<div class="lb-muted">No rules yet. Add one above, or turn on site memory in Settings to let Reflex record what it learns.</div>`;
+    return;
+  }
+  box.innerHTML = domains
+    .map((dom) => {
+      const rules = [...mem[dom]].sort((a, b) => (a.source === "user" ? 0 : 1) - (b.source === "user" ? 0 : 1) || a.created_at - b.created_at);
+      return `<div class="mem-site"><div class="mem-domain">${escapeHtml(dom)}</div>${rules
+        .map(
+          (r) => `<div class="mem-rule">
+            <span class="mem-src ${r.source === "user" ? "user" : ""}">${r.source === "user" ? "Yours" : "Learned"}</span>
+            <span class="mem-text">${escapeHtml(r.rule)}</span>
+            <button class="lb-icon-btn small" data-del-domain="${escapeHtml(dom)}" data-del-created="${r.created_at}" title="Delete rule" aria-label="Delete rule">✕</button>
+          </div>`
+        )
+        .join("")}</div>`;
+    })
+    .join("");
+}
+
+function initSiteRules() {
+  const form = $("site-rule-form");
+  const target = $("site-rule-target");
+  const msg = $("site-rule-msg");
+  if (!form) return;
+  const say = (text, ok) => {
+    if (!msg) return;
+    msg.textContent = text;
+    msg.classList.toggle("ok", Boolean(ok));
+  };
+  target?.addEventListener("focus", () => {
+    const url = currentState?.page?.url;
+    if (!target.value && url && /^https?:/.test(url)) target.value = new URL(url).hostname.replace(/^www\./, "");
+  });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const s = await apiPost("site_rules", { action: "add", target: target.value, rule: $("site-rule-text").value });
+      $("site-rule-text").value = "";
+      say("Rule saved. Reflex will use it on this website.", true);
+      renderState(s);
+    } catch (err) {
+      say(err.message.replace(/^Error:\s*/, ""), false);
+    }
+  });
+  $("memory-rules-box")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-del-domain]");
+    if (!btn) return;
+    try {
+      renderState(await apiPost("site_rules", { action: "delete", domain: btn.dataset.delDomain, created_at: Number(btn.dataset.delCreated) }));
+    } catch (err) {
+      say(err.message, false);
+    }
+  });
+}
+
+// Download the current session (task, steps with reasons, plan, answer check, chat, cost) as JSON; no screenshots.
+function exportSessionJson() {
+  const st = currentState;
+  if (!st || !(st.history || []).length) {
+    alert("There are no steps to download yet.");
+    return;
+  }
+  const strip = ({ screenshot, ...rest }) => rest;
+  const data = {
+    exported_at: new Date().toISOString(),
+    task: st.goal,
+    status: st.status,
+    final_url: st.page?.url || null,
+    models: { supervisor: st.config?.supervisor_model, mode: st.config?.mode },
+    metrics: st.metrics,
+    plan: st.context?.plan || null,
+    steps: (st.history || []).map(strip),
+    supervisor_decisions: (st.escalations || []).map(({ usage, ...rest }) => rest),
+    answer_checks: st.answer_checks || [],
+    chat: (st.context?.chat_log || []).filter((m) => m.kind !== "escalation_note"),
+    pages_visited: st.context?.visited_urls || [],
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `reflex-session-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// Short in-app explanations behind the "?" buttons.
+const INFO_TEXT = {
+  models: `<b>How Reflex decides</b>
+    <p><span class="info-tag s2">S2 · Supervisor</span> Meta <b>Muse Spark 1.3</b> reads the page as a numbered list of elements and decides every step, with a short reason. This is the default mode, <b>S2 Only</b>.</p>
+    <p><span class="info-tag s1">S1 · Fast reflex</span> An optional small model (Jev in the cloud or Turnike on your machine) that takes confident clicks and typing so the supervisor is called less often. Experimental; not used in S2 Only.</p>
+    <p><span class="info-tag ok">Answer check</span> Meta <b>Muse Spark Open</b> checks the final answer against every requirement of your task. If something is missing, Reflex goes back once.</p>`,
+};
+
+function initInfoPopovers() {
+  const pop = $("info-pop");
+  if (!pop) return;
+  const close = () => {
+    pop.classList.remove("open");
+    pop.setAttribute("aria-hidden", "true");
+  };
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".info-btn");
+    if (!btn) {
+      if (!e.target.closest("#info-pop")) close();
+      return;
+    }
+    e.preventDefault();
+    if (pop.classList.contains("open") && pop.dataset.for === btn.dataset.info) return close();
+    pop.innerHTML = INFO_TEXT[btn.dataset.info] || "";
+    pop.dataset.for = btn.dataset.info;
+    pop.classList.add("open");
+    pop.setAttribute("aria-hidden", "false");
+    const r = btn.getBoundingClientRect();
+    const w = Math.min(380, window.innerWidth - 24);
+    pop.style.width = `${w}px`;
+    pop.style.left = `${Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2))}px`;
+    const below = r.bottom + 10;
+    pop.style.top = `${below + pop.offsetHeight > window.innerHeight - 12 ? Math.max(12, r.top - pop.offsetHeight - 10) : below}px`;
+  });
+  document.addEventListener("keydown", (e) => e.key === "Escape" && close());
+}
+
 function initLiveLayout() {
   const bento = $("live-bento");
   if (!bento) return;
@@ -681,10 +812,7 @@ function renderSecondaryViews(state) {
   }
 
   // Site memory view
-  if ($("memory-rules-box")) {
-    const mem = state.site_memory || {};
-    $("memory-rules-box").textContent = Object.keys(mem).length ? JSON.stringify(mem, null, 2) : "No domain rules recorded yet.";
-  }
+  if ($("memory-rules-box")) renderSiteRules(state.site_memory || {});
 
   // Keys status
   if (state.keys) {
@@ -1222,6 +1350,10 @@ function initUI() {
   initLogoIntro();
   initLiveLayout();
   initViewportAmbient();
+  initSiteRules();
+  initInfoPopovers();
+  $("btn-export-json")?.addEventListener("click", exportSessionJson);
+  $("btn-export-steps")?.addEventListener("click", exportSessionJson);
 
   // Rail navigation
   document.querySelectorAll(".rail-btn[data-view]").forEach((btn) => {
@@ -1423,6 +1555,7 @@ function initUI() {
   // Clear Site Memory
   if ($("btn-clear-memory")) {
     $("btn-clear-memory").addEventListener("click", async () => {
+      if (!confirm("Delete all site rules, including the ones you wrote?")) return;
       const s = await apiPost("config", { clear_site_memory: true });
       renderState(s);
     });
