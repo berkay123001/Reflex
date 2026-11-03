@@ -206,6 +206,7 @@
         </div>
 
         <div class="viewport-wrap">
+          <canvas class="viewport-ambient" id="viewport-ambient" aria-hidden="true"></canvas>
           <div class="viewport-stage" id="viewport-container">
             <div class="viewport-empty" id="viewport-empty">
               <div class="big">Live browser</div>
@@ -285,6 +286,11 @@
           <div class="lb-head">
             <span class="lb-label">Steps</span>
             <span class="lb-count" id="dstack-count">0</span>
+          </div>
+          <div class="st-thinking" aria-live="polite">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span>Muse Spark is choosing the next step</span>
+            <span class="st-thinking-time" id="st-thinking-time">0.0 s</span>
           </div>
           <div class="lb-stack" id="decision-stack"></div>
         </div>

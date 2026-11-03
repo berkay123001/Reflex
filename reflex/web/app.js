@@ -188,7 +188,7 @@ function renderDomOverlay(state) {
     cursor.classList.toggle("s2", Boolean(isS2));
     cursor.classList.add("visible");
     if (callout && lastStep) {
-      callout.textContent = `${lastStep.actor} · ${lastStep.operation || lastStep.kind} · ${lastStep.step_ms ?? lastStep.latency_ms ?? 0}ms`;
+      callout.textContent = stepVerb(lastStep.operation || lastStep.kind)[0];
     }
   } else if (cursor) {
     cursor.classList.remove("visible");
@@ -450,6 +450,42 @@ function formatElapsed(ms) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+// While Muse Spark decides the next step: a live "thinking" card in the step deck and a scan line over the browser.
+let thinkingTimer = null;
+function setThinking(on) {
+  const steps = document.querySelector(".lb-steps");
+  const wrap = document.querySelector(".lb-stage .viewport-wrap");
+  const label = $("st-thinking-time");
+  clearInterval(thinkingTimer);
+  steps?.classList.toggle("thinking", on);
+  wrap?.classList.toggle("thinking", on);
+  if (!on || !label) return;
+  const t0 = performance.now();
+  label.textContent = "0.0 s";
+  thinkingTimer = setInterval(() => {
+    label.textContent = `${((performance.now() - t0) / 1000).toFixed(1)} s`;
+  }, 100);
+}
+
+// Ambient fill for the letterbox around the live frame: a tiny, blurred copy of the current frame.
+function initViewportAmbient() {
+  const img = $("viewport-img");
+  const canvas = $("viewport-ambient");
+  if (!img || !canvas) return;
+  const ctx = canvas.getContext("2d");
+  canvas.width = 48;
+  canvas.height = 30;
+  setInterval(() => {
+    if (img.style.display === "none" || !img.naturalWidth || document.hidden) return;
+    try {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.classList.add("on");
+    } catch (_) {
+      canvas.classList.remove("on");
+    }
+  }, 500);
+}
+
 function initLiveLayout() {
   const bento = $("live-bento");
   if (!bento) return;
@@ -509,6 +545,38 @@ function renderScrubberAndActionSpace(state) {
   }
 }
 
+// Messages typed by the user show up at once; the server copy replaces them when it arrives.
+let pendingChat = [];
+let chatWaiting = false;
+const AVATAR_REFLEX = `<svg viewBox="0 0 36 22" fill="none" aria-hidden="true"><path d="M2 11h7l3.5-8 5.5 16 4.2-11 2.8 3H34" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const AVATAR_USER = `<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="7" r="3.4" stroke="currentColor" stroke-width="1.7"/><path d="M3.8 17c.8-3.2 3.3-5 6.2-5s5.4 1.8 6.2 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+
+function chatRow(m) {
+  const user = m.role === "user";
+  const cls = m.kind === "ask_user" ? "ask_user" : m.kind === "confirm_action" ? "confirm_action" : user ? "user" : "assistant";
+  const roleLbl = user ? "You" : m.kind === "ask_user" ? "Reflex asks" : m.kind === "confirm_action" ? "Safety guard" : "Reflex";
+  const body = user ? escapeHtml(m.content) : `<div class="md">${renderMarkdown(m.content)}</div>`;
+  return `<div class="crow ${user ? "me" : "them"}${m.pending ? " pending" : ""}">
+      <div class="cavatar ${user ? "user" : "reflex"}">${user ? AVATAR_USER : AVATAR_REFLEX}</div>
+      <div class="cmsg ${cls}"><div class="cmsg-role">${roleLbl}</div>${body}</div>
+    </div>`;
+}
+
+function renderChatLog(chatBox, log) {
+  const serverUserTexts = log.filter((m) => m.role === "user").map((m) => m.content);
+  pendingChat = pendingChat.filter((p) => !serverUserTexts.includes(p.content));
+  const rows = [...log, ...pendingChat];
+  const atBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 60;
+  let html = rows.length
+    ? rows.map(chatRow).join("")
+    : `<div class="crow them"><div class="cavatar reflex">${AVATAR_REFLEX}</div><div class="cmsg assistant"><div class="cmsg-role">Reflex</div>Ask questions while the task runs, steer the goal, or answer when Reflex asks you something.</div></div>`;
+  if (chatWaiting || runningLoop) {
+    html += `<div class="crow them typing"><div class="cavatar reflex">${AVATAR_REFLEX}</div><div class="cmsg assistant"><span class="dots"><i></i><i></i><i></i></span>${runningLoop ? " Working on the task…" : ""}</div></div>`;
+  }
+  chatBox.innerHTML = html;
+  if (atBottom || pendingChat.length) chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 function renderGuardAndChat(state) {
   const modal = $("guard-modal");
   const railSafety = $("rail-safety");
@@ -527,23 +595,8 @@ function renderGuardAndChat(state) {
   }
 
   const chatBox = $("chat-messages");
-  const log = state.context?.chat_log || [];
-  if (chatBox) {
-    if (log.length === 0) {
-      chatBox.innerHTML = `<div class="cmsg assistant"><div class="cmsg-role">Reflex</div>Ask questions while the task runs, steer the goal, or answer when Reflex asks you something.</div>`;
-    } else {
-      const atBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 40;
-      chatBox.innerHTML = log
-        .map((m) => {
-          const cls = m.kind === "ask_user" ? "ask_user" : m.kind === "confirm_action" ? "confirm_action" : m.role === "user" ? "user" : "assistant";
-          const roleLbl = m.role === "user" ? "You" : m.kind === "ask_user" ? "Reflex asks" : m.kind === "confirm_action" ? "Safety guard" : "Reflex";
-          const body = m.role === "user" ? escapeHtml(m.content) : `<div class="md">${renderMarkdown(m.content)}</div>`;
-          return `<div class="cmsg ${cls}"><div class="cmsg-role">${roleLbl}</div>${body}</div>`;
-        })
-        .join("");
-      if (atBottom) chatBox.scrollTop = chatBox.scrollHeight;
-    }
-  }
+  const log = (state.context?.chat_log || []).filter((m) => m.kind !== "escalation_note");
+  if (chatBox) renderChatLog(chatBox, log);
 
   // One-line preview of the latest message from Reflex, shown under the browser.
   const peek = $("chat-peek");
@@ -743,16 +796,19 @@ async function runContinuousLoop() {
   try {
     while (runningLoop && currentState && currentState.status === "ready") {
       stepInFlight = true;
+      setThinking(true);
       const next = await apiPost("step");
       stepInFlight = false;
+      setThinking(false);
       renderState(next);
       if (next.status !== "ready") {
         break;
       }
-      await new Promise((r) => setTimeout(r, 140));
+      await new Promise((r) => setTimeout(r, 60));
     }
   } catch (err) {
     stepInFlight = false;
+    setThinking(false);
     console.error("Step error:", err);
     const errText = err.message || String(err);
     if (currentState) {
@@ -1165,6 +1221,7 @@ function initUI() {
   initSilkCanvas();
   initLogoIntro();
   initLiveLayout();
+  initViewportAmbient();
 
   // Rail navigation
   document.querySelectorAll(".rail-btn[data-view]").forEach((btn) => {
@@ -1316,6 +1373,10 @@ function initUI() {
       if (!msg) return;
       inp.value = "";
       runningLoop = false;
+      pendingChat.push({ role: "user", content: msg, kind: "chat", pending: true });
+      chatWaiting = true;
+      const box = $("chat-messages");
+      if (box) renderChatLog(box, (currentState?.context?.chat_log || []).filter((m) => m.kind !== "escalation_note"));
       try {
         const s = await apiPost("reply", {
           message: msg,
@@ -1324,11 +1385,15 @@ function initUI() {
           decision_backend: $("top-s1-select")?.value || "openrouter_jev",
           supervisor_model: $("top-s2-select")?.value || "muse-spark-1.3-contributor",
         });
+        chatWaiting = false;
         renderState(s);
         if (s.status === "ready") {
           await runContinuousLoop();
         }
       } catch (err) {
+        chatWaiting = false;
+        pendingChat = [];
+        if (currentState) renderState(currentState);
         alert(err.message);
       }
     });
