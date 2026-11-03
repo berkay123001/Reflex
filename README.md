@@ -21,31 +21,38 @@ You give Reflex a website and a goal in plain language, for example *"find the c
 
 ## Results
 
-### Online-Mind2Web: 40 live tasks
+**On live websites, Reflex completes about two out of three tasks it can reach: 61–70% over four runs of 40 [Online-Mind2Web](https://arxiv.org/abs/2504.01382) tasks, for under one cent per task.** That is in the range of the strongest agents in the benchmark paper (OpenAI Operator 61%, Claude Computer Use 3.7 56%, Browser Use 30%, judged by humans on all 300 tasks), although our setup is not the same as theirs (see [How we measured](#how-we-measured)). **On the 10 sites that blocked our network, Reflex never invented a result.**
 
-[Online-Mind2Web](https://arxiv.org/abs/2504.01382) has 300 tasks on 136 live websites. We drew 40 of them with a fixed seed, stratified by difficulty (11 easy, 19 medium, 10 hard), after excluding the 8 tasks we had used to diagnose failures ([`scripts/benchmark/sample_online_mind2web.py`](scripts/benchmark/sample_online_mind2web.py)). The same 40 tasks were run four times while we fixed general bugs. **Across the four runs, 19–21 of 40 tasks succeeded, and 19–21 of the 30 reachable ones (61–70%).**
+| Online-Mind2Web, 40 live tasks | Final code | Four runs |
+|---|---|---|
+| Success on reachable sites | **19/30 (63%)** | **19–21/30 (61–70%)** |
+| Success on all 40, blocked sites included | 19/40 (48%) | 19–21/40 (48–53%) |
+| Easy / medium / hard, reachable | 7/9 · 9/15 · 3/6 | |
+| Cost per task | $0.009 | $0.006–0.009 |
+| Invented results on blocked sites | 0 | 0 |
+
+Fixes we measured on these tasks while building Reflex:
+- Runs that left the task website for a guessed address on another site: 17 → 5 of 40 (the remaining ones followed the site's own links).
+- Runs that ended waiting for a user who is not there: 2 → 0.
+- A Steam task that needs a playtime slider passed for the first time once sliders were moved with the keyboard.
+
+Per-task answers, verdicts and final screenshots of the final run: [`reports/online_mind2web_pilot40/`](reports/online_mind2web_pilot40/).
+
+### How we measured
+
+Online-Mind2Web has 300 tasks on 136 live websites. We drew 40 of them with a fixed seed, stratified by difficulty (11 easy, 19 medium, 10 hard), after excluding the 8 tasks we had used to diagnose failures ([`scripts/benchmark/sample_online_mind2web.py`](scripts/benchmark/sample_online_mind2web.py)), and ran the same 40 tasks four times while we fixed general bugs:
 
 | Run (same 40 tasks, max 40 steps) | Success | Success on reachable sites | Cost per task |
 |---|---|---|---|
-| **Final code** (+ no waiting on an absent user, ARIA slider keys) | **19/40 (48%)** | **19/30 (63%)** | $0.009 |
-| Answer check with Muse Spark Open | 20/40 (50%) | 20/30 (67%) | $0.008 |
-| Answer check, first prompt | 21/40 (53%) | 21/30 (70%) | $0.008 |
-| No answer check | 19/40 (48%) | 19/31 (61%) | $0.006 |
+| **Final code** (no waiting on an absent user, slider keys) | **19/40** | **19/30** | $0.009 |
+| Answer check with Muse Spark Open | 20/40 | 20/30 | $0.008 |
+| Answer check, first prompt | 21/40 | 21/30 | $0.008 |
+| No answer check | 19/40 | 19/31 | $0.006 |
 
-Final code by difficulty (reachable tasks in brackets): easy 7/11 (7/9), medium 9/19 (9/15), hard 3/10 (3/6).
-
-The runs are within noise of each other: 40 tasks give roughly ±15 points of uncertainty, and the same task can pass in one run and fail in the next (Birkenstock redirected us to its German store in the last run). The last two fixes did what they were meant to: no run ended waiting for a user who is not there (two did before), and a Steam task that needs a playtime slider passed for the first time. Other tasks went the other way, so the total did not move.
-
-The answer check did not measurably raise the success rate either. In the last two runs it sent back two answers: one that gave general prices instead of prices for the zip code asked for (the agent could not find local prices and kept them), and one correct Compass answer (a false alarm). It passed a Compass listing that was not the cheapest and an AccuWeather answer about a nearby place. In an earlier run it caught that AccuWeather substitute, and the agent then said plainly that the place was not listed. It adds 1–4 s per finished task.
-
-"Reachable" excludes sites that refused our network before the agent could do anything: geo-blocks (CVS, Healthgrades, Adopt-a-Pet), Cloudflare and bot checks (cars.com, StubHub, BBB, JCPenney) and dead hosts. In all of these the agent reported the block instead of inventing a result.
-
-For context, the paper's human-judged success rates on all 300 tasks: OpenAI Operator 61.3%, Claude Computer Use 3.7 56.3%, SeeAct 30.7%, Browser Use 30.0%, Agent-E 28.0%. **This is not a like-for-like comparison:**
-- Our runs were judged by Claude (Opus 5.5) from each final answer and, where needed, the last screenshot. They were not judged by humans or by WebJudge. We judged strictly: for example, "the first Best Paper of ICLR 2016" counts only if it matches the first paper listed on iclr.cc.
-- Live sites change from run to run (BBB was reachable in one run and behind Cloudflare in the next).
-- The tasks date from 2025, so some sites have changed since. Our runs came from Turkey, where several US sites block access.
-
-Per-task answers, verdicts and final screenshots of the final run: [`reports/online_mind2web_pilot40/`](reports/online_mind2web_pilot40/).
+- **Judging.** Each run was judged by Claude (Opus 5.5) from the final answer and, where needed, the last screenshot, not by humans or WebJudge. We judged strictly: "the first Best Paper of ICLR 2016" counts only if it matches the first paper listed on iclr.cc.
+- **Reachable** excludes sites that refused our network before the agent could do anything: geo-blocks (CVS, Healthgrades, Adopt-a-Pet), Cloudflare and bot checks (cars.com, StubHub, BBB, JCPenney) and dead hosts. Our runs came from Turkey, where several US sites block access, and the tasks date from 2025, so some sites have changed since.
+- **Noise.** 40 tasks give roughly ±15 points of uncertainty, and live sites change from run to run (Birkenstock sent us to its German store in one run), so the differences between the four runs are not meaningful on their own.
+- **Answer check.** On 40 tasks its effect on the success rate is too small to measure. In the last two runs it sent back two answers (one gave general prices instead of prices for the zip code asked for, one was a false alarm) and passed two that were close to, but not, what was asked. In an earlier run it caught an AccuWeather answer about a nearby town, and the agent then said plainly that the town was not listed. It adds 1–4 s per finished task.
 
 Where it still fails (final run): long multi-step forms and filter chains (a six-topic newsletter signup, setting a Trader Joe's home store) run out of the 40-step budget (4 of 40); twice the agent could not act on a filter option it needed (on Birkenstock the size was hidden behind "show more") and stopped honestly after six attempts; and three answers gave something close to, but not, what was asked (a nearby place, general prices instead of a zip code, a listing that was not the cheapest).
 
