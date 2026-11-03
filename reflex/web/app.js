@@ -195,104 +195,155 @@ function renderDomOverlay(state) {
   }
 }
 
+// Plain-language labels for browser operations shown in the step deck.
+const STEP_VERBS = {
+  CLICK: ["Clicked", "↖"],
+  TYPE: ["Typed", "⌨"],
+  TYPE_TEXT: ["Typed", "⌨"],
+  FILL: ["Typed", "⌨"],
+  SELECT: ["Selected", "☰"],
+  SELECT_OPTION: ["Selected", "☰"],
+  SCROLL_DOWN: ["Scrolled down", "↓"],
+  SCROLL_UP: ["Scrolled up", "↑"],
+  GOTO_URL: ["Opened", "↗"],
+  PRESS_KEY: ["Pressed", "⏎"],
+  PRESS_ENTER: ["Pressed Enter", "⏎"],
+  GO_BACK: ["Went back", "←"],
+  HOVER: ["Hovered", "◎"],
+  OBSERVE: ["Looked at the page", "◉"],
+  COMPLETE_TASK: ["Finished", "✓"],
+};
+let lastDeckStep = 0;
+
+function stepVerb(op) {
+  const key = String(op || "").toUpperCase();
+  if (STEP_VERBS[key]) return STEP_VERBS[key];
+  const words = key.toLowerCase().replace(/_/g, " ");
+  return [words.charAt(0).toUpperCase() + words.slice(1) || "Step", "•"];
+}
+
+// The supervisor's own words for a step: its reasoning, else its next goal; internal notes are skipped.
+function stepReason(step, escalations) {
+  const esc = escalations.find((e) => e.step === step.step);
+  const text = esc?.reasoning || esc?.next_goal || "";
+  if (text) return text;
+  const note = step.escalation_note || "";
+  return /\s/.test(note) ? note : "";
+}
+
 function renderDecisionStack(state) {
   const container = $("decision-stack");
-  const countEl = $("dstack-count");
   if (!container) return;
-
   const history = state.history || [];
-  const decisions = state.decisions || [];
   const escalations = state.escalations || [];
-  if (countEl) countEl.textContent = `${history.length} steps`;
+  if ($("dstack-count")) $("dstack-count").textContent = String(history.length);
 
-  if (history.length === 0 && escalations.length === 0) {
-    container.innerHTML = `
-      <div class="dcard s1">
-        <div class="dcard-top">
-          <span class="actor-badge s1">READY</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">3-Layer Verification</span>
-        </div>
-        <div class="dcard-reason">Session ready. Press <b>▶ Run</b> or <b>⏭ Step</b> to begin the live stream.</div>
-      </div>`;
+  if (history.length === 0) {
+    lastDeckStep = 0;
+    container.innerHTML = `<div class="lb-muted" style="padding:4px 4px 0">Each step appears here: what Reflex did, and why.</div>`;
     return;
   }
 
-  const lastStep = history[history.length - 1];
-  const lastEsc = escalations[escalations.length - 1];
-  const lastDec = decisions[decisions.length - 1];
+  const last = history[history.length - 1];
+  const [verb, icon] = stepVerb(last.operation);
+  const v = last.verification || {};
+  const why = stepReason(last, escalations);
+  const fresh = last.step !== lastDeckStep ? " fresh" : "";
+  lastDeckStep = last.step;
+  const changed = v.url_changed ? "New page ✓" : v.page_changed || v.element_state_changed ? "Page changed ✓" : "No visible change";
+  const loop = v.oscillation_detected || v.loop_detected;
 
-  let html = "";
-  if (lastStep) {
-    const isS2 = lastStep.actor === "S2";
-    const v = lastStep.verification || {};
-    const opPct = Math.round((lastStep.confidence || 0) * 100);
-    const tgtPct = lastStep.target_confidence != null ? Math.round(lastStep.target_confidence * 100) : 100;
-    const jntPct = Math.round((lastStep.joint_confidence || lastStep.confidence || 0) * 100);
-    const marPct = Math.round((lastStep.target_margin ?? 1) * 100);
-
-    const matchingEsc = isS2 ? escalations.find((e) => e.step === lastStep.step) || lastEsc : null;
-    const stepDur = lastStep.step_ms ?? lastStep.latency_ms ?? 0;
-    const stepBreakdownTitle = `S1: ${lastStep.s1_ms ?? 0}ms | S2: ${lastStep.s2_ms ?? 0}ms | Act: ${lastStep.act_ms ?? 0}ms | Observe: ${lastStep.observe_ms ?? 0}ms`;
-
-    html += `
-      <div class="dcard ${isS2 ? "s2" : "s1"}">
-        <div class="dcard-top">
-          <span class="actor-badge ${isS2 ? "s2" : "s1"}">#${lastStep.step} ${isS2 ? "🧠 S2 SUPERVISOR" : "⚡ S1 REFLEX"} · ${escapeHtml(lastStep.operation)}</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)" title="${stepBreakdownTitle}">${stepDur} ms</span>
+  let html = `
+    <div class="st-now${fresh}">
+      <div class="st-top">
+        <div class="st-icon">${icon}</div>
+        <div class="st-title">
+          <div class="st-verb">${escapeHtml(verb)}</div>
+          <div class="st-target">${escapeHtml(last.text ? `"${last.text}"` : last.target || last.action || "")}</div>
         </div>
-        <div class="dcard-act">${lastStep.target ? `[${escapeHtml(lastStep.target)}] ` : ""}${escapeHtml(lastStep.action)}</div>
-        ${lastStep.text ? `<div class="dcard-reason">✎ Typed: <b>"${escapeHtml(lastStep.text)}"</b></div>` : ""}
-        ${lastStep.escalation_note ? `<div class="dcard-reason">🧠 ${escapeHtml(lastStep.escalation_note)}</div>` : ""}
-        ${
-          matchingEsc && (matchingEsc.evaluation_previous_goal || matchingEsc.memory || matchingEsc.next_goal)
-            ? `<div class="s2-state-box">
-                ${matchingEsc.evaluation_previous_goal ? `<div><b>Eval:</b> ${escapeHtml(matchingEsc.evaluation_previous_goal)}</div>` : ""}
-                ${matchingEsc.memory ? `<div><b>Memory:</b> ${escapeHtml(matchingEsc.memory)}</div>` : ""}
-                ${matchingEsc.next_goal ? `<div><b>Next Goal:</b> ${escapeHtml(matchingEsc.next_goal)}</div>` : ""}
-              </div>`
-            : ""
-        }
-        <div class="bars-grid">
-          <div class="cbar">
-            <div class="cbar-top"><span>Action</span><span>${opPct}%</span></div>
-            <div class="cbar-track"><div class="cbar-fill ${isS2 ? "s2" : ""}" style="width:${opPct}%"></div></div>
-          </div>
-          <div class="cbar">
-            <div class="cbar-top"><span>Target</span><span>${tgtPct}%</span></div>
-            <div class="cbar-track"><div class="cbar-fill ${isS2 ? "s2" : ""}" style="width:${tgtPct}%"></div></div>
-          </div>
-          <div class="cbar">
-            <div class="cbar-top"><span>Joint Conf</span><span>${jntPct}%</span></div>
-            <div class="cbar-track"><div class="cbar-fill ${isS2 ? "s2" : ""}" style="width:${jntPct}%"></div></div>
-          </div>
-          <div class="cbar">
-            <div class="cbar-top"><span>Margin</span><span>${marPct}%</span></div>
-            <div class="cbar-track"><div class="cbar-fill ${isS2 ? "s2" : ""}" style="width:${marPct}%"></div></div>
-          </div>
-        </div>
-        <div class="ver-row">
-          <span class="v-chip ok">Applied ✓</span>
-          <span class="v-chip ${v.effective_progress ? "ok" : ""}">${v.url_changed ? "URL Changed ✓" : v.page_changed ? "DOM Updated ✓" : "Same Page"}</span>
-          <span class="v-chip ${v.loop_detected || v.oscillation_detected ? "warn" : "ok"}">${v.oscillation_detected ? "Oscillation ⚠" : v.loop_detected ? "Loop ⚠" : "No Loop ✓"}</span>
-          <span class="v-chip">${escapeHtml(lastStep.model || "")}</span>
-        </div>
-      </div>`;
+        <span class="st-num">#${last.step}</span>
+      </div>
+      ${why ? `<div class="st-why"><b>Why:</b> ${escapeHtml(why)}</div>` : ""}
+      <div class="st-chips">
+        <span class="st-chip ${v.effective_progress ? "ok" : ""}">${changed}</span>
+        ${loop ? `<span class="st-chip warn">${v.oscillation_detected ? "Going back and forth" : "Repeating itself"}</span>` : ""}
+        <span class="st-chip">${((last.step_ms ?? last.latency_ms ?? 0) / 1000).toFixed(1)} s</span>
+      </div>
+    </div>`;
 
-    // Stacked previous 3 steps
-    const prevSteps = history.slice(Math.max(0, history.length - 4), history.length - 1).reverse();
-    prevSteps.forEach((ps) => {
-      const psDur = ps.step_ms ?? ps.latency_ms ?? 0;
-      html += `
-        <div class="dstack-prev">
-          <span>#${ps.step} <b style="color:${ps.actor === "S2" ? "var(--s2)" : "var(--s1)"}">${ps.actor}</b> ${escapeHtml(ps.operation)} · ${escapeHtml((ps.action || "").slice(0, 38))}</span>
-          <span>${psDur}ms</span>
-        </div>`;
+  history
+    .slice(Math.max(0, history.length - 4), history.length - 1)
+    .reverse()
+    .forEach((ps, i) => {
+      const [pVerb] = stepVerb(ps.operation);
+      html += `<div class="st-prev" style="--i:${i}"><b>#${ps.step} ${escapeHtml(pVerb)}</b><span>${escapeHtml(ps.text ? `"${ps.text}"` : ps.target || ps.action || "")}</span></div>`;
     });
-  } else if (lastDec) {
-    html += `<div class="dcard s1"><div class="dcard-act">Step 1 Decision</div></div>`;
+  container.innerHTML = html;
+}
+
+function finalAnswer(state) {
+  if (state.status !== "done") return "";
+  const log = state.context?.chat_log || [];
+  const msg = [...log].reverse().find((m) => m.role === "assistant" && (m.kind || "chat") === "chat");
+  return msg?.content || "";
+}
+
+function renderPlanCard(state) {
+  const body = $("plan-body");
+  const head = document.querySelector("#plan-card .lb-label");
+  if (!body) return;
+
+  const answer = finalAnswer(state);
+  const badgeSlot = $("answer-check-badge");
+  if (badgeSlot) badgeSlot.innerHTML = "";
+  if (answer) {
+    if (head) head.textContent = "Answer";
+    const checks = state.answer_checks || [];
+    const failed = checks.find((c) => c.verdict === "fail");
+    if (badgeSlot && checks.length) {
+      badgeSlot.innerHTML = failed
+        ? `<span class="ans-check sent-back" title="${escapeHtml(failed.unmet.join("; "))}">↺ Muse Spark Open sent it back once</span>`
+        : `<span class="ans-check">✓ Checked by Muse Spark Open</span>`;
+    }
+    const why = failed ? `<div class="lb-muted" style="margin-top:8px">Sent back because: ${escapeHtml(failed.unmet.join("; "))}</div>` : "";
+    body.innerHTML = `<div class="ans-fan"><div class="ans-card">${escapeHtml(answer)}</div></div>${why}`;
+    return;
   }
 
-  container.innerHTML = html;
+  if (head) head.textContent = "Plan";
+  const subgoals = state.context?.plan?.subgoals || [];
+  if (subgoals.length) {
+    const mark = { completed: "✓", failed: "✕" };
+    body.innerHTML = subgoals
+      .map((sg) => `<div class="pl-item ${escapeHtml(sg.status)}"><span class="pl-dot">${mark[sg.status] || ""}</span><span>${escapeHtml(sg.text)}</span></div>`)
+      .join("");
+    return;
+  }
+  const active = state.context?.active_subgoal;
+  body.innerHTML = active && state.history?.length
+    ? `<div class="pl-item active"><span class="pl-dot"></span><span>${escapeHtml(active)}</span></div>`
+    : `<div class="lb-muted">Muse Spark writes a short plan when the task starts.</div>`;
+}
+
+function formatElapsed(ms) {
+  const s = Math.max(0, Math.round((ms || 0) / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function initLiveLayout() {
+  const bento = $("live-bento");
+  if (!bento) return;
+  const saved = localStorage.getItem("reflex_live_layout");
+  if (saved === "browser" || saved === "chat") bento.dataset.layout = saved;
+  const toggle = (mode) => {
+    bento.dataset.layout = bento.dataset.layout === mode ? "normal" : mode;
+    localStorage.setItem("reflex_live_layout", bento.dataset.layout);
+    const growing = bento.dataset.layout === mode;
+    const btn = $(mode === "browser" ? "btn-browser-size" : "btn-chat-size");
+    if (btn) btn.title = `${growing ? "Shrink" : "Enlarge"} ${mode}`;
+  };
+  $("btn-browser-size")?.addEventListener("click", () => toggle("browser"));
+  $("btn-chat-size")?.addEventListener("click", () => toggle("chat"));
 }
 
 function renderScrubberAndActionSpace(state) {
@@ -493,6 +544,7 @@ function renderState(state) {
 
   const m = state.metrics || {};
   if ($("m-steps")) $("m-steps").textContent = String(m.steps ?? 0);
+  if ($("m-elapsed")) $("m-elapsed").textContent = formatElapsed(m.elapsed_ms);
   if ($("m-s1")) $("m-s1").textContent = String(m.s1_steps ?? 0);
   if ($("m-s2")) $("m-s2").textContent = String(m.s2_escalations ?? 0);
   if ($("m-lat")) $("m-lat").textContent = `${m.median_step_ms ?? m.median_decision_ms ?? 0} ms`;
@@ -533,6 +585,7 @@ function renderState(state) {
   ensureLiveStream(state);
   renderDomOverlay(state);
   renderDecisionStack(state);
+  renderPlanCard(state);
   renderScrubberAndActionSpace(state);
   renderGuardAndChat(state);
   renderSecondaryViews(state);
@@ -967,6 +1020,7 @@ function initUI() {
   initThemeToggle();
   initSilkCanvas();
   initLogoIntro();
+  initLiveLayout();
 
   // Rail navigation
   document.querySelectorAll(".rail-btn[data-view]").forEach((btn) => {

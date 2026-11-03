@@ -183,51 +183,43 @@
 
   <!-- VIEW 2: LIVE RUN -->
   <section class="view-pane" id="view-live">
-    <div class="live-grid">
-      <!-- Left: Live Browser Stage -->
-      <div class="stage">
-        <div class="bbar">
+    <div class="live-bento" id="live-bento" data-layout="normal">
+
+      <!-- Browser -->
+      <div class="lb-card lb-stage">
+        <div class="lb-stage-top">
           <div class="status-pill" id="status-badge">
             <span class="dot"></span>
             <span id="status-text">IDLE</span>
           </div>
-          <button class="bbar-btn" id="btn-toggle-boxes" title="Toggle DOM Bounding Boxes">DOM [<span id="dom-count">0</span>]</button>
           <div class="urlbar">
             <span class="lock">●</span>
             <span class="u-txt" id="page-url-badge">about:blank</span>
           </div>
-          <div class="stat-strip">
-            <div class="kv"><span class="k">steps</span><span class="v" id="m-steps">0</span></div>
-            <div class="kv"><span class="k">s1</span><span class="v s1" id="m-s1">0</span></div>
-            <div class="kv"><span class="k">s2</span><span class="v s2" id="m-s2">0</span></div>
-            <div class="kv"><span class="k">p50</span><span class="v" id="m-lat">0 ms</span></div>
-            <div class="kv"><span class="k">cost</span><span class="v" id="m-cost">$0.0000</span></div>
-          </div>
-          <div class="stream-badge" id="stream-live-pill">
-            <span class="s-dot"></span>
-            <span id="stream-fps-txt">LIVE STREAM</span>
-          </div>
+          <button class="bbar-btn" id="btn-toggle-boxes" title="Show the elements Reflex can act on">Elements <span id="dom-count">0</span></button>
+          <button class="lb-icon-btn" id="btn-browser-size" title="Enlarge browser" aria-label="Enlarge browser">
+            <svg class="i-grow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="i-shrink" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 6.5h-4v-4M2.5 9.5h4v4M9.5 6.5 14 2M6.5 9.5 2 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
 
         <div class="viewport-wrap">
           <div class="viewport-stage" id="viewport-container">
             <div class="viewport-empty" id="viewport-empty">
-              <div class="big">Live Chromium Session Ready</div>
-              <div>Start a task from the Launch screen or press <b>▶ Run</b> in the top right.</div>
+              <div class="big">Live browser</div>
+              <div>Start a task from the New Task screen, then watch Reflex work here.</div>
             </div>
-            <img id="viewport-img" alt="Live Browser Stream" style="display:none;" />
+            <img id="viewport-img" alt="Live browser stream" style="display:none;" />
             <div class="dom-overlay" id="dom-overlay"></div>
 
-            <!-- Live Gliding Cursor & Click Ripple -->
             <div class="rx-cursor" id="rx-cursor">
               <div class="rx-ripple"></div>
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M4 3L11.5 20L14.2 13.2L21 10.5L4 3Z" fill="#2A9D8F" stroke="#08090C" stroke-width="1.8" stroke-linejoin="round"/>
               </svg>
-              <div class="rx-callout" id="rx-callout">S1 · CLICK</div>
+              <div class="rx-callout" id="rx-callout">CLICK</div>
             </div>
 
-            <!-- Safety Guard Modal -->
             <div class="stage-modal" id="guard-modal">
               <div class="sm-head">
                 <span id="guard-modal-tag">🛡️ SAFETY GUARD HOLD · IRREVERSIBLE ACTION</span>
@@ -243,58 +235,67 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Scrubber & Action Space Footer -->
-        <div class="stage-foot">
-          <div class="scrub-row">
-            <span class="scrub-lbl" id="scrub-label">STEP 0</span>
-            <div class="scrub-track" id="scrubber-track"></div>
+      <!-- Right column: task + steps -->
+      <div class="lb-side">
+        <div class="lb-card lb-goal">
+          <span class="lb-label">Task</span>
+          <div class="lb-goal-text" id="top-goal-crumb">No task yet</div>
+        </div>
+        <div class="lb-card lb-steps">
+          <div class="lb-head">
+            <span class="lb-label">Steps</span>
+            <span class="lb-count" id="dstack-count">0</span>
           </div>
-          <div class="aspace-row" id="aspace-row">
-            <span class="aspace-chip" id="top-goal-crumb">Waiting for first step decision…</span>
-          </div>
+          <div class="lb-stack" id="decision-stack"></div>
         </div>
       </div>
 
-      <!-- Right Column: Controls + Decision Stack + Co-Pilot Chat -->
-      <div class="rcol">
-        <div class="ctrl-bar">
+      <!-- Chat -->
+      <div class="lb-card lb-chat">
+        <div class="lb-head">
+          <span class="lb-label">Chat with Reflex</span>
+          <button class="lb-icon-btn" id="btn-chat-size" title="Enlarge chat" aria-label="Enlarge chat">
+            <svg class="i-grow" width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.5 10 8 5.5l4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="i-shrink" width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.5 6 8 10.5 12.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="chat-log" id="chat-messages"></div>
+        <form class="chat-form" id="chat-form">
+          <input type="text" id="input-chat" placeholder="Steer the agent, ask a question, or answer it…" autocomplete="off" />
+          <button type="submit" class="chat-send" aria-label="Send">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h9M8.5 4l4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- Controls + run stats -->
+      <div class="lb-card lb-ctrl">
+        <div class="lb-ctrl-btns">
           <button class="cbtn run" id="btn-continue">▶ Run</button>
           <button class="cbtn" id="btn-step">⏭ Step</button>
           <button class="cbtn pause" id="btn-pause" disabled>⏸ Pause</button>
-          <div style="flex:1"></div>
-          <button class="cbtn" id="btn-new-task" title="New Task">+ New</button>
-          <button class="cbtn" id="btn-reset" title="Close Browser Session">✕</button>
+          <button class="cbtn" id="btn-new-task" title="New task">+ New</button>
+          <button class="cbtn" id="btn-reset" title="Close browser session">✕</button>
         </div>
-
-        <div class="dstack-sec">
-          <div class="dstack-head">
-            <span>Execution &amp; Escalation Stack</span>
-            <span id="dstack-count">0 steps</span>
-          </div>
-          <div id="decision-stack">
-            <div class="dcard s1">
-              <div class="dcard-top">
-                <span class="actor-badge s1">READY</span>
-                <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3)">3-Layer Verification</span>
-              </div>
-              <div class="dcard-reason">No steps executed yet. Press <b>▶ Run</b> or <b>⏭ Step</b> to begin the live stream.</div>
-            </div>
-          </div>
+        <div class="lb-stats">
+          <div class="lb-stat"><span class="k">Steps</span><span class="v" id="m-steps">0</span></div>
+          <div class="lb-stat"><span class="k">Time</span><span class="v" id="m-elapsed">0:00</span></div>
+          <div class="lb-stat"><span class="k">Cost</span><span class="v" id="m-cost">$0.0000</span></div>
         </div>
-
-        <div class="chat-sec">
-          <div class="chat-head">
-            <span>Interactive Co-Pilot Chat</span>
-            <span style="color:var(--s2)">HITL · Multi-Turn</span>
-          </div>
-          <div class="chat-log" id="chat-messages"></div>
-          <form class="chat-form" id="chat-form">
-            <input type="text" id="input-chat" placeholder="Steer the agent, ask a question, or reply to ASK_USER..." autocomplete="off" />
-            <button type="submit" class="chat-send">Send</button>
-          </form>
+        <div class="scrub-row">
+          <span class="scrub-lbl" id="scrub-label">STEP 0</span>
+          <div class="scrub-track" id="scrubber-track"></div>
         </div>
       </div>
+
+      <!-- Plan, then the checked answer -->
+      <div class="lb-card lb-plan" id="plan-card">
+        <div class="lb-head"><span class="lb-label">Plan</span><span id="answer-check-badge"></span></div>
+        <div class="lb-plan-body" id="plan-body"><div class="lb-muted">Muse Spark writes a short plan when the task starts.</div></div>
+      </div>
+
     </div>
   </section>
 

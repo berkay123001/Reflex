@@ -590,6 +590,10 @@ class ReflexSession:
             "text_calls": self.text_calls,
             "interpret_calls": self.interpret_calls,
             "context": self.ctx.snapshot_dict(),
+            "answer_checks": [
+                {"verdict": ac.get("verdict"), "unmet": list(ac.get("unmet") or [])}
+                for ac in getattr(self, "answer_checks", [])
+            ],
             "config": self.config.model_dump(),
             "pending_confirmation": (
                 {
