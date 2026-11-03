@@ -515,6 +515,23 @@
       }
     }
   }
+  // Form fields that still share a label (min/max boxes under one heading) get their own field
+  // caption and placeholder, so "BATHROOMS · min" is not mistaken for the bedroom box.
+  const stillCounts=new Map();
+  for (const a of actions) {
+    if (a.label) stillCounts.set(a.label.trim().toLowerCase(),(stillCounts.get(a.label.trim().toLowerCase())||0)+1);
+  }
+  for (const a of actions) {
+    if (!a.label || stillCounts.get(a.label.trim().toLowerCase())<2) continue;
+    const el=cache.nodes.get(a.node);
+    if (!el || !['INPUT','TEXTAREA','SELECT'].includes(el.tagName)) continue;
+    const low=a.label.toLowerCase(), parts=[];
+    const cap=controlFallbackLabel(el,new Set());
+    if (cap && !low.includes(cap.slice(0,25).toLowerCase())) parts.push(cap.slice(0,60));
+    const ph=(el.getAttribute('placeholder')||'').replace(/\s+/g,' ').trim();
+    if (ph && !low.includes(ph.toLowerCase()) && !parts.some(p=>p.toLowerCase().includes(ph.toLowerCase()))) parts.push(ph.slice(0,40));
+    if (parts.length) a.label=`${parts.join(' · ')} · ${a.label.trim()}`;
+  }
   const clipCache=new Map();
   const getClipBottom=el=>{
     if (!el || el===document.body || el===document.documentElement) return Infinity;
