@@ -331,7 +331,12 @@ function stepVerb(op) {
 
 // The supervisor's own words for a step: its reasoning, else its next goal; internal notes are skipped.
 function stepReason(step, escalations) {
-  const esc = escalations.find((e) => e.step === step.step);
+  // A decision that could not run adds no step, so the next decision gets the same step number;
+  // the last one with that number is the decision that produced the step.
+  let esc = null;
+  for (let i = escalations.length - 1; i >= 0 && !esc; i--) {
+    if (escalations[i].step === step.step) esc = escalations[i];
+  }
   const text = esc?.reasoning || esc?.next_goal || "";
   if (text) return text;
   const note = step.escalation_note || "";

@@ -27,9 +27,25 @@ def test_site_key_uses_registrable_domain() -> None:
 
 def test_search_engine_start_has_no_home_site() -> None:
     assert _home_site_for("https://www.google.com") == ""
-    assert _home_site_for("https://www.google.com/travel/flights") == ""
+    assert _home_site_for("https://www.google.com/search?q=quiz") == ""
     assert _home_site_for("https://duckduckgo.com/?q=x") == ""
+    assert _home_site_for("https://search.yahoo.com/search?p=x") == ""
     assert _home_site_for("https://www.stubhub.com/") == "stubhub.com"
+
+
+def test_product_of_a_search_company_is_the_task_website() -> None:
+    """full300 2026-11-04: tasks on Google Shopping guessed amazon/bestbuy/walmart URLs because google.com counted as open web."""
+    assert _home_site_for("https://www.google.com/shopping?udm=28") == "google.com"
+    assert _home_site_for("https://www.google.com/travel/flights") == "google.com"
+    assert _home_site_for("https://www.google.com/finance/") == "google.com"
+    assert _home_site_for("https://www.google.com/maps/") == "google.com"
+    assert _home_site_for("https://finance.yahoo.com/") == "yahoo.com"
+
+
+def test_guess_off_google_shopping_is_rejected() -> None:
+    sess = _session_on("https://www.google.com/shopping?udm=28", goal="Look for reviews of a Nest Hello Video Doorbell")
+    assert sess._resolve_supervisor_action(_goto("https://www.amazon.com/s?k=Nest+Hello"), {}, {}) is None
+    assert any("amazon.com" in r for r in sess.ctx.rejected_links)
 
 
 def test_guessed_other_site_is_rejected() -> None:

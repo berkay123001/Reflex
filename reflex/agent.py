@@ -179,7 +179,7 @@ def repeated_type_text_nodes(page: dict[str, Any], history: list[dict[str, Any]]
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
 MAX_IDLE_STEP_CALLS = 6
-# A run that starts on a web search engine is an open-web task: no home site to stay on.
+# A run that starts on the search page of a web search engine is an open-web task: no home site to stay on.
 _OPEN_WEB_START_SITES = {"google", "bing", "duckduckgo", "yandex", "yahoo", "baidu", "ecosia", "startpage", "brave"}
 _SECOND_LEVEL_LABELS = {"co", "com", "org", "net", "gov", "ac", "edu"}
 
@@ -195,9 +195,19 @@ def _site_key(url: str | None) -> str:
     return ".".join(labels[-2:])
 
 
+def _is_search_page(url: str | None, site: str) -> bool:
+    """The search box or results of a search engine (`google.com/search`), not one of its products (`/shopping`)."""
+    parts = urlsplit(url or "")
+    host = (parts.hostname or "").lower()
+    sub = host[: -len(site)].rstrip(".") if host.endswith(site) else host
+    return sub in {"", "www", "search"} and parts.path.rstrip("/") in {"", "/search", "/webhp", "/html"}
+
+
 def _home_site_for(url: str | None) -> str:
     site = _site_key(url)
-    return "" if not site or site.split(".")[0] in _OPEN_WEB_START_SITES else site
+    if not site:
+        return ""
+    return "" if site.split(".")[0] in _OPEN_WEB_START_SITES and _is_search_page(url, site) else site
 
 
 def _extract_candidate_url(sup: SupervisorDecision, current_url: str) -> str | None:
