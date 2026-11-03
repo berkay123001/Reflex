@@ -1,0 +1,88 @@
+{
+  "task_id": "a7a73c8fa75441fc76df9746c327bdd6",
+  "task": "Estimate the cost of a photographer in 07055 for a 4-hour project.",
+  "final_result_response": "Estimated cost for a photographer in 07055 for a 4-hour project:\n\n- Thumbtack national average hourly rate: ~$150/hr (ranges $125-$450/hr for weddings/events, $150-$199/hr for most other types). For 4 hours = ~$600.\n- Thumbtack national average total project range: $233-$486 (low $149, high $1,053). Wedding/event average $756 total ($569-$1,005).\n- Thumbtack instant-results for 07055 (Passaic, NJ area) showed Avg cost $265 for a typical project.\n\nReasonable estimate for 4 hours in 07055: $500-$800, centered around $600 (4 x $150/hr). Simple portrait/pet/real estate type at $150/hr = $600. Wedding/event/commercial at higher end could be $800-$1,000+ for 4 hours.\n\nSources: https://www.thumbtack.com/p/photographer-prices (national avg $233-$486, $150/hr avg) and Thumbtack instant-results for zip 07055 (Avg $265 near Passaic, NJ).",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will start searching for photographer services on Thumbtack.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select Photographer before entering zip code.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need zip code to localize photographer cost estimate.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to submit search to get photographer listings.",
+      "url": "https://www.thumbtack.com/instant-results/?deprecate_spr=true&keyword_pk=102906937000741842&search_bar_query_pk=594510332682059779&zip_code=07055&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594510344044437505",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need detailed hourly pricing for 4-hour estimate.",
+      "url": "https://www.thumbtack.com/prices",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need hourly rates to estimate 4-hour cost.",
+      "url": "https://www.thumbtack.com/p/photographer-prices",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 6,
+  "cost_usd": 0.005754,
+  "maliyet": 0.005754,
+  "elapsed_s": 42.9,
+  "sure_sn": 42.9,
+  "level": "medium",
+  "website": "https://www.thumbtack.com/",
+  "domain": "www.thumbtack.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00188605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

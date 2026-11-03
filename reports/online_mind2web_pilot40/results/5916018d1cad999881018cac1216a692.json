@@ -1,0 +1,78 @@
+{
+  "task_id": "5916018d1cad999881018cac1216a692",
+  "task": "Find a personal trainer service at 10040 for a 25-year-old client aiming to build muscle.",
+  "final_result_response": "Found personal trainer for ZIP 10040 for 25-year-old aiming to build muscle (defaulted age group 23-30 years old, goal Build Muscle):\n\nTrainer: iBSmartFitness (Owner Iosif Beniaminov, 11+ years, 12 years in business, 7 employees)\nProfile Link: https://www.thumbtack.com/ny/new-york/personal-trainers/ibsmartfitness/service/307911406635106524\nRating: Exceptional 5.0 out of 5 stars (76 reviews, 100% 5-star, Hired 41 times, Top Pro, Background checked)\nMuscle-building relevance: Services explicitly list Fitness goals including 'Build muscle', plus 'Get toned', 'Lose weight'; methodology follows 'progressive muscle overload for safe, effective, proven progress' with customized program and nutritional advice. Client age options include '23-30 years old' covering 25-year-old client. Serves New York, NY including 10040, offers In-Home and Remote Personal Training. Responds in about 2 hours.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to start search for personal trainer service.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select the correct trainer category before entering zip.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to enter zip code to get results for 10040.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search inputs are ready so submit the search.",
+      "url": "https://www.thumbtack.com/instant-results/?deprecate_spr=true&keyword_pk=230792798637902654&search_bar_query_pk=594510225687068673&zip_code=10040&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594510235887468549",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Top profile link is visible and avoids covered button overlay.",
+      "url": "https://www.thumbtack.com/ny/new-york/personal-trainers/ibsmartfitness/service/307911406635106524?service_pk=307911406635106524&encoded_answers=eyJzZl9wayI6IjU0NDQwOTQ1MjMyODQ4NDg2NSIsImFucyI6e319&project_pk=594510238275608581&lp_request_pk=594510245013102593&zip_code=10040&keyword_pk=230792798637902654&category_pk=122325513795633420&hideBack=true&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594510235887468549",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.006828,
+  "maliyet": 0.006828,
+  "elapsed_s": 42.8,
+  "sure_sn": 42.8,
+  "level": "medium",
+  "website": "https://www.thumbtack.com/",
+  "domain": "www.thumbtack.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0026438
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

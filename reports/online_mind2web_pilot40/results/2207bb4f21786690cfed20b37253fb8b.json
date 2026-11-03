@@ -1,0 +1,48 @@
+{
+  "task_id": "2207bb4f21786690cfed20b37253fb8b",
+  "task": "Check the current wind speed in Calgary, Alberta.",
+  "final_result_response": "The current wind speed in Calgary, Alberta is 17 km/h from the South (S), with gusts to 26 km/h, as reported on The Weather Network Calgary current weather page.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search for Calgary using the site search box.",
+      "url": "https://www.theweathernetwork.com/en",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Suggestion for Calgary Alberta is visible, so I will open it.",
+      "url": "https://www.theweathernetwork.com/en/city/ca/alberta/calgary/current",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 2,
+  "cost_usd": 0.003727,
+  "maliyet": 0.003727,
+  "elapsed_s": 17.4,
+  "sure_sn": 17.4,
+  "level": "easy",
+  "website": "https://www.theweathernetwork.com/",
+  "domain": "www.theweathernetwork.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00156505
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

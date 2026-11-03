@@ -1,0 +1,78 @@
+{
+  "task_id": "354b4ddf048815f8fd4163d0d7e1aaa3",
+  "task": "Browse marketing jobs and filter by Bachelor's Degree education level.",
+  "final_result_response": "Browsed marketing jobs on OhioMeansJobs (ohio.gov job search). Searched keyword 'marketing' in Ohio, then applied Career/Education Level filter for Bachelor's degree. Results filtered successfully: Current Filters show Keywords: marketing, State: OH, Career/Education Level: Bachelor's degree, with 37,249 jobs found (20,116 matching Bachelor's degree). Listings displayed include Plum Market and Fresh Thyme Market roles.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search for marketing jobs using the keyword box.",
+      "url": "https://ohiomeansjobs.ohio.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Keyword is entered, now I must submit the search.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=marketing",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to open Filters to apply Bachelor's Degree education level.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=marketing",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open education filter to select Bachelor's Degree.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=marketing",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Bachelor's degree filter is visible and must be selected.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=marketing",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.004507,
+  "maliyet": 0.004507,
+  "elapsed_s": 45.9,
+  "sure_sn": 45.9,
+  "level": "medium",
+  "website": "https://ohiomeansjobs.ohio.gov/",
+  "domain": "ohiomeansjobs.ohio.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0014278
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

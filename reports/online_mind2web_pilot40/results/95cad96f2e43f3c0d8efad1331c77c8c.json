@@ -1,0 +1,38 @@
+{
+  "task_id": "95cad96f2e43f3c0d8efad1331c77c8c",
+  "task": "View the list of the Most Popular TV on rotten tomatoes.",
+  "final_result_response": "The Most Popular TV list is visible at https://www.rottentomatoes.com/browse/tv_series_browse/sort:popular titled 'Best TV Shows (November 2026)' sorted by Most popular.\n\nTop entries visible:\n1. The Terminal List - 51% Tomatometer, 93% Popcornmeter\n2. Nocturne - 86%, 53%\n3. Phony - 93%, 92%\n4. Time - 97%, 89%\n5. VisionQuest - 91%, 82%\n6. Minimum Wage - 82%\n7. Dexter: Resurrection - 91%, 95%\n8. Lupin - 98%, 64%\n9. Cyberpunk: Edgerunners - 87%, 80%\n10. Crystal Lake - 77%, 88%\nFurther entries include Below, The Diplomat, Carrie, Avatar: Seven Havens, East of Eden, YAGA, Nobody Wants This, The Final Problem, War, Slow Horses, MobLand, From and more with Load more option.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The Tv shows menu links directly to popular TV browse.",
+      "url": "https://www.rottentomatoes.com/browse/tv_series_browse/sort:popular",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 1,
+  "cost_usd": 0.003629,
+  "maliyet": 0.003629,
+  "elapsed_s": 17.6,
+  "sure_sn": 17.6,
+  "level": "easy",
+  "website": "https://www.rottentomatoes.com/",
+  "domain": "www.rottentomatoes.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00166835
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

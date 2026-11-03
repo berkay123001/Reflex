@@ -1,0 +1,62 @@
+{
+  "task_id": "2d5a7f95f951a26838289dfd629ae850_110325",
+  "task": "Find a list of houses for sale in zip code 85747 with a pool and a private outdoor space.",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will enter the zip code to start the search.",
+      "url": "https://www.compass.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Zip is entered, now I must trigger the search.",
+      "url": "https://www.compass.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must select suggested 85747 AZ location to run search.",
+      "url": "https://www.compass.com/homes-for-sale/tucson-az-85747/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to apply pool and outdoor space filters.",
+      "url": "https://www.compass.com/homes-for-sale/tucson-az-85747/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "waiting_user",
+  "steps": 4,
+  "cost_usd": 0.004414,
+  "maliyet": 0.004414,
+  "elapsed_s": 24.9,
+  "sure_sn": 24.9,
+  "level": "medium",
+  "website": "https://www.compass.com/",
+  "domain": "www.compass.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}
