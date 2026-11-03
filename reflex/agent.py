@@ -135,6 +135,7 @@ from .planner import Subgoal, _extract_domain
 from .safety import check_action_safety, extract_origin
 from .supervisor import (
     SupervisorDecision,
+    check_final_answer,
     generate_field_text,
     interpret_user_message,
     resolve_escalation,
@@ -268,6 +269,8 @@ class ReflexSession:
         self.escalations: list[dict[str, Any]] = []
         self.text_calls: list[dict[str, Any]] = []
         self.interpret_calls: list[dict[str, Any]] = []
+        self.answer_checks: list[dict[str, Any]] = []
+        self._answer_check_rejections: int = 0
 
         # Pending state for pause/resume & post-verification escalation
         self.pending_fact_key: str | None = None
@@ -520,6 +523,9 @@ class ReflexSession:
         for t in self.text_calls:
             if "cost_usd" in t and t["cost_usd"] is not None:
                 cost_items.append(t["cost_usd"])
+        for ac in getattr(self, "answer_checks", []):
+            if "cost_usd" in ac and ac["cost_usd"] is not None:
+                cost_items.append(ac["cost_usd"])
         for ic in self.interpret_calls:
             if "cost_usd" in ic and ic["cost_usd"] is not None:
                 cost_items.append(ic["cost_usd"])
@@ -536,6 +542,7 @@ class ReflexSession:
             + [(e.get("usage") or {}) for e in self.escalations]
             + [(t.get("usage") or {}) for t in self.text_calls]
             + [(ic.get("usage") or {}) for ic in self.interpret_calls]
+            + [(ac.get("usage") or {}) for ac in getattr(self, "answer_checks", [])]
         )
         prompt_tokens = sum(int(u.get("prompt_tokens", 0) or 0) for u in usage_records if isinstance(u, dict))
         completion_tokens = sum(int(u.get("completion_tokens", 0) or 0) for u in usage_records if isinstance(u, dict))
@@ -624,6 +631,8 @@ class ReflexSession:
                 "stuck_counter": self._stuck_counter,
                 "s1_errors": self.s1_errors,
                 "text_helper_calls": len(self.text_calls),
+                "answer_checks": len(getattr(self, "answer_checks", [])),
+                "answer_check_rejections": getattr(self, "_answer_check_rejections", 0),
                 "trace_write_errors": self.trace_write_errors,
                 "visit_queue_rejected_count": self.ctx.visit_queue_rejected_count,
                 "median_decision_ms": median_ms,
@@ -1261,6 +1270,48 @@ class ReflexSession:
                 if entry and entry not in self.ctx.rejected_links:
                     self.ctx.rejected_links.append(entry)
                 break
+
+    def _answer_check_rejects(self, answer: str) -> bool:
+        """Send S2 back once when the final-answer check finds task requirements the answer does not meet.
+
+        The check never blocks an answer on its own: a failed call, a second COMPLETE_TASK, or too few
+        remaining steps all accept the answer as is.
+        """
+        model = getattr(self.config, "answer_check_model", "")
+        if not model or not answer or getattr(self, "_answer_check_rejections", 0) >= 1:
+            return False
+        if len(self.history) > self.config.max_steps - 5:
+            return False
+        try:
+            outcome = check_final_answer(
+                ctx=self.ctx,
+                answer=answer,
+                page=self.page if isinstance(self.page, dict) else {},
+                model=model,
+                supervisor_timeout_s=getattr(self.config, "answer_check_timeout_s", 20.0),
+                reasoning_effort=getattr(self.config, "answer_check_reasoning_effort", "low"),
+            )
+        except Exception as exc:  # noqa: BLE001 - a failed check must never block the answer
+            self.ctx.add_agent_message(f"answer_check_error: {exc}", kind="escalation_note")
+            return False
+        if not hasattr(self, "answer_checks"):
+            self.answer_checks = []
+        self.answer_checks.append(outcome.model_dump())
+        if outcome.verdict != "fail":
+            return False
+        self._answer_check_rejections = getattr(self, "_answer_check_rejections", 0) + 1
+        unmet = "; ".join(outcome.unmet)
+        self.pending_escalation_reason = (
+            "answer_check",
+            (
+                f"The final answer was checked against the task; these requirements are not met: {unmet}. "
+                "Continue on the site to meet them. If they cannot be met, use COMPLETE_TASK and say plainly "
+                "what could not be found; do not present a substitute as the answer."
+            ),
+        )
+        self.ctx.add_agent_message(f"answer_check_rejected: {unmet}", kind="escalation_note")
+        self.status = "ready"
+        return True
 
     def _verify_and_complete_task_from_plan(self, summary: str | None = None) -> dict[str, Any]:
         """Finish a planned task after System 2 returned COMPLETE_TASK.
@@ -2106,6 +2157,8 @@ class ReflexSession:
 
         # Case 1: Supervisor verifies the task is complete
         if sup.action_type == "COMPLETE_TASK":
+            if self._answer_check_rejects((sup.summary_for_user or sup.reasoning or "").strip()):
+                return self.snapshot()
             if self.ctx.plan and self.ctx.plan.needs_plan and trigger_type != "stuck_finish":
                 return self._verify_and_complete_task_from_plan(sup.summary_for_user)
             self.status = "done"

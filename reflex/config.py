@@ -28,6 +28,9 @@ OPENROUTER_BASE_URL = "https://openrouter.ai"
 OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 META_API_CHAT_URL = "https://api.meta.ai/v1/chat/completions"
+# Meta open-weights models served by Baseten (hackathon partner); model ids start with this prefix.
+BASETEN_CHAT_URL = "https://inference.baseten.co/v1/chat/completions"
+BASETEN_MODEL_PREFIX = "meta-models/"
 LOCAL_TURNIKE_URL = "http://127.0.0.1:8794/v1/systemone"
 
 DEFAULT_DECISION_BACKEND = "openrouter_jev"
@@ -86,6 +89,11 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
         "output": 0.20,
     },
     "muse-spark-1.3": {
+        "input": 1.25,
+        "cached": 0.15,
+        "output": 4.25,
+    },
+    "meta-models/muse-spark-open-1026": {
         "input": 1.25,
         "cached": 0.15,
         "output": 4.25,
@@ -218,6 +226,22 @@ def get_default_stay_on_start_site() -> bool:
     return val not in {"0", "false", "no", "off"}
 
 
+DEFAULT_ANSWER_CHECK_MODEL = "meta-models/muse-spark-open-1026"
+
+
+def get_default_answer_check_model() -> str:
+    """Model that checks the final answer before it is shown (REFLEX_ANSWER_CHECK_MODEL; "off" disables).
+
+    Unset: Muse Spark Open on Baseten when BASETEN_API_KEY is configured, otherwise no check.
+    """
+    load_env()
+    raw = os.environ.get("REFLEX_ANSWER_CHECK_MODEL")
+    if raw is None:
+        return DEFAULT_ANSWER_CHECK_MODEL if get_baseten_api_key() else ""
+    value = raw.strip()
+    return "" if value.lower() in {"", "0", "off", "false", "none"} else value
+
+
 DEFAULT_BROWSER_LANGUAGE = "tr-TR"
 
 
@@ -226,6 +250,12 @@ def get_default_browser_language() -> str:
     load_env()
     val = os.environ.get("REFLEX_BROWSER_LANG", DEFAULT_BROWSER_LANGUAGE).strip()
     return val or DEFAULT_BROWSER_LANGUAGE
+
+
+def get_baseten_api_key() -> str:
+    """Return the Baseten API key (`BASETEN_API_KEY`) used for Meta open-weights models, if configured."""
+    load_env()
+    return os.environ.get("BASETEN_API_KEY", "").strip()
 
 
 def save_env_key(key_name: str, key_value: str) -> None:
@@ -308,6 +338,9 @@ class ReflexConfig(BaseModel):
     ax_supplement: bool = Field(default_factory=get_default_ax_supplement)
     light_stealth: bool = Field(default_factory=get_default_light_stealth)
     stay_on_start_site: bool = Field(default_factory=get_default_stay_on_start_site)
+    answer_check_model: str = Field(default_factory=get_default_answer_check_model)
+    answer_check_reasoning_effort: str = "low"
+    answer_check_timeout_s: float = 20.0
     browser_language: str = Field(default_factory=get_default_browser_language)
 
     @field_validator("browser_language", mode="before")
