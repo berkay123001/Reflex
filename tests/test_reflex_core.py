@@ -30,6 +30,20 @@ def test_action_space_indexing():
     assert "SCROLL_DOWN" in controls
 
 
+def test_action_space_select_after_click_on_same_node():
+    """full300 2026-11-03 (Google Shopping): a node first offered as a click, then as dropdown options, raised KeyError."""
+    raw_actions = [
+        {"id": "e1", "node": 7, "kind": "click", "role": "combobox", "label": "Sort by"},
+        {"id": "e2", "node": 7, "kind": "select", "label": "Sort by → Rating", "value": "rating", "current_value": "relevance"},
+        {"id": "e3", "node": 7, "kind": "select", "label": "Sort by → Price", "value": "price", "current_value": "relevance"},
+    ]
+    elements, targets, _ = action_space(raw_actions)
+    assert len(elements) == 1
+    assert set(elements[0]["operations"]) == {"CLICK", "SELECT"}
+    assert [o["value"] for o in elements[0]["options"]] == ["rating", "price"]
+    assert set(targets["SELECT"]) == {"1:1", "1:2"}
+
+
 def test_verifier_checkbox_and_fill_without_url_change():
     """Critique #1: page_changed == False or same URL is NOT failure when element state changes."""
     before_page = {

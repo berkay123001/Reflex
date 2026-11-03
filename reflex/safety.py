@@ -12,6 +12,7 @@ from .config import MAX_SUPERVISOR_ELEMENTS
 
 MAX_PAGE_CONTROLS = 150
 MAX_CONTROL_LABEL_LENGTH = 140
+MAX_OFFSCREEN_FIELDS = 40
 
 
 def extract_origin(url: str | None) -> str:
@@ -456,6 +457,31 @@ def extract_focused_full_text(raw_full: str, focus: str = "", max_chars: int = 7
     return result
 
 
+def _offscreen_fields_block(controls: list[dict[str, Any]]) -> str:
+    """Read-only state of form fields scrolled out of view: field values are not page text,
+    so without this System 2 cannot tell an off-screen field is already filled."""
+    lines: list[str] = []
+    offscreen = [c for c in controls if c.get("where") in {"above", "below"}]
+    for ctrl in offscreen[:MAX_OFFSCREEN_FIELDS]:
+        role = sanitize_untrusted_text(str(ctrl.get("role", "")), 40)
+        lbl = sanitize_untrusted_text(str(ctrl.get("label", "")), MAX_CONTROL_LABEL_LENGTH)
+        if ctrl.get("checked") not in (None, ""):
+            state = f"checked={sanitize_untrusted_text(str(ctrl['checked']), 20)}"
+        elif ctrl.get("value") not in (None, ""):
+            state = f"value={sanitize_untrusted_text(str(ctrl['value']), 80)}"
+        else:
+            state = "empty"
+        lines.append(f"- ({role}) {lbl} | {state} | {ctrl['where']} the viewport")
+    if not lines:
+        return ""
+    if len(offscreen) > MAX_OFFSCREEN_FIELDS:
+        lines.append(f"+{len(offscreen) - MAX_OFFSCREEN_FIELDS} more form fields outside the viewport")
+    return (
+        "\n\nForm fields outside the viewport (current state only; scroll to reach one before acting on it):\n"
+        + "\n".join(lines)
+    )
+
+
 def wrap_untrusted_dom(
     page: dict[str, Any],
     elements: list[dict[str, Any]],
@@ -540,6 +566,8 @@ def wrap_untrusted_dom(
             ctrl_lines.append(f"[{idx}] ({role}) {lbl}{extra_str} | ops: {op}")
         if ctrl_lines:
             page_controls_block = "\n\nPage-wide form controls (also off-screen):\n" + "\n".join(ctrl_lines)
+    elif raw_page_controls:
+        page_controls_block = _offscreen_fields_block(raw_page_controls)
 
     extra_full_block = ""
     if full_text and len(full_text) > len(text) + 40:

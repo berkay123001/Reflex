@@ -1930,7 +1930,11 @@ class Browser:
 
         if target is None:
             if kind == "select":
-                raise RuntimeError("Dropdown execution was not confirmed; inspect before retrying.")
+                # Same recovery path as a covered click: the step fails and the agent gets told why.
+                raise TargetCoveredError(
+                    f"Dropdown '{action.get('label', '')}' could not be set: it is covered by an overlay/modal "
+                    "or offscreen, or that option is no longer listed. Close the overlay or pick a listed option."
+                )
             raise TargetCoveredError(
                 f"Target '{action.get('label', '')}' is covered by an overlay/modal or offscreen. Dismiss the overlay first."
             )

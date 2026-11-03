@@ -85,9 +85,6 @@ def action_space(
                 label=str(action.get("label", "")).split(" → ")[0] if kind == "select" else str(action.get("label", "")),
                 operations=[],
             )
-            if kind == "select":
-                element["value"] = action.get("current_value", "")
-                element["options"] = []
             elements.append(element)
 
         index = indices[node]
@@ -102,6 +99,10 @@ def action_space(
         if len(group) >= max_elements:
             continue
         element = elements[int(index) - 1]
+        if kind == "select" and "options" not in element:
+            # The node may have been indexed first through a click action; its dropdown options start here.
+            element["value"] = action.get("current_value", "")
+            element["options"] = []
         if operation not in element["operations"]:
             element["operations"].append(operation)
         target = index

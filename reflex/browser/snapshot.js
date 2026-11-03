@@ -612,11 +612,14 @@
                  (['INPUT', 'TEXTAREA'].includes(e.tagName) && !['checkbox', 'radio'].includes(e.type)) ? 'fill' :
                  (e.tagName === 'SELECT' ? 'select' : 'click');
 
+    const boxRect = box.getBoundingClientRect();
     const ctrlObj = {
       node: nodeId,
       role: rname,
       kind,
       label: ctrlLabel,
+      // Lets System 2 know a filled field is still there after scrolling past it.
+      where: boxRect.bottom <= 0 ? 'above' : (boxRect.top >= innerHeight ? 'below' : 'in view'),
     };
 
     if (['checkbox', 'radio'].includes(e.type)) {
