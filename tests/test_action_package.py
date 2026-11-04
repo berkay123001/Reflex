@@ -1078,7 +1078,8 @@ def test_executor_type_text_uses_s2_preset_text() -> None:
         patch("reflex.agent.generate_field_text") as mock_field_text,
         patch("reflex.agent.verify_step", return_value=_ok_verify()),
     ):
-        session = ReflexSession(url="https://example.com/signup", goal="Register", config=cfg)
+        # The user gives the email: personal-data fields only take values the user gave.
+        session = ReflexSession(url="https://example.com/signup", goal="Register as berkay123 with user@example.test", config=cfg)
 
         # Step 1: uses "berkay123"
         session.step()

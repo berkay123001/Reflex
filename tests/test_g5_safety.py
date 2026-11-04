@@ -685,3 +685,11 @@ def test_sending_a_message_to_a_third_party_needs_confirmation() -> None:
         assert check_action_safety({"kind": "click", "role": "button", "label": label}).requires_confirmation is True, label
     for label in ("Submit", "Search", "Send to phone", "Request a quote"):
         assert check_action_safety({"kind": "click", "role": "button", "label": label}).requires_confirmation is False, label
+
+
+def test_brand_names_with_buy_are_not_payments() -> None:
+    """full300 2026-11-04 (bestbuy.com): an 'Add to Cart' label naming a Best Buy gift card asked for payment approval."""
+    for label in ("Add to Cart, Best Buy $100 Celebrate Balloons Gift Card", "Best Buy Gift Card"):
+        assert check_action_safety({"kind": "click", "role": "button", "label": label}).requires_confirmation is False, label
+    for label in ("Buy", "Buy now", "Buy it now", "Buy tickets"):
+        assert check_action_safety({"kind": "click", "role": "button", "label": label}).requires_confirmation is True, label

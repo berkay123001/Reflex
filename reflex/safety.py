@@ -37,8 +37,8 @@ PAYMENT_PATTERNS = [
     r"\bpay\s+now\b",
     r"\bcheckout\b(?!\s+guide\b)",
     r"\bcheck\s*out\b(?!\s+guide\b)",
-    r"\bbuy\b",
-    r"\bbuy\s+now\b",
+    r"^\s*buy\b",  # a "Buy ..." button; not "Add to Cart - Best Buy $100 Gift Card"
+    r"\bbuy\s+(?:it\s+)?now\b",
     r"\bpurchase\b",
     r"\bcomplete\s+(?:purchase|order|payment)\b",
     r"\bplace\s+order\b",

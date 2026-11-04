@@ -184,6 +184,50 @@ _OPEN_WEB_START_SITES = {"google", "bing", "duckduckgo", "yandex", "yahoo", "bai
 _SECOND_LEVEL_LABELS = {"co", "com", "org", "net", "gov", "ac", "edu"}
 
 
+# Fields that ask for the user's own details. Only values the user gave (goal, chat, saved facts) go in.
+_PERSONAL_FIELD_RE = re.compile(
+    r"\b(?:e-?mail|phone|telephone|mobile|password|passcode|card\s*number|credit\s*card|cvv|cvc|ssn|"
+    r"social\s*security|street\s*address|address\s*line|(?:first|last|full|middle|your)\s*name)\b",
+    re.IGNORECASE,
+)
+_NAME_FIELD_RE = re.compile(r"\bname\b", re.IGNORECASE)
+_NOT_A_PERSON_RE = re.compile(
+    r"\b(?:search|agent|company|business|product|store|user\s*name|username|file|course|recipe|event|pet)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_personal_field(action: dict[str, Any]) -> bool:
+    """True for a fill field that asks for a name, email, phone, address, password or card details."""
+    if action.get("kind") != "fill":
+        return False
+    text = " ".join(str(action.get(k) or "") for k in ("label", "field_label", "accessible_name"))
+    if _PERSONAL_FIELD_RE.search(text):
+        return True
+    return bool(_NAME_FIELD_RE.search(text)) and not _NOT_A_PERSON_RE.search(text)
+
+
+def _user_gave(ctx: Any, text: str) -> bool:
+    """True when `text` comes from the user: the goal, a user chat message or a saved fact."""
+    if not str(text or "").strip():
+        return True
+    given = " ".join(
+        [str(ctx.primary_goal or "")]
+        + [m.content for m in ctx.chat_log if m.role == "user"]
+        + [str(v) for v in (ctx.user_facts or {}).values()]
+    )
+    def norm(value: str) -> str:
+        return re.sub(r"[^a-z0-9@.+]", "", value.lower())
+
+    if norm(text) and norm(text) in norm(given):
+        return True
+    digits = re.sub(r"\D", "", text)
+    if len(digits) >= 6 and digits in re.sub(r"\D", "", given):
+        return True
+    words = [w for w in re.findall(r"[a-z0-9@.+'-]+", text.lower()) if len(w) > 1]
+    return bool(words) and all(w in given.lower() for w in words)
+
+
 def _site_key(url: str | None) -> str:
     """Registrable site of a URL (`webapps.akc.org` -> `akc.org`, `www.bbc.co.uk` -> `bbc.co.uk`)."""
     host = extract_domain(url)
@@ -2650,6 +2694,21 @@ class ReflexSession:
                 self.ctx.add_agent_message(ask_msg, kind="ask_user")
                 return self.snapshot()
             typed_text = outcome.text
+
+        # 2b. Personal-data fields take only what the user gave; nothing is made up for an absent user.
+        if action.get("kind") == "fill" and typed_text and _is_personal_field(action) and not _user_gave(self.ctx, typed_text):
+            field = str(action.get("field_label") or action.get("label") or "this field")
+            self.pending_escalation_reason = (
+                "personal_data",
+                (
+                    f"'{field}' asks for personal data the user did not give ('{typed_text}'). Do not invent names, "
+                    "emails, phone numbers, addresses or account details: ask the user, or finish with COMPLETE_TASK "
+                    "and say which details are needed."
+                ),
+            )
+            self.ctx.add_agent_message(f"personal_data_blocked: {field}", kind="escalation_note")
+            self.status = "ready"
+            return self.snapshot()
 
         # 3. Execute on Browser via CDP
         before_page = self.page

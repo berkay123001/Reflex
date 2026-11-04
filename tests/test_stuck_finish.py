@@ -307,7 +307,7 @@ def test_new_url_resets_non_progress_budget() -> None:
 
 def test_verifier_effective_progress_resets_non_progress_budget() -> None:
     """Effective progress declared by verifier resets the 12-step non-progress budget counter to 0."""
-    sess = _make_mock_session()
+    sess = _make_mock_session(goal="Fill in the form with the name Alice")  # the user gave the name (personal-data guard)
     sess._no_progress_steps = 11
 
     p_before = {"url": "https://example.com/form", "fingerprint": "fp1", "text": "Form empty", "actions": [{"id": "t1", "kind": "fill", "node": 1}]}
