@@ -1,0 +1,1675 @@
+{
+ "what": "Same first 50 Online-Mind2Web tasks of the full run, same code (commit 81fc1a4), three modes, judged by Claude (Opus 5.5)",
+ "arms": {
+  "muse_only": {
+   "success": 28,
+   "total": 50,
+   "reachable": 40,
+   "success_reachable": 28
+  },
+  "strict_hybrid_jev": {
+   "success": 28,
+   "total": 50,
+   "reachable": 39,
+   "success_reachable": 28
+  },
+  "strict_hybrid_turnike": {
+   "success": 27,
+   "total": 50,
+   "reachable": 40,
+   "success_reachable": 27
+  }
+ },
+ "tasks": [
+  {
+   "index": 0,
+   "task_id": "27fa3ac20745d3d35e89fae157f63069",
+   "level": "hard",
+   "task": "Browse the class schedule of graduate-level chemistry courses on Monday afternoons in the winter of 2023.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "ExploreCourses Winter 2022-23, graduate, Monday 2-5 pm: CHEM 300",
+    "steps": 15,
+    "s1_steps": null,
+    "elapsed_s": 87.5,
+    "cost_usd": 0.010772
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "ExploreCourses Winter 2023, graduate + Monday filters, afternoon classes listed",
+    "steps": 21,
+    "s1_steps": 6,
+    "elapsed_s": 149.7,
+    "cost_usd": 0.019817
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "ExploreCourses CHEM Winter 2022-23 time schedule: CHEM 300 on Monday afternoon",
+    "steps": 21,
+    "s1_steps": 1,
+    "elapsed_s": 164.5,
+    "cost_usd": 0.020839
+   }
+  },
+  {
+   "index": 1,
+   "task_id": "7072d09436972a5d5fe7476e3e9f1559",
+   "level": "medium",
+   "task": "Show me the comparison of the first two personal credit cards that do not charge foreign transaction fees.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "did not reach the card comparison",
+    "steps": 40,
+    "s1_steps": null,
+    "elapsed_s": 246.4,
+    "cost_usd": 0.015127
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "did not reach the card comparison",
+    "steps": 40,
+    "s1_steps": 10,
+    "elapsed_s": 208.1,
+    "cost_usd": 0.016616
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "did not reach the card comparison",
+    "steps": 40,
+    "s1_steps": 0,
+    "elapsed_s": 275.6,
+    "cost_usd": 0.023221
+   }
+  },
+  {
+   "index": 2,
+   "task_id": "28e7574e7bd6d14f36d2988a5ef2bd23",
+   "level": "hard",
+   "task": "Get a part-time job within 5 miles of Moscow, Idaho in the accommodation and food services industry, as a chef, and show jobs for corporate only.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "gave_up",
+    "reason": "OhioMeansJobs lists Ohio jobs only; 0 results for Moscow, Idaho",
+    "steps": 5,
+    "s1_steps": null,
+    "elapsed_s": 78.1,
+    "cost_usd": 0.009186
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "gave_up",
+    "reason": "idle guard ended the run on OhioMeansJobs",
+    "steps": 28,
+    "s1_steps": 8,
+    "elapsed_s": 205.5,
+    "cost_usd": 0.022882
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "gave_up",
+    "reason": "OhioMeansJobs lists Ohio jobs only; said so without searching",
+    "steps": 0,
+    "s1_steps": 0,
+    "elapsed_s": 24.1,
+    "cost_usd": 0.002855
+   }
+  },
+  {
+   "index": 3,
+   "task_id": "05483c50cc9b04c8ac44c574758fb2bd",
+   "level": "medium",
+   "task": "Look for the best rated BBB accredited charity near 12023.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "bbb.org: Cloudflare",
+    "steps": 24,
+    "s1_steps": null,
+    "elapsed_s": 146.9,
+    "cost_usd": 0.006389
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "bbb.org: Cloudflare",
+    "steps": 7,
+    "s1_steps": 3,
+    "elapsed_s": 37.1,
+    "cost_usd": 0.002318
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "bbb.org: Cloudflare",
+    "steps": 12,
+    "s1_steps": 3,
+    "elapsed_s": 70.3,
+    "cost_usd": 0.00535
+   }
+  },
+  {
+   "index": 4,
+   "task_id": "29526b17a32485742b5ab63507e99417",
+   "level": "easy",
+   "task": "Browse Humira dosage information.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Humira dosage page on drugs.com",
+    "steps": 2,
+    "s1_steps": null,
+    "elapsed_s": 23.4,
+    "cost_usd": 0.004556
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Humira dosage page on drugs.com",
+    "steps": 2,
+    "s1_steps": 2,
+    "elapsed_s": 21.2,
+    "cost_usd": 0.003727
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Humira dosage page on drugs.com",
+    "steps": 2,
+    "s1_steps": 2,
+    "elapsed_s": 20.3,
+    "cost_usd": 0.002682
+   }
+  },
+  {
+   "index": 5,
+   "task_id": "6db4a0e346976f2729ba9afcd3208941",
+   "level": "easy",
+   "task": "Look up tracking information for shipment #3023858502.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "tracking lookup done; FedEx says the number is not found",
+    "steps": 2,
+    "s1_steps": null,
+    "elapsed_s": 21.2,
+    "cost_usd": 0.002433
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "tracking lookup done; FedEx says the number is not found",
+    "steps": 1,
+    "s1_steps": 0,
+    "elapsed_s": 20.7,
+    "cost_usd": 0.002206
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "tracking lookup done; FedEx says the number is not found",
+    "steps": 1,
+    "s1_steps": 0,
+    "elapsed_s": 15.8,
+    "cost_usd": 0.002365
+   }
+  },
+  {
+   "index": 6,
+   "task_id": "a96fca87a17d792644e736d1d10d3cbe",
+   "level": "easy",
+   "task": "View the pricing plan for 'Business'. Specifically, we have 100 users. We need a 1PB storage quota and a 50 TB transfer quota.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Business calculator 100 users, 1000 TB, 50 TB, total shown",
+    "steps": 10,
+    "s1_steps": null,
+    "elapsed_s": 86.9,
+    "cost_usd": 0.007738
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Business calculator 100 users, 1000 TB, 50 TB, total shown",
+    "steps": 15,
+    "s1_steps": 6,
+    "elapsed_s": 113.4,
+    "cost_usd": 0.012778
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Business calculator 100 users, 1 PB, 50 TB, total shown",
+    "steps": 16,
+    "s1_steps": 2,
+    "elapsed_s": 133.5,
+    "cost_usd": 0.011282
+   }
+  },
+  {
+   "index": 7,
+   "task_id": "d9d8b7d84a3f8d057e368254fe8d65e2",
+   "level": "medium",
+   "task": "Find the first commit submitted by NielsRogge to the official repository of the SAM2 model.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "first NielsRogge commit to facebookresearch/sam2",
+    "steps": 3,
+    "s1_steps": null,
+    "elapsed_s": 35.0,
+    "cost_usd": 0.004441
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "first NielsRogge commit to facebookresearch/sam2",
+    "steps": 5,
+    "s1_steps": 2,
+    "elapsed_s": 48.1,
+    "cost_usd": 0.00909
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "first NielsRogge commit to facebookresearch/sam2",
+    "steps": 3,
+    "s1_steps": 0,
+    "elapsed_s": 40.5,
+    "cost_usd": 0.004437
+   }
+  },
+  {
+   "index": 8,
+   "task_id": "34992feb69eb8e788faa06868b365c49",
+   "level": "easy",
+   "task": "Submit a request for vehicle registration renewal with title number X123456 and last 4 digits of VIN is 1234.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "dmv.virginia.gov: no response",
+    "steps": 0,
+    "s1_steps": null,
+    "elapsed_s": 30.7,
+    "cost_usd": 0.0
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "dmv.virginia.gov: no response",
+    "steps": 0,
+    "s1_steps": null,
+    "elapsed_s": 30.6,
+    "cost_usd": 0.0
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "dmv.virginia.gov: no response",
+    "steps": 0,
+    "s1_steps": null,
+    "elapsed_s": 30.6,
+    "cost_usd": 0.0
+   }
+  },
+  {
+   "index": 9,
+   "task_id": "0b51b4fa0295ae80ccd176ebdad6fff6",
+   "level": "hard",
+   "task": "Search for a red Toyota Corolla from model years 2018 to 2023 on CarMax.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "carmax: ERR_HTTP2_PROTOCOL_ERROR",
+    "steps": 7,
+    "s1_steps": null,
+    "elapsed_s": 75.3,
+    "cost_usd": 0.00259
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "carmax: unreachable",
+    "steps": 5,
+    "s1_steps": 0,
+    "elapsed_s": 259.6,
+    "cost_usd": 0.002727
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "carmax: ERR_HTTP2_PROTOCOL_ERROR",
+    "steps": 7,
+    "s1_steps": 0,
+    "elapsed_s": 58.1,
+    "cost_usd": 0.002493
+   }
+  },
+  {
+   "index": 10,
+   "task_id": "d71be72aa25c3eab8eea47a0e60382e2",
+   "level": "easy",
+   "task": "Find technical specs for the latest Macbook Air on Apple.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "MacBook Air (M5) tech specs page",
+    "steps": 3,
+    "s1_steps": null,
+    "elapsed_s": 28.6,
+    "cost_usd": 0.005027
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "MacBook Air (M5) tech specs page",
+    "steps": 2,
+    "s1_steps": 1,
+    "elapsed_s": 23.4,
+    "cost_usd": 0.004562
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "MacBook Air (M5) tech specs page",
+    "steps": 3,
+    "s1_steps": 2,
+    "elapsed_s": 24.9,
+    "cost_usd": 0.004443
+   }
+  },
+  {
+   "index": 11,
+   "task_id": "239a29bde438fe44fe17fe1390ef1634",
+   "level": "medium",
+   "task": "Find me a gluten-free diet to lose weight for a pregnant woman.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "gluten-free and pregnancy guidance on Healthline",
+    "steps": 6,
+    "s1_steps": null,
+    "elapsed_s": 63.5,
+    "cost_usd": 0.007862
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "gluten-free diet guide and pregnancy advice on Healthline",
+    "steps": 7,
+    "s1_steps": 5,
+    "elapsed_s": 46.7,
+    "cost_usd": 0.006578
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "gluten-free and pregnancy guidance on Healthline",
+    "steps": 5,
+    "s1_steps": 1,
+    "elapsed_s": 43.8,
+    "cost_usd": 0.00775
+   }
+  },
+  {
+   "index": 12,
+   "task_id": "7c09c2c7c87cf6bb1138701eb54284ea",
+   "level": "medium",
+   "task": "Find the comments for the most popular news in the past month under the Quantum Physics topic.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "phys.org: antibot check",
+    "steps": 40,
+    "s1_steps": null,
+    "elapsed_s": 191.4,
+    "cost_usd": 0.013839
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "phys.org: antibot check",
+    "steps": 24,
+    "s1_steps": 7,
+    "elapsed_s": 114.4,
+    "cost_usd": 0.004105
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "phys.org: antibot check",
+    "steps": 40,
+    "s1_steps": 1,
+    "elapsed_s": 205.0,
+    "cost_usd": 0.013459
+   }
+  },
+  {
+   "index": 13,
+   "task_id": "bc2ce7f206045dd2d322e5695a947219",
+   "level": "medium",
+   "task": "Estimate the federal income tax I would owe on $158,500 of taxable income in ZIP code 97007, filing as single.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "unsupported_answer",
+    "reason": "again reports $27,107 as tax on $158,500 taxable income (it is the tax on $158,500 gross)",
+    "steps": 17,
+    "s1_steps": null,
+    "elapsed_s": 88.6,
+    "cost_usd": 0.016065
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "federal tax for $158,500 household income, not for $158,500 taxable income",
+    "steps": 18,
+    "s1_steps": 6,
+    "elapsed_s": 100.8,
+    "cost_usd": 0.018547
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "unsupported_answer",
+    "reason": "again reports $27,107 as tax on $158,500 taxable income (it is the tax on $158,500 gross)",
+    "steps": 18,
+    "s1_steps": 6,
+    "elapsed_s": 87.8,
+    "cost_usd": 0.013764
+   }
+  },
+  {
+   "index": 14,
+   "task_id": "db1ffb5e60578597d1c3aa3c389ac7b1",
+   "level": "easy",
+   "task": "Search for smart TVs with a screen size of 55 to 65 inches and filter the results to show only those that have an LED display.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Google Shopping 55-65 in smart TVs with the LED filter",
+    "steps": 6,
+    "s1_steps": null,
+    "elapsed_s": 48.7,
+    "cost_usd": 0.016006
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Google Shopping smart TVs with the LED filter",
+    "steps": 5,
+    "s1_steps": 3,
+    "elapsed_s": 37.9,
+    "cost_usd": 0.011679
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Google Shopping smart TVs with 55-65 in and LED filters",
+    "steps": 12,
+    "s1_steps": 0,
+    "elapsed_s": 72.3,
+    "cost_usd": 0.016935
+   }
+  },
+  {
+   "index": 15,
+   "task_id": "9af05e392cf3f5a8ff17aa764ba5bda6",
+   "level": "hard",
+   "task": "Get a quote from C and above-rated solar energy equipment company within 10 miles of Miami, Florida.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "bbb.org: Cloudflare",
+    "steps": 15,
+    "s1_steps": null,
+    "elapsed_s": 96.0,
+    "cost_usd": 0.005229
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "bbb.org: Cloudflare",
+    "steps": 40,
+    "s1_steps": 10,
+    "elapsed_s": 172.8,
+    "cost_usd": 0.004995
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "bbb.org: Cloudflare",
+    "steps": 40,
+    "s1_steps": 7,
+    "elapsed_s": 181.7,
+    "cost_usd": 0.005129
+   }
+  },
+  {
+   "index": 16,
+   "task_id": "987bad7c6d4726d64232a8a1c3386888",
+   "level": "hard",
+   "task": "Find the seller info and seller's notes about the used car model 2011 BMW 135 with a max price of $30000.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 16,
+    "s1_steps": null,
+    "elapsed_s": 85.8,
+    "cost_usd": 0.005813
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 14,
+    "s1_steps": 7,
+    "elapsed_s": 59.0,
+    "cost_usd": 0.004841
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 10,
+    "s1_steps": 5,
+    "elapsed_s": 42.4,
+    "cost_usd": 0.00231
+   }
+  },
+  {
+   "index": 17,
+   "task_id": "d9a8689393effeed75ea0866e44e1def",
+   "level": "medium",
+   "task": "Find the address and phone of the Office of the Inspector General (OIG).",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "OIG address and phone from the OIG directory",
+    "steps": 4,
+    "s1_steps": null,
+    "elapsed_s": 47.0,
+    "cost_usd": 0.004417
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "OIG address and phone from the OIG directory",
+    "steps": 6,
+    "s1_steps": 3,
+    "elapsed_s": 45.9,
+    "cost_usd": 0.00395
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "OIG address and phone from the OIG directory",
+    "steps": 2,
+    "s1_steps": 0,
+    "elapsed_s": 23.2,
+    "cost_usd": 0.002973
+   }
+  },
+  {
+   "index": 18,
+   "task_id": "246d654fab7c31d9651007e39e75f74f",
+   "level": "easy",
+   "task": "Open the most helpful 5-star reviews of Alpine Ridge.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Alpine Ridge reviews, Most Helpful, 5 stars",
+    "steps": 8,
+    "s1_steps": null,
+    "elapsed_s": 49.2,
+    "cost_usd": 0.006292
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Alpine Ridge reviews, Most Helpful, 5 stars",
+    "steps": 5,
+    "s1_steps": 4,
+    "elapsed_s": 30.8,
+    "cost_usd": 0.004227
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Alpine Ridge reviews, Most Helpful, 5 stars",
+    "steps": 11,
+    "s1_steps": 2,
+    "elapsed_s": 64.6,
+    "cost_usd": 0.006591
+   }
+  },
+  {
+   "index": 19,
+   "task_id": "9bb63ad0e38d5691a618932a8b31c05a",
+   "level": "easy",
+   "task": "Look for reviews of a Nest Hello Video Doorbell and filter by 1-star ratings.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Nest Hello reviews on Google Shopping filtered to 1 star",
+    "steps": 11,
+    "s1_steps": null,
+    "elapsed_s": 56.7,
+    "cost_usd": 0.009569
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Nest Hello reviews on Google Shopping filtered to 1 star",
+    "steps": 9,
+    "s1_steps": 5,
+    "elapsed_s": 34.8,
+    "cost_usd": 0.008314
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Nest Hello reviews on Google Shopping filtered to 1 star",
+    "steps": 10,
+    "s1_steps": 1,
+    "elapsed_s": 52.4,
+    "cost_usd": 0.008251
+   }
+  },
+  {
+   "index": 20,
+   "task_id": "3ec0f6138d37fadcb989347a6088ec45",
+   "level": "easy",
+   "task": "Open the page to learn more about how to get accredited.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "BBB Get Accredited page opened",
+    "steps": 4,
+    "s1_steps": null,
+    "elapsed_s": 28.6,
+    "cost_usd": 0.00237
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "BBB Get Accredited page opened",
+    "steps": 4,
+    "s1_steps": 2,
+    "elapsed_s": 23.9,
+    "cost_usd": 0.00217
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "BBB Get Accredited page opened",
+    "steps": 5,
+    "s1_steps": 2,
+    "elapsed_s": 26.0,
+    "cost_usd": 0.002067
+   }
+  },
+  {
+   "index": 21,
+   "task_id": "f05e87c5b92d9869e08806103c1c15a1",
+   "level": "hard",
+   "task": "Find all startup companies from the 2022 and 2023 Y Combinator batches that are based in France and currently have job openings.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "batches + hiring filtered but no France filter; two companies listed",
+    "steps": 18,
+    "s1_steps": null,
+    "elapsed_s": 105.8,
+    "cost_usd": 0.01827
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "YC directory filtered by batches, HQ France and hiring: six companies",
+    "steps": 11,
+    "s1_steps": 4,
+    "elapsed_s": 68.8,
+    "cost_usd": 0.010257
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "YC companies not filtered within 40 steps",
+    "steps": 40,
+    "s1_steps": 0,
+    "elapsed_s": 269.8,
+    "cost_usd": 0.02622
+   }
+  },
+  {
+   "index": 22,
+   "task_id": "4e0f5561a76478da87995dee00b09572",
+   "level": "easy",
+   "task": "Show me the monthly weather forecast for Florida City.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "AccuWeather monthly forecast for Florida City",
+    "steps": 5,
+    "s1_steps": null,
+    "elapsed_s": 35.3,
+    "cost_usd": 0.006526
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "AccuWeather monthly forecast for Florida City",
+    "steps": 6,
+    "s1_steps": 3,
+    "elapsed_s": 38.6,
+    "cost_usd": 0.006628
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "AccuWeather monthly forecast for Florida City",
+    "steps": 6,
+    "s1_steps": 2,
+    "elapsed_s": 38.4,
+    "cost_usd": 0.005571
+   }
+  },
+  {
+   "index": 23,
+   "task_id": "3f312ae3efc3c3e90ababe050dd4e7ae",
+   "level": "easy",
+   "task": "Find the current NFL standings for the AFC East division on NFL.com and go to the page on which team is in first place.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "AFC East standings, first-place Bills team page opened",
+    "steps": 4,
+    "s1_steps": null,
+    "elapsed_s": 45.2,
+    "cost_usd": 0.006822
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "AFC East standings, first-place Bills team page opened",
+    "steps": 2,
+    "s1_steps": 1,
+    "elapsed_s": 31.1,
+    "cost_usd": 0.004868
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "AFC East standings, first-place Bills team page opened",
+    "steps": 2,
+    "s1_steps": 0,
+    "elapsed_s": 33.3,
+    "cost_usd": 0.004477
+   }
+  },
+  {
+   "index": 24,
+   "task_id": "b6d10e9bd19b4009a02dea0e98f4e1ae",
+   "level": "easy",
+   "task": "Check the current standings for MLS on Fox Sports.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "current MLS standings on Fox Sports",
+    "steps": 2,
+    "s1_steps": null,
+    "elapsed_s": 44.0,
+    "cost_usd": 0.005102
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "current MLS standings on Fox Sports",
+    "steps": 2,
+    "s1_steps": 2,
+    "elapsed_s": 34.7,
+    "cost_usd": 0.003409
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "current MLS standings on Fox Sports",
+    "steps": 2,
+    "s1_steps": 2,
+    "elapsed_s": 33.7,
+    "cost_usd": 0.002801
+   }
+  },
+  {
+   "index": 25,
+   "task_id": "eb2db4b769c145dbe6ba4f74f3e0de98",
+   "level": "medium",
+   "task": "Find an energetic hairless dog with medium barking.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "American Hairless Terrier on akc.org",
+    "steps": 12,
+    "s1_steps": null,
+    "elapsed_s": 91.8,
+    "cost_usd": 0.009349
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "American Hairless Terrier on akc.org",
+    "steps": 28,
+    "s1_steps": 4,
+    "elapsed_s": 175.2,
+    "cost_usd": 0.022152
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "AKC breed not found within 40 steps",
+    "steps": 40,
+    "s1_steps": 1,
+    "elapsed_s": 220.8,
+    "cost_usd": 0.021578
+   }
+  },
+  {
+   "index": 26,
+   "task_id": "50d91eabde542906937ab4c5b6f8f23a_121425",
+   "level": "hard",
+   "task": "My baby boy was born on Dec 1, 2025. His weight is 7 lb 8 oz, height is 20 inches, and head circumference is 35 cm. The measurement date is Dec 1, 2025. Can you calculate his growth percentiles using a calculator?",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "gave_up",
+    "reason": "idle guard ended the run after 2 steps on BabyCenter",
+    "steps": 2,
+    "s1_steps": null,
+    "elapsed_s": 47.9,
+    "cost_usd": 0.009054
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "BabyCenter percentiles 55th/69th/66th",
+    "steps": 20,
+    "s1_steps": 14,
+    "elapsed_s": 83.0,
+    "cost_usd": 0.018792
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "BabyCenter calculator not finished within 40 steps",
+    "steps": 40,
+    "s1_steps": 12,
+    "elapsed_s": 167.3,
+    "cost_usd": 0.019152
+   }
+  },
+  {
+   "index": 27,
+   "task_id": "eb323dc584156d0eb3a2b90bb8c4b791_110325",
+   "level": "hard",
+   "task": "Find the cheapest 2 bed and 3+ bath apartment listing for rent in New York.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "$3,600 2-bed 3-bath listing, cheapest after price sort",
+    "steps": 17,
+    "s1_steps": null,
+    "elapsed_s": 109.2,
+    "cost_usd": 0.01802
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "answered $4,500; cheaper 2-bed 3-bath rentals exist ($3,600)",
+    "steps": 17,
+    "s1_steps": 14,
+    "elapsed_s": 63.8,
+    "cost_usd": 0.010592
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "$3,600 2-bed 3-bath listing, cheapest after price sort",
+    "steps": 18,
+    "s1_steps": 2,
+    "elapsed_s": 109.8,
+    "cost_usd": 0.017071
+   }
+  },
+  {
+   "index": 28,
+   "task_id": "dcd26e662a616d373ddd339747c6ce5b",
+   "level": "hard",
+   "task": "Take a weight management quiz to find a motivating article for a non-exercising, mostly eating out and can't control portions and cravings, and who has a strong support system, enjoys traveling, loves family time and cooking.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "wrong_target",
+    "reason": "took the 'What might be affecting your weight loss goals' quiz again",
+    "steps": 29,
+    "s1_steps": null,
+    "elapsed_s": 142.0,
+    "cost_usd": 0.02031
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "wrong_target",
+    "reason": "took the 'What might be affecting your weight loss goals' quiz",
+    "steps": 29,
+    "s1_steps": 15,
+    "elapsed_s": 103.1,
+    "cost_usd": 0.014491
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "wrong_target",
+    "reason": "took the 'What might be affecting your weight loss goals' quiz",
+    "steps": 29,
+    "s1_steps": 1,
+    "elapsed_s": 138.2,
+    "cost_usd": 0.017298
+   }
+  },
+  {
+   "index": 29,
+   "task_id": "3621b099326c7aebd2e2dac6be3b52d1",
+   "level": "easy",
+   "task": "Open the profile page of the leader of the Nvidia Learning and Perception Lab.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "NVIDIA LPR leader profile not opened within 40 steps",
+    "steps": 40,
+    "s1_steps": null,
+    "elapsed_s": 319.6,
+    "cost_usd": 0.02754
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "gave_up",
+    "reason": "named Jan Kautz from the lab page but did not open his profile",
+    "steps": 39,
+    "s1_steps": 10,
+    "elapsed_s": 358.0,
+    "cost_usd": 0.035415
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Jan Kautz profile reached from the NVIDIA LPR lab page",
+    "steps": 10,
+    "s1_steps": 1,
+    "elapsed_s": 77.7,
+    "cost_usd": 0.007735
+   }
+  },
+  {
+   "index": 30,
+   "task_id": "fd787623166785d84093565bf945fd24",
+   "level": "medium",
+   "task": "Check the interaction between Novolin N and Novolin R.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Novolin N + Novolin R interaction report",
+    "steps": 8,
+    "s1_steps": null,
+    "elapsed_s": 44.8,
+    "cost_usd": 0.005459
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Novolin N + Novolin R interaction report",
+    "steps": 8,
+    "s1_steps": 6,
+    "elapsed_s": 31.9,
+    "cost_usd": 0.005605
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Novolin N + Novolin R interaction report",
+    "steps": 7,
+    "s1_steps": 4,
+    "elapsed_s": 30.9,
+    "cost_usd": 0.00397
+   }
+  },
+  {
+   "index": 31,
+   "task_id": "2dd41b1d0e8f389d0683f4a4627abfe6",
+   "level": "medium",
+   "task": "Show houses for sale in Maryland with a maximum price of $60,000.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Maryland houses up to $60K on landwatch",
+    "steps": 8,
+    "s1_steps": null,
+    "elapsed_s": 54.4,
+    "cost_usd": 0.008174
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Maryland houses up to $60K on landwatch",
+    "steps": 8,
+    "s1_steps": 3,
+    "elapsed_s": 58.1,
+    "cost_usd": 0.008371
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Maryland houses up to $60K on landwatch",
+    "steps": 4,
+    "s1_steps": 0,
+    "elapsed_s": 36.8,
+    "cost_usd": 0.005281
+   }
+  },
+  {
+   "index": 32,
+   "task_id": "4c572a627b53b0f9a734ab37f21819b8",
+   "level": "easy",
+   "task": "Browse apartments with at least 2 bedrooms and 2 bathrooms and a max price of $4000 per month.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "unsupported_answer",
+    "reason": "bedroom/bathroom values typed but not applied (4,250 results, $9,000 listings); claims filters active",
+    "steps": 20,
+    "s1_steps": null,
+    "elapsed_s": 144.5,
+    "cost_usd": 0.022634
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "craigslist filters applied: max $4000, 2+ beds, 2+ baths (282 results)",
+    "steps": 6,
+    "s1_steps": 0,
+    "elapsed_s": 59.1,
+    "cost_usd": 0.009909
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "stayed in the Istanbul area craigslist chose for us; no US area",
+    "steps": 19,
+    "s1_steps": 2,
+    "elapsed_s": 129.8,
+    "cost_usd": 0.013379
+   }
+  },
+  {
+   "index": 33,
+   "task_id": "f158345f8489e0d1d91e28768c39bca1",
+   "level": "hard",
+   "task": "Estimate the total cost (with basic support) of using 5 million input tokens and 5 million output tokens each for GPT-4o and GPT-4o Mini, both deployed in the US/EU Data Zones under Standard (On-Demand) in the East US region.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Azure Data Zone prices and total for GPT-4o and 4o-mini",
+    "steps": 7,
+    "s1_steps": null,
+    "elapsed_s": 63.7,
+    "cost_usd": 0.006742
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Azure Data Zone prices and total for GPT-4o and 4o-mini",
+    "steps": 5,
+    "s1_steps": 3,
+    "elapsed_s": 47.2,
+    "cost_usd": 0.005278
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Azure Data Zone prices and total for GPT-4o and 4o-mini",
+    "steps": 2,
+    "s1_steps": 0,
+    "elapsed_s": 40.4,
+    "cost_usd": 0.005177
+   }
+  },
+  {
+   "index": 34,
+   "task_id": "fcf4952d2a1d80ea505c555c3c3b54e7",
+   "level": "hard",
+   "task": "Find the cheapest used  8-cylinder bmw made between 2005-2015 and priced from 25,000 to  50,000 dollars with mileage less than 50,000 miles or less.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 15,
+    "s1_steps": null,
+    "elapsed_s": 80.8,
+    "cost_usd": 0.005418
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 35,
+    "s1_steps": 14,
+    "elapsed_s": 143.5,
+    "cost_usd": 0.006058
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 23,
+    "s1_steps": 5,
+    "elapsed_s": 101.0,
+    "cost_usd": 0.006093
+   }
+  },
+  {
+   "index": 35,
+   "task_id": "3c1ffc3f494e423b3c434c79e35da8f3_110325",
+   "level": "medium",
+   "task": "Find photos related to Trinity in The Matrix Wiki community.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Trinity photos on the Matrix Wiki",
+    "steps": 1,
+    "s1_steps": null,
+    "elapsed_s": 34.0,
+    "cost_usd": 0.003241
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "Matrix Wiki Trinity page not reached within 40 steps",
+    "steps": 40,
+    "s1_steps": 13,
+    "elapsed_s": 185.4,
+    "cost_usd": 0.007062
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "Matrix Wiki Trinity page not reached within 40 steps",
+    "steps": 40,
+    "s1_steps": 5,
+    "elapsed_s": 196.2,
+    "cost_usd": 0.007147
+   }
+  },
+  {
+   "index": 36,
+   "task_id": "7fff82864f21ddeccf4104a220892824",
+   "level": "medium",
+   "task": "Find the lowest 27\"-32\" Samsung or LG computer monitors nearby which have 4k, IPS display.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "search queries instead of nearby/size/panel filters and a price sort",
+    "steps": 6,
+    "s1_steps": null,
+    "elapsed_s": 43.4,
+    "cost_usd": 0.008138
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "search queries instead of nearby/size/panel filters and a price sort",
+    "steps": 3,
+    "s1_steps": 1,
+    "elapsed_s": 88.6,
+    "cost_usd": 0.008056
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "missed_requirement",
+    "reason": "search queries instead of nearby/size/panel filters and a price sort",
+    "steps": 3,
+    "s1_steps": 0,
+    "elapsed_s": 33.4,
+    "cost_usd": 0.005582
+   }
+  },
+  {
+   "index": 37,
+   "task_id": "4e801ba102dfaf22c7cf7a126b107609",
+   "level": "medium",
+   "task": "Find Linux platform software developers in 10080 who master the Python language and Java language with web interface project type.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Thumbtack software developers in 10080 with the requested filters",
+    "steps": 10,
+    "s1_steps": null,
+    "elapsed_s": 63.3,
+    "cost_usd": 0.009619
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Thumbtack software developers in 10080 with the requested filters",
+    "steps": 10,
+    "s1_steps": 6,
+    "elapsed_s": 52.6,
+    "cost_usd": 0.008807
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Thumbtack software developers in 10080 with the requested filters",
+    "steps": 8,
+    "s1_steps": 1,
+    "elapsed_s": 55.4,
+    "cost_usd": 0.008527
+   }
+  },
+  {
+   "index": 38,
+   "task_id": "47bfe8a7e0e4e7efc837287b407fbe90",
+   "level": "medium",
+   "task": "Compare the first and second most popular smartphones manufactured by Xiaomi and show the comparison chart.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "top two Xiaomi phones compared on versus.com",
+    "steps": 6,
+    "s1_steps": null,
+    "elapsed_s": 44.3,
+    "cost_usd": 0.007016
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "top two Xiaomi phones compared on versus.com",
+    "steps": 7,
+    "s1_steps": 3,
+    "elapsed_s": 80.5,
+    "cost_usd": 0.007367
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "top two Xiaomi phones compared on versus.com",
+    "steps": 9,
+    "s1_steps": 3,
+    "elapsed_s": 54.3,
+    "cost_usd": 0.008115
+   }
+  },
+  {
+   "index": 39,
+   "task_id": "f2097f92a10d42a842c14179f422311e",
+   "level": "easy",
+   "task": "Add a $50 Uber gift card to the cart.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "$50 Uber gift card shown as unavailable; kept trying",
+    "steps": 40,
+    "s1_steps": null,
+    "elapsed_s": 276.3,
+    "cost_usd": 0.017869
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "$50 Uber gift card shown as unavailable; kept trying",
+    "steps": 40,
+    "s1_steps": 5,
+    "elapsed_s": 230.6,
+    "cost_usd": 0.021022
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "$50 Uber digital gift card added to the Best Buy cart (listed as available in this run)",
+    "steps": 28,
+    "s1_steps": 1,
+    "elapsed_s": 161.0,
+    "cost_usd": 0.012143
+   }
+  },
+  {
+   "index": 40,
+   "task_id": "2fc51dd3febd447f0fdcdabca8d944ce_110325",
+   "level": "medium",
+   "task": "Locate a self-storage unit near zip code 60538 that can fit the contens of two small bedrooms and is climate-controlled.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "climate-controlled unit at Public Storage Aurora near 60538",
+    "steps": 10,
+    "s1_steps": null,
+    "elapsed_s": 65.1,
+    "cost_usd": 0.010805
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "publicstorage: Cloudflare in this run",
+    "steps": 10,
+    "s1_steps": 5,
+    "elapsed_s": 42.5,
+    "cost_usd": 0.002399
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "climate-controlled unit at Public Storage Aurora near 60538",
+    "steps": 11,
+    "s1_steps": 2,
+    "elapsed_s": 69.1,
+    "cost_usd": 0.009759
+   }
+  },
+  {
+   "index": 41,
+   "task_id": "bbbc243b4f18a7a897f0bc84e11d293f",
+   "level": "easy",
+   "task": "Find out how many assists Chris Paul has been averaging in the current season.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Chris Paul 3.3 APG on nba.com",
+    "steps": 2,
+    "s1_steps": null,
+    "elapsed_s": 23.6,
+    "cost_usd": 0.002603
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Chris Paul 3.3 APG on nba.com",
+    "steps": 2,
+    "s1_steps": 0,
+    "elapsed_s": 23.3,
+    "cost_usd": 0.002843
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "Chris Paul 3.3 APG on nba.com",
+    "steps": 2,
+    "s1_steps": 0,
+    "elapsed_s": 22.7,
+    "cost_usd": 0.002495
+   }
+  },
+  {
+   "index": 42,
+   "task_id": "c03ee2be3d73556ab789c0ad1cbd3451",
+   "level": "hard",
+   "task": "Find a dog groomer for nail trimming within 100 miles of zip code 10005 and check the detailed service prices of the first one.",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "gave_up",
+    "reason": "AKC groomer search returns 403; stopped honestly",
+    "steps": 35,
+    "s1_steps": null,
+    "elapsed_s": 283.3,
+    "cost_usd": 0.022668
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "AKC groomer search not reached within 40 steps",
+    "steps": 40,
+    "s1_steps": 1,
+    "elapsed_s": 416.0,
+    "cost_usd": 0.021403
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "AKC groomer search not reached within 40 steps",
+    "steps": 40,
+    "s1_steps": 0,
+    "elapsed_s": 413.5,
+    "cost_usd": 0.016196
+   }
+  },
+  {
+   "index": 43,
+   "task_id": "63d6866fc000fcb1f153e07604bd1395",
+   "level": "medium",
+   "task": "What are the Nearby Attractions from the most popular attraction in Hong Kong?",
+   "muse_only": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "nearby attractions of the top Hong Kong attraction not reached",
+    "steps": 40,
+    "s1_steps": null,
+    "elapsed_s": 344.8,
+    "cost_usd": 0.017894
+   },
+   "strict_hybrid_jev": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "nearby attractions of the top Hong Kong attraction not reached",
+    "steps": 40,
+    "s1_steps": 13,
+    "elapsed_s": 266.3,
+    "cost_usd": 0.017403
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "step_limit",
+    "reason": "nearby attractions of the top Hong Kong attraction not reached",
+    "steps": 40,
+    "s1_steps": 0,
+    "elapsed_s": 301.0,
+    "cost_usd": 0.041077
+   }
+  },
+  {
+   "index": 44,
+   "task_id": "79f0bd7df6e685f30f20025cc6755c0a_110325",
+   "level": "hard",
+   "task": "Show me the list of external hard drives for Mac with a capacity greater than 2TB on Micro Center, sorted by price from lowest to highest.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "microcenter: Cloudflare",
+    "steps": 10,
+    "s1_steps": null,
+    "elapsed_s": 61.7,
+    "cost_usd": 0.004672
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "microcenter: Cloudflare",
+    "steps": 12,
+    "s1_steps": 5,
+    "elapsed_s": 50.1,
+    "cost_usd": 0.002859
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "microcenter: Cloudflare",
+    "steps": 10,
+    "s1_steps": 3,
+    "elapsed_s": 48.9,
+    "cost_usd": 0.002599
+   }
+  },
+  {
+   "index": 45,
+   "task_id": "e7f6cca9a8875f98fee3b711ead3a444_110325",
+   "level": "easy",
+   "task": "Find the posts liked by the user Taylor Swift on Tumblr.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "@taylorswift likes page on Tumblr",
+    "steps": 4,
+    "s1_steps": null,
+    "elapsed_s": 36.2,
+    "cost_usd": 0.006229
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "@taylorswift likes page on Tumblr",
+    "steps": 3,
+    "s1_steps": 0,
+    "elapsed_s": 34.9,
+    "cost_usd": 0.006559
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "@taylorswift likes page on Tumblr",
+    "steps": 5,
+    "s1_steps": 1,
+    "elapsed_s": 50.5,
+    "cost_usd": 0.010809
+   }
+  },
+  {
+   "index": 46,
+   "task_id": "1b867afecf072cb877ebfa4069263746",
+   "level": "hard",
+   "task": "Display the figure comparing unemployment trends among women in Illinois and Michigan.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "women's unemployment trends, Illinois vs Michigan",
+    "steps": 29,
+    "s1_steps": null,
+    "elapsed_s": 134.6,
+    "cost_usd": 0.01136
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "women's unemployment trends, Illinois vs Michigan",
+    "steps": 30,
+    "s1_steps": 4,
+    "elapsed_s": 136.3,
+    "cost_usd": 0.01555
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "failure",
+    "failure_type": "wrong_target",
+    "reason": "showed the general comparison plot (unemployment row), not the women's unemployment trends figure",
+    "steps": 10,
+    "s1_steps": 0,
+    "elapsed_s": 61.5,
+    "cost_usd": 0.006746
+   }
+  },
+  {
+   "index": 47,
+   "task_id": "ba2a469af584f16da93ce6a7430cf7e5_070826",
+   "level": "medium",
+   "task": "Search for a beginner’s course in computer science that includes python programming skills.",
+   "muse_only": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "beginner CS course with Python on Coursera",
+    "steps": 3,
+    "s1_steps": null,
+    "elapsed_s": 31.4,
+    "cost_usd": 0.004885
+   },
+   "strict_hybrid_jev": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "beginner CS course with Python on Coursera",
+    "steps": 2,
+    "s1_steps": 1,
+    "elapsed_s": 24.3,
+    "cost_usd": 0.00398
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "success",
+    "failure_type": null,
+    "reason": "beginner CS course with Python on Coursera",
+    "steps": 2,
+    "s1_steps": 1,
+    "elapsed_s": 23.3,
+    "cost_usd": 0.003929
+   }
+  },
+  {
+   "index": 48,
+   "task_id": "2218042362d8fae73756eb309848c2b2",
+   "level": "medium",
+   "task": "Compare Audi A7 with Audi A6, both made in 2023, and hide similarities.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 12,
+    "s1_steps": null,
+    "elapsed_s": 73.6,
+    "cost_usd": 0.004684
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 15,
+    "s1_steps": 8,
+    "elapsed_s": 62.5,
+    "cost_usd": 0.004355
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 31,
+    "s1_steps": 7,
+    "elapsed_s": 143.8,
+    "cost_usd": 0.006648
+   }
+  },
+  {
+   "index": 49,
+   "task_id": "39c388cdc468688c8139cc2bb5157c13",
+   "level": "medium",
+   "task": "Calculate the estimated car loan payment amount for an average credit-rated person for a 15,000-dollar car with a down payment of 2000 dollars and loan tenure of 48 months in zip 65215 and shop for the lowest-priced car.",
+   "muse_only": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 17,
+    "s1_steps": null,
+    "elapsed_s": 97.3,
+    "cost_usd": 0.012339
+   },
+   "strict_hybrid_jev": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 30,
+    "s1_steps": 14,
+    "elapsed_s": 133.4,
+    "cost_usd": 0.010372
+   },
+   "strict_hybrid_turnike": {
+    "verdict": "blocked",
+    "failure_type": "blocked",
+    "reason": "cars.com: Cloudflare",
+    "steps": 11,
+    "s1_steps": 3,
+    "elapsed_s": 63.5,
+    "cost_usd": 0.008405
+   }
+  }
+ ]
+}

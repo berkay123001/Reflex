@@ -1,0 +1,244 @@
+{
+  "task_id": "199be0b54a436daee74247971fc684ee_070826",
+  "task": "My name is Mike. I would like to send Christene (christenson@gmail.com) a Dillard’s $100 eGift Card for her birthday. The delivery date should be set for next Monday. Please include the message: “Happy Birthday, wishing you many more years to come.”",
+  "final_result_response": "Could not complete the $100 Dillard's eGift Card for Christene (christenson@gmail.com) from Mike with message 'Happy Birthday, wishing you many more years to come' for next Monday (Nov 9, 2026) because dillards.com detects an international location and shows 'This item is not available for international purchase' with no amount, recipient, message, or delivery date form. I tried loading the US version, changing country, and reloading multiple times but it redirects to international mode. To complete: open dillards.com from a US IP/address, go to Dillard's eGift Card page, select $100, enter To: Christene / christenson@gmail.com, From: Mike, Message as above, and choose delivery date Monday Nov 9, 2026, then proceed to checkout.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Gift cards link is visible, so I will open it.",
+      "url": "https://www.dillards.com/c/home-gift-cards?facet=dil_shipinternational:Y",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The category is filtered empty, so I will search directly.",
+      "url": "https://www.dillards.com/c/home-gift-cards?facet=dil_shipinternational:Y",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to follow search suggestion to find eGift product.",
+      "url": "https://www.dillards.com/c/giftcard?trackAsSearch=gift+card&facet=dil_shipinternational:Y",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The eGift shop link is visible and matches the task.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] International block prevents form, so I will load US site.",
+      "url": "https://www.dillards.com/?facet=dil_shipinternational:Y",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will load the US eGift page to reveal the purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page blocks purchase in international mode, so I will change country.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I must dismiss the country notice to access the purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Cookie banner blocks form, so I will close it first.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[action_rejected] I must load the clean US page to reveal the form.",
+      "url": "https://www.dillards.com/c/home-gift-cards?facet=dil_shipinternational:Y",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I must load the US version to reveal the purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to switch to US store to reveal purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need US mode to reveal purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to close the country modal to access the purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] International block prevents form, so I will switch country to US.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "SELECT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Must switch country to US to reveal purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] I need to exit international mode to reveal the purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to dismiss the popup blocking the form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I must escape international mode to reveal purchase form.",
+      "url": "https://www.dillards.com/?facet=dil_shipinternational:Y",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will load the clean eGift page to reveal purchase form.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Form hidden by international mode, need footer control.",
+      "url": "https://www.dillards.com/p/dillards-egift-card/503516586",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 21,
+  "cost_usd": 0.02074,
+  "maliyet": 0.02074,
+  "elapsed_s": 182.6,
+  "sure_sn": 182.6,
+  "level": "hard",
+  "website": "https://www.dillards.com/",
+  "domain": "www.dillards.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00149055
+    },
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0019523
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

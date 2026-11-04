@@ -1,0 +1,59 @@
+{
+  "task_id": "0170ca95038b05fa58d463fe627ac605",
+  "task": "Check if a visa is required to work in the UK for longer than 6 months in Healthcare as an American citizen.",
+  "final_result_response": "Yes, a visa is required for an American citizen to work in the UK in Healthcare for longer than 6 months.\n\nThe applicable visa is the **Health and Care Worker visa** (gov.uk/health-care-worker-visa).\n\nKey details from GOV.UK:\n- Allows medical professionals to come to or stay in the UK to do an eligible job with the NHS, an NHS supplier or in adult social care.\n- Requirements: qualified doctor, nurse, health professional or adult social care professional; eligible health/social care job; UK employer approved by Home Office; certificate of sponsorship; minimum salary; English language ability; confirmed job offer before applying.\n- Duration: visa can last up to 5 years before extension, so covers >6 months. Can be extended unlimited times and after 5 years may apply to settle permanently (indefinite leave to remain).\n- Must apply online from outside the UK up to 3 months before start date; decision usually within 3 weeks.\n- No healthcare surcharge; can use NHS for free from visa start date.\n- If not eligible, another UK work visa may apply (check-uk-visa).",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search gov.uk for healthcare work visa requirements.",
+      "url": "https://www.gov.uk/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Query is typed, so I will submit the search.",
+      "url": "https://www.gov.uk/search/all?keywords=Health+Care+Worker+visa",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result directly answers visa requirement question.",
+      "url": "https://www.gov.uk/health-care-worker-visa",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.003365,
+  "maliyet": 0.003365,
+  "elapsed_s": 18.2,
+  "sure_sn": 18.2,
+  "level": "hard",
+  "website": "https://www.gov.uk/",
+  "domain": "www.gov.uk",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00148505
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,422 @@
+{
+  "task_id": "63d6866fc000fcb1f153e07604bd1395",
+  "task": "What are the Nearby Attractions from the most popular attraction in Hong Kong?",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reach Hong Kong attractions ranking to find most popular.",
+      "url": "https://us.trip.com/things-to-do/?locale=en-US&curr=USD",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need the official Hong Kong ranking to identify the top attraction.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Disneyland is clearly most popular, so open its page.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US%26poiType%3D3%26scene%3Dticket&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification cannot be solved, so I return to list page.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] I will retry the Disneyland detail page to find nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US%26poiType%3D3%26scene%3Dticket&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] WWW domain triggers captcha, so try US domain version.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fus.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN386lrEjNy0XA%2BorxVMRoe8kuBGFHk5nex0ey0hd4R9vLU4xyhos24xn7tYM%2B19f9rxKwK4gGPwYsfNakaoV2azZblhmfxhCL8VIKLA6Z7%2B3IMqBwr42r4jg%3D%3D",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Verification cannot be solved, so I will try alternate route.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US%26poiType%3D3%26scene%3Dticket&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Verification blocks detail page, so I will return to list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Direct URLs trigger verification, so try clicking the listing card.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US%26poiType%3D3%26scene%3Dticket&ref=https%3A%2F%2Fus.trip.com%2F&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification cannot be solved, so return to list page.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Detail travel-guide pages trigger verification, so I will try alternate listing route.",
+      "url": "https://us.trip.com/things-to-do/experiences/hongkong-attractions/",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Trying click-through to detail page to find nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%2F&ref=https%3A%2F%2Fus.trip.com%2F&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks progress, so return to list page.",
+      "url": "https://us.trip.com/things-to-do/experiences/hongkong-attractions/",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need list page to try alternative detail access.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will open the US Disneyland detail page to find nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fus.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN386lrEjNy0XA%2BorxVMRoe8kuBGFHk5nex0ey0hd4R9vLU4xyhos24xn7tYM%2B19f9rxKwK4gGPwYsfNakaoV2azZblhmfxhCL8VIKLA6Z7%2B3IMqBwr42r4jg%3D%3D",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks detail, so I return to list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] I need the detail page to find nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks direct page, so I will return and seek alternative.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] [Anti-Loop: skipped already-visited link 'Hong Kong Disneyland 2026 Global 100 - Best Things to Do Hong Kong Disneyland  10 4.7 /5 92.7k reviews WORLD OF FROZEN IS NOW OPEN AT HONG KONG DISNEYLAND \"For the First Time in Forever,\" immerse yourself fully in the epic world of the beloved \"Frozen\" films, brought to life before your very eyes! Let It Go Like Never Before at World of Frozen Guests are invited to explore the kingdom of Arendelle, from a magical musical boat ride to zooming through Arendelle's picturesque landscape, and Anna and Elsa's hidden forest hideaway. Indulge yourself in delicious cuisine, pick up unique souvenirs, delve deeper into the story of “Frozen” with enchanting attractions and experiences in day and night! THE MOST MAGICAL SHOW ON EARTH The nighttime spectacular, “Momentous”, illuminates the night sky with about 20 minutes of music and memorable moments. It reminds us how precious time is, and to cherish every moment with our loved ones. CASTLE OF MAGICAL DREAMS Standing as a shining beacon of courage, hope and possibility, the Castle of Magical Dreams stands proudly as the new centerpiece of Hong Kong Disneyland. It is built on 13 classic Disney tales of Princesses and Queens and inspires everyone to dream big. IT'S PLAYTIME WITH DUFFY AND FRIENDS Are you ready to jump into a whole new Fans-tasy adventure? Duffy and Friends are dressed in their seasonal outfits, and they want to write new stories with you! They love to spend this colorful time surrounded by laughter, smelling the flowers, touching the grass, bouncing around, jumping for joy, and playing wherever and whenever with you! So, let your innocent self out to play wholeheartedly. CAN'T MISS MARVEL EXPERIENCES If you are a Marvel fan, be sure to join the heroes in defeating the evil forces of Hydra at the highly-rated Iron Man Experience, and Ant-Man and The Wasp: Nano-Battle! Fantastic Dining And Shopping Experiences Feast your eyes and satisfy your appetite with a whimsical assortment of food items inspired by classic Disney Characters or taste the exquisite cuisine integrating authentic flavors from around the world; and bring back a keepsake or two from the merchandise store to commemorate the magical experience. Stay In The Magic Extend the Disney spirit for a never-ending magical experience at Hong Kong Disneyland Resort hotels. Whether you are vacationing in a themed suite, spending a romantic staycation, or celebrating a spectacular day. The happiest place on earth becomes the dreami-est place, the delicious-est place, the magic-est place, with iconic Disney Friends at every turn. As to Disney artwork, logos, and properties: ©Disney ©2024 Marvel Content from official website of Hong Kong Disneyland Hong Kong · 12.7 km from downtown collect this' -> scrolling down] Direct URLs trigger verification, so trying click navigation instead.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will try a slightly different detail URL to reach Nearby Attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fus.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN386lrEjNy0XA%2BorxVMRoe8kuBGFHk5nex0ey0hd4R9vLU4xyhos24xn7tYM%2B19f9rxKwK4gGPwYsfNakaoV2azZblhmfxhCL8VIKLA6Z7%2B3IMqBwr42r4jg%3D%3D",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks detail pages, so return to list page.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Travel-guide pages are blocked, so I will use things-to-do product pages instead.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Travel-guide is blocked, so I will use site search instead.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Search input is filled, now submit to get results.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Empty results page requires returning to working list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The US detail URL may avoid verification and show nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fus.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN386lrEjNy0XA%2BorxVMRoe8kuBGFHk5nex0ey0hd4R9vLU4xyhos24xn7tYM%2B19f9rxKwK4gGPwYsfNakaoV2azZblhmfxhCL8VIKLA6Z7%2B3IMqBwr42r4jg%3D%3D",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks detail page, so return to list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Travel-guide is blocked, so I will try ticket detail.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Empty search page gives no data, so return to list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] [Anti-Loop: skipped already-visited link 'Hong Kong Disneyland 2026 Global 100 - Best Things to Do Hong Kong Disneyland  10 4.7 /5 92.7k reviews WORLD OF FROZEN IS NOW OPEN AT HONG KONG DISNEYLAND \"For the First Time in Forever,\" immerse yourself fully in the epic world of the beloved \"Frozen\" films, brought to life before your very eyes! Let It Go Like Never Before at World of Frozen Guests are invited to explore the kingdom of Arendelle, from a magical musical boat ride to zooming through Arendelle's picturesque landscape, and Anna and Elsa's hidden forest hideaway. Indulge yourself in delicious cuisine, pick up unique souvenirs, delve deeper into the story of “Frozen” with enchanting attractions and experiences in day and night! THE MOST MAGICAL SHOW ON EARTH The nighttime spectacular, “Momentous”, illuminates the night sky with about 20 minutes of music and memorable moments. It reminds us how precious time is, and to cherish every moment with our loved ones. CASTLE OF MAGICAL DREAMS Standing as a shining beacon of courage, hope and possibility, the Castle of Magical Dreams stands proudly as the new centerpiece of Hong Kong Disneyland. It is built on 13 classic Disney tales of Princesses and Queens and inspires everyone to dream big. IT'S PLAYTIME WITH DUFFY AND FRIENDS Are you ready to jump into a whole new Fans-tasy adventure? Duffy and Friends are dressed in their seasonal outfits, and they want to write new stories with you! They love to spend this colorful time surrounded by laughter, smelling the flowers, touching the grass, bouncing around, jumping for joy, and playing wherever and whenever with you! So, let your innocent self out to play wholeheartedly. CAN'T MISS MARVEL EXPERIENCES If you are a Marvel fan, be sure to join the heroes in defeating the evil forces of Hydra at the highly-rated Iron Man Experience, and Ant-Man and The Wasp: Nano-Battle! Fantastic Dining And Shopping Experiences Feast your eyes and satisfy your appetite with a whimsical assortment of food items inspired by classic Disney Characters or taste the exquisite cuisine integrating authentic flavors from around the world; and bring back a keepsake or two from the merchandise store to commemorate the magical experience. Stay In The Magic Extend the Disney spirit for a never-ending magical experience at Hong Kong Disneyland Resort hotels. Whether you are vacationing in a themed suite, spending a romantic staycation, or celebrating a spectacular day. The happiest place on earth becomes the dreami-est place, the delicious-est place, the magic-est place, with iconic Disney Friends at every turn. As to Disney artwork, logos, and properties: ©Disney ©2024 Marvel Content from official website of Hong Kong Disneyland Hong Kong · 12.7 km from downtown collect this' -> scrolling down] Direct navigation triggers verification, so trying click-through instead.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    },
+    {
+      "step": 30,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reach detail page to find nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fus.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN386lrEjNy0XA%2BorxVMRoe8kuBGFHk5nex0ey0hd4R9vLU4xyhos24xn7tYM%2B19f9rxKwK4gGPwYsfNakaoV2azZblhmfxhCL8VIKLA6Z7%2B3IMqBwr42r4jg%3D%3D",
+      "screenshot": "trajectory/30_full_screenshot.png"
+    },
+    {
+      "step": 31,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification cannot be solved, so I return to list page.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/31_full_screenshot.png"
+    },
+    {
+      "step": 32,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Direct navigation may bypass verification and show nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/32_full_screenshot.png"
+    },
+    {
+      "step": 33,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks detail, so I return to list page.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/33_full_screenshot.png"
+    },
+    {
+      "step": 34,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Clean URL may bypass verification and show nearby attractions.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fus.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN386lrEjNy0XA%2BorxVMRoe8kuBGFHk5nex0ey0hd4R9vLU4xyhos24xn7tYM%2B19f9rxKwK4gGPwYsfNakaoV2azZblhmfxhCL8VIKLA6Z7%2B3IMqBwr42r4jg%3D%3D",
+      "screenshot": "trajectory/34_full_screenshot.png"
+    },
+    {
+      "step": 35,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Verification blocks detail page so I return to list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/35_full_screenshot.png"
+    },
+    {
+      "step": 36,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] [Anti-Loop: skipped already-visited link 'View all Attractions' -> scrolling down] I will try the us.trip.com attractions list to avoid verification.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/36_full_screenshot.png"
+    },
+    {
+      "step": 37,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] [Anti-Loop: skipped already-visited link 'Hong Kong Disneyland 2026 Global 100 - Best Things to Do Hong Kong Disneyland  10 4.7 /5 92.7k reviews WORLD OF FROZEN IS NOW OPEN AT HONG KONG DISNEYLAND \"For the First Time in Forever,\" immerse yourself fully in the epic world of the beloved \"Frozen\" films, brought to life before your very eyes! Let It Go Like Never Before at World of Frozen Guests are invited to explore the kingdom of Arendelle, from a magical musical boat ride to zooming through Arendelle's picturesque landscape, and Anna and Elsa's hidden forest hideaway. Indulge yourself in delicious cuisine, pick up unique souvenirs, delve deeper into the story of “Frozen” with enchanting attractions and experiences in day and night! THE MOST MAGICAL SHOW ON EARTH The nighttime spectacular, “Momentous”, illuminates the night sky with about 20 minutes of music and memorable moments. It reminds us how precious time is, and to cherish every moment with our loved ones. CASTLE OF MAGICAL DREAMS Standing as a shining beacon of courage, hope and possibility, the Castle of Magical Dreams stands proudly as the new centerpiece of Hong Kong Disneyland. It is built on 13 classic Disney tales of Princesses and Queens and inspires everyone to dream big. IT'S PLAYTIME WITH DUFFY AND FRIENDS Are you ready to jump into a whole new Fans-tasy adventure? Duffy and Friends are dressed in their seasonal outfits, and they want to write new stories with you! They love to spend this colorful time surrounded by laughter, smelling the flowers, touching the grass, bouncing around, jumping for joy, and playing wherever and whenever with you! So, let your innocent self out to play wholeheartedly. CAN'T MISS MARVEL EXPERIENCES If you are a Marvel fan, be sure to join the heroes in defeating the evil forces of Hydra at the highly-rated Iron Man Experience, and Ant-Man and The Wasp: Nano-Battle! Fantastic Dining And Shopping Experiences Feast your eyes and satisfy your appetite with a whimsical assortment of food items inspired by classic Disney Characters or taste the exquisite cuisine integrating authentic flavors from around the world; and bring back a keepsake or two from the merchandise store to commemorate the magical experience. Stay In The Magic Extend the Disney spirit for a never-ending magical experience at Hong Kong Disneyland Resort hotels. Whether you are vacationing in a themed suite, spending a romantic staycation, or celebrating a spectacular day. The happiest place on earth becomes the dreami-est place, the delicious-est place, the magic-est place, with iconic Disney Friends at every turn. As to Disney artwork, logos, and properties: ©Disney ©2024 Marvel Content from official website of Hong Kong Disneyland Hong Kong · 12.7 km from downtown collect this' -> scrolling down] Direct click may bypass verification unlike direct URL navigation.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/37_full_screenshot.png"
+    },
+    {
+      "step": 38,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Direct click may open detail differently than URL navigation.",
+      "url": "https://verify.trip.com/static/tripVerify.html?returnUrl=https%3A%2F%2Fwww.trip.com%2Ftravel-guide%2Fattraction%2Fhong-kong%2Fhong-kong-disneyland-10558849%3Fcurr%3DUSD%26locale%3Den-US%26poiType%3D3%26scene%3Dticket&ref=&bgref=w2ceUSide1dfV%2Bsmqgz6IuDlex5pPDiHmiDP6SXtWGgkgTLIdnW9kJXlt%2Fx1ARODaSZpZF2GHDQP072T%2BhZzfC%2FtonT0cwnllggParKhDvTCI1JgfXVHD5ZMX7Ck7m450mxD%2FJq8x1laZcO2xWpX8UW399bk9AyoymPXX2MsW2nvjIqxcpi9Qoj6ar5i5oCoXxmhvDPnywKaGoQfMKIjswmZwpf3QRn9tZHl0CO6zWAnuUbKEA8%2FoE8BYvsbej30OAWX9b0tUpPftuB29Hzp1EiLAyqj9MN3qY%2BS0XxQ%2BwVe0QChEfdi5Ma32w4FZShK",
+      "screenshot": "trajectory/38_full_screenshot.png"
+    },
+    {
+      "step": 39,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Verification blocks detail page, so I return to list.",
+      "url": "https://us.trip.com/things-to-do/hong-kong-38/",
+      "screenshot": "trajectory/39_full_screenshot.png"
+    }
+  ],
+  "status": "max_steps",
+  "steps": 40,
+  "cost_usd": 0.036471,
+  "maliyet": 0.036471,
+  "elapsed_s": 235.9,
+  "sure_sn": 235.9,
+  "level": "medium",
+  "website": "https://us.trip.com/",
+  "domain": "us.trip.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,119 @@
+{
+  "task_id": "7abdceee212151f187ee1a1744c57606",
+  "task": "Can you show me the page with the filing fee for a self-petitioned I-140 application?",
+  "final_result_response": "The filing fee page for self-petitioned Form I-140 (Immigrant Petition for Alien Workers) is shown on USCIS Fee Calculator: https://www.uscis.gov/feecalculator?topic_id=97275\n\nFees displayed:\n- General Filing: $715 by paper, $665 online, plus additional fees\n- Additional Asylum Program Fee for Small Employer or self-petitioner: $300\n\nSo total for self-petitioner: $715 + $300 = $1,015 by paper, or $665 + $300 = $965 online.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search for I-140 to locate its fee page.",
+      "url": "https://www.uscis.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term is entered, so I will submit the search.",
+      "url": "https://www.uscis.gov/search?query=I-140",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches I-140, so open it to find fee.",
+      "url": "https://www.uscis.gov/i-140",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I-140 page lists Filing Fee section but fee details need fees page.",
+      "url": "https://www.uscis.gov/forms/filing-fees",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Generic page lacks I-140 amount, so calculator will show it.",
+      "url": "https://www.uscis.gov/feecalculator",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The form selection widget is below the fold, so I will scroll down.",
+      "url": "https://www.uscis.gov/feecalculator",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select I-140 form for fee details.",
+      "url": "https://www.uscis.gov/feecalculator",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to filter the form dropdown to find I-140 quickly.",
+      "url": "https://www.uscis.gov/feecalculator",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to click the I-140 option to display its fee.",
+      "url": "https://www.uscis.gov/feecalculator?form=i-140",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 9,
+  "cost_usd": 0.005788,
+  "maliyet": 0.005788,
+  "elapsed_s": 39.9,
+  "sure_sn": 39.9,
+  "level": "medium",
+  "website": "https://www.uscis.gov/",
+  "domain": "www.uscis.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00125055
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

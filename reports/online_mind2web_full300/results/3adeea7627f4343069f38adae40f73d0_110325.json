@@ -1,0 +1,20 @@
+{
+  "task_id": "3adeea7627f4343069f38adae40f73d0_110325",
+  "task": "Within 25 Miles of 96817, find a nursing home that accepts medicare.",
+  "final_result_response": null,
+  "action_history": [],
+  "status": "error",
+  "error": "Input.dispatchMouseEvent timed out after 5s waiting for the daemon\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"artifacts/araclar/kod/g23_full/reflex/browser/cdp.py\", line 687, in call\n    return cdp(method, session_id=sid, **params)\n  File \".venv/lib/python3.13/site-packages/browser_harness/helpers.py\", line 74, in cdp\n    return _send(\n           ~~~~~^\n        {\"method\": method, \"params\": params, \"session_id\": session_id},\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        response_timeout=_response_timeout,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ).get(\"result\", {})\n    ^\n  File \".venv/lib/python3.13/site-packages/browser_harness/helpers.py\", line 63, in _send\n    raise _IPCResponseTimeout(\n        f\"{label} timed out after {response_timeout:g}s waiting for the daemon\"\n    ) from e\nbrowser_harness.helpers._IPCResponseTimeout: Input.dispatchMouseEvent timed out after 5s waiting for the daemon\n",
+  "steps": 4,
+  "cost_usd": 0.0,
+  "maliyet": 0.0,
+  "elapsed_s": 51.9,
+  "sure_sn": 51.9,
+  "level": "medium",
+  "website": "https://medicare.gov",
+  "domain": "medicare.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,49 @@
+{
+  "task_id": "82eb3bfedd78456a0230b389f4e7a938",
+  "task": "Open the XRP yearly chart.",
+  "final_result_response": "XRP yearly chart is now open on CoinMarketCap. The XRP page (https://coinmarketcap.com/currencies/xrp/) shows the Price chart with the 1Y tab selected, displaying price around $1.25 with 46.38% change over 1Y.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] XRP link is visible so I will open it.",
+      "url": "https://coinmarketcap.com/currencies/xrp/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] XRP page shows chart with 1Y tab available to click.",
+      "url": "https://coinmarketcap.com/currencies/xrp/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 2,
+  "cost_usd": 0.00466,
+  "maliyet": 0.00466,
+  "elapsed_s": 22.4,
+  "sure_sn": 22.4,
+  "level": "easy",
+  "website": "https://coinmarketcap.com/",
+  "domain": "coinmarketcap.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00197905
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

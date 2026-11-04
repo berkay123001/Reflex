@@ -1,0 +1,59 @@
+{
+  "task_id": "16200f51d63f0a47a58fa17acd49e368",
+  "task": "Find a recipe that includes eggplant and mushrooms.",
+  "final_result_response": "Found recipe: Teriyaki Eggplant & Mushroom Don\nURL: https://cookpad.com/eng/recipes/17110323\nIngredients include 2-3 Asian eggplant and 8-9 shiitake mushrooms, plus sweet onion, sake, mirin, shoyu, garlic, gochugang, soy sauce, maple syrup, green onions, sesame seeds. 45 mins, 3 servings.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search using the site search box.",
+      "url": "https://cookpad.com/uk",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Text is ready, need to trigger search.",
+      "url": "https://cookpad.com/eng/search/eggplant%20mushroom",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +2, rej 0) Search results contain a recipe clearly with both ingredients, so open it.",
+      "url": "https://cookpad.com/eng/recipes/17110323",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.00365,
+  "maliyet": 0.00365,
+  "elapsed_s": 22.9,
+  "sure_sn": 22.9,
+  "level": "easy",
+  "website": "https://cookpad.com/",
+  "domain": "cookpad.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00123055
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

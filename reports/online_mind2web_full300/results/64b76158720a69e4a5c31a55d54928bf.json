@@ -1,0 +1,79 @@
+{
+  "task_id": "64b76158720a69e4a5c31a55d54928bf",
+  "task": "Compare two pescatarian diets for eating healthier.",
+  "final_result_response": "Comparison of Two Pescatarian Diets for Healthier Eating (from healthline.com):\n\n1) Classic Pescatarian Diet (from /nutrition/pescatarian-diet): Vegetarian base + fish/seafood, plus dairy and eggs. Rich in omega-3s (DHA/EPA), high-quality protein, vitamin B12. Eliminates red meat and poultry to lower heart disease, type 2 diabetes risk.\n\n2) Pescatarian as described in Vegetarian vs Vegan vs Pescatarian comparison: Same inclusion (fish + dairy + eggs) but emphasized vs vegetarian (no fish) and vegan (no animal products). Key advantage highlighted: provides active DHA/EPA for brain and heart health, whereas vegetarian/vegan only provide ALA with poor conversion; easier to meet B12 and iron needs without supplements.\n\nKey Differences:\n- Both include fish, but Diet 1 focuses on what to eat/avoid for pescatarian alone; Diet 2 frames pescatarian as more flexible and nutritionally complete than vegan/vegetarian.\n- Vegan requires careful planning + B12 supplements; pescatarian does not.\n- Pescatarian provides direct omega-3s from seafood, vegetarian/vegan do not.\n\nHealthier Choice: For eating healthier with minimal deficiency risk, the lacto-ovo-pescatarian pattern with fatty fish (salmon, sardines) 2x/week + vegetables, whole grains, dairy/eggs is best default. It offers same red-meat reduction benefits as vegan/vegetarian plus superior B12 and omega-3 coverage, making it easier to sustain.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for pescatarian diet articles.",
+      "url": "https://www.healthline.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for pescatarian diet options.",
+      "url": "https://www.healthline.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Query is typed, now submit to get results.",
+      "url": "https://www.healthline.com/search?q1=pescatarian%20diet",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +2, rej 0) Search shows two ideal articles to compare, so queue and visit them.",
+      "url": "https://www.healthline.com/nutrition/pescatarian-diet",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need second diet source to enable comparison.",
+      "url": "https://www.healthline.com/nutrition/vegetarian-vs-vegan-vs-pescatarian",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.005565,
+  "maliyet": 0.005565,
+  "elapsed_s": 52.0,
+  "sure_sn": 52.0,
+  "level": "medium",
+  "website": "https://www.healthline.com/",
+  "domain": "www.healthline.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00232605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

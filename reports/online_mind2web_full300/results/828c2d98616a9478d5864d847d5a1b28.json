@@ -1,0 +1,69 @@
+{
+  "task_id": "828c2d98616a9478d5864d847d5a1b28",
+  "task": "Browse the list of Civil Division forms.",
+  "final_result_response": "Browsed Civil Division Documents and Forms list at https://www.justice.gov/civil/documents-and-forms-0 :\n\nGeneral Forms:\n- Legal Representation Letters (DOJ and other agencies formats)\n- Standard Form 95 (FTCA claim for damage/injury/death - requires sum certain, 2-year deadline)\n- Judgment Fund Payment Forms: FMS 194 Transmittal, FMS 196 Award Data Sheet, FMS 197 Voucher for Payment\n- Civil Division Enforcement Priorities memo\n\nCommercial Litigation:\n- Fraud Section: False Claims Act Primer, False Claims Act Statistics\n- Corporate/Financial Litigation: Student Loan Bankruptcy Discharge At-a-Glance, Guidance for DOJ Attorneys, Appendix A Attestation Form, Appendix B Sample Scenario\n- Intellectual Property: 28 U.S.C. 1498, 35 U.S.C. 271(a), 22 U.S.C. 2356, 19 U.S.C. 1337, 42 U.S.C. 2223, 35 U.S.C. 183, Trademark Amendments Act 1999\n- National Courts: Appellate Practice, Trial Practice documents\n- Office of Foreign Litigation\n\nEnforcement & Affirmative Litigation Branch, Office of Immigration Litigation (lists referenced)\n\nTorts Branch:\n- Aviation, Space and Admiralty Litigation Section\n- Constitutional & Specialized Tort: 28 C.F.R. 50.15, 50.16, RECA 42 U.S.C. 2210 note, RECA Categories Summary, RECA Claim Forms (Onsite Participant, Downwinder, Uranium Miner, Ore Transporter, Uranium Miller) + mail request option\n- Environmental Tort Litigation Section\n- Federal Tort Claims Act Litigation: Annuity Broker Declaration, Standard Form 95 info\n\nPage updated July 10, 2026. Contact: 950 Pennsylvania Ave NW, Washington DC 20530, 202-514-2000.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search the site for Civil Division to locate forms.",
+      "url": "https://www.justice.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term is entered, need to submit search.",
+      "url": "https://search.justice.gov/search?utf8=%E2%9C%93&affiliate=justice&query=Civil+Division",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Search yielded nothing, so I will open Civil Division section directly.",
+      "url": "https://www.justice.gov/civil",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Public Documents link likely contains the forms list.",
+      "url": "https://www.justice.gov/civil/documents-and-forms-0",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.004067,
+  "maliyet": 0.004067,
+  "elapsed_s": 26.5,
+  "sure_sn": 26.5,
+  "level": "easy",
+  "website": "https://www.justice.gov/",
+  "domain": "www.justice.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0017148
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

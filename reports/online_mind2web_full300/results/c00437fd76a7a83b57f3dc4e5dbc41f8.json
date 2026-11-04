@@ -1,0 +1,224 @@
+{
+  "task_id": "c00437fd76a7a83b57f3dc4e5dbc41f8",
+  "task": "Check the most recent full-time medical health and safety jobs, requiring 1-3 years of industry experience available in the US.",
+  "final_result_response": "Most recent Full-Time Medical, Health & Safety jobs in USA with 1-3 years industry experience, sorted by Most Recent (as of Nov 3, 2026) on amazon.jobs:\n\n1. EHS Specialist - Jacksonville, FL - ID 10596025 - Posted Nov 3, 2026 (~2h ago) - Requires 1 year EHS, knowledge of OSHA 29 CFR 1910 - Full-Time, Medical Health & Safety\n\n2. EHS Specialist - Monroe, OH - ID 10595995 - Posted Nov 3, 2026 (~3h ago) - Requires 1 year EHS - Full-Time, Medical Health & Safety\n\n3. EHS Specialist - Staten Island, NY - ID 10595918 - Posted Nov 3, 2026 (~4h ago) - Requires minimum 1 year EHS, OSHA 29 CFR 1910, $31.82-36.77 hourly - Full-Time, Medical Health & Safety\n\n4. Onsite Medical Representative - Middletown, DE - ID 10595910 - Posted Nov 3, 2026 (~4h ago) - Medical Health & Safety\n\n5. EHS Specialist - Port Allen, LA - ID 10595790 - Posted Nov 3, 2026 (~5h ago) - Medical Health & Safety\n\n6. Onsite Medical Representative - West Jefferson, OH - ID 10595892 - $27.01-31.05 hourly - Requires High school + BLS + EMT/Paramedic or Athletic Trainer (BOC) - Full-Time, Medical Health & Safety\n\n7. Overnight Staff Pharmacist, Amazon Pharmacy - Monroe Township, NJ - ID 10595786 - $103,800-$146,400 yearly - Full-Time, Medical Health & Safety\n\n8. Staff Pharmacist roles - Kansas City, MO (10595069), Simi Valley, CA (10595067), Richardson, TX overnight (10595068) - $103,800-$146,400 - Full-Time, Medical Health & Safety\n\nFilter used: category=medical-health-safety, job_type=Full-Time, industry_experience=one_to_three_years, country=USA, sort=recent.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must clear cookie banner to enable search.",
+      "url": "https://www.amazon.jobs/en/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to start search with relevant keywords on homepage.",
+      "url": "https://www.amazon.jobs/en/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set location to US before searching.",
+      "url": "https://www.amazon.jobs/en/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Inputs are set, now execute the search.",
+      "url": "https://www.amazon.jobs/en/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search button ineffective, so I navigate directly to results URL.",
+      "url": "https://www.amazon.jobs/en/search?base_query=medical+health+safety&country=USA",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to filter for 1-3 years experience first.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&distanceType=Mi&radius=24km&industry_experience=one_to_three_years&latitude=&longitude=&loc_group_id=&loc_query=&base_query=medical%20health%20safety&city=&country=USA&region=&county=&query_options=&",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need full-time filter to meet task criteria.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&job_type%5B%5D=Full-Time&distanceType=Mi&radius=24km&industry_experience=one_to_three_years&latitude=&longitude=&loc_group_id=&loc_query=&base_query=medical%20health%20safety&city=&country=USA&region=&county=&query_options=&",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to check Medical Health Safety category to meet criteria.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&category%5B%5D=medical-health-safety&job_type%5B%5D=Full-Time&distanceType=Mi&radius=24km&industry_experience=one_to_three_years&latitude=&longitude=&loc_group_id=&loc_query=&base_query=medical%20health%20safety&city=&country=USA&region=&county=&query_options=&",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results are sorted by relevance, need most recent order.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&category%5B%5D=medical-health-safety&job_type%5B%5D=Full-Time&distanceType=Mi&radius=24km&industry_experience=one_to_three_years&latitude=&longitude=&loc_group_id=&loc_query=&base_query=medical%20health%20safety&city=&country=USA&region=&county=&query_options=&",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to sort results by most recent first.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=recent&category%5B%5D=medical-health-safety&job_type%5B%5D=Full-Time&distanceType=Mi&radius=24km&industry_experience=one_to_three_years&latitude=&longitude=&loc_group_id=&loc_query=&base_query=medical%20health%20safety&city=&country=USA&region=&county=&query_options=&",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +4, rej 0) Filters complete, now verify details of most recent listings.",
+      "url": "https://www.amazon.jobs/en/jobs/10595995/ehs-specialist",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +3, rej 0) Need multiple recent listings to satisfy task requirements.",
+      "url": "https://www.amazon.jobs/en/jobs/10596025/ehs-specialist",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue collecting details from queued recent jobs.",
+      "url": "https://www.amazon.jobs/en/jobs/10595786/overnight-staff-pharmacist-amazon-pharmacy",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continuing to collect details from queued recent jobs.",
+      "url": "https://www.amazon.jobs/en/jobs/10595069/staff-pharmacist-amazon-pharmacy",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue collecting details from queued recent jobs.",
+      "url": "https://www.amazon.jobs/en/jobs/10595067/staff-pharmacist-amazon-pharmacy",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue collecting details from queued recent jobs.",
+      "url": "https://www.amazon.jobs/en/jobs/10595068/overnight-staff-pharmacist-amazon-pharmacy",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will continue collecting details from queued recent jobs.",
+      "url": "https://www.amazon.jobs/en/jobs/10595918/ehs-specialist",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continuing through queued recent jobs to collect details.",
+      "url": "https://www.amazon.jobs/en/jobs/10595910/onsite-medical-representative",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will open the last queued job to complete the recent list.",
+      "url": "https://www.amazon.jobs/en/jobs/10595892/onsite-medical-representative",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 19,
+  "cost_usd": 0.017529,
+  "maliyet": 0.017529,
+  "elapsed_s": 108.0,
+  "sure_sn": 108.0,
+  "level": "medium",
+  "website": "https://www.amazon.jobs/",
+  "domain": "www.amazon.jobs",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00241355
+    },
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0026873
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

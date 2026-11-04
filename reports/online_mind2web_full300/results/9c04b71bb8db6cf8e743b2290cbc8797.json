@@ -1,0 +1,229 @@
+{
+  "task_id": "9c04b71bb8db6cf8e743b2290cbc8797",
+  "task": "Find a UPS drop-off point near Miami Florida.",
+  "final_result_response": "UPS drop-off point near Miami, FL:\n\nThe UPS Store - 153 E FLAGLER ST, MIAMI, FL 33131, Phone: (305) 372-9877\n\nLocation Hours: Mon-Fri 8:30 AM - 7:00 PM, Sat-Sun 10:00 AM - 3:00 PM\nDrop-off deadlines: Ground/Air Mon-Fri 6:30 PM, Sat Air 1:30 PM\nServices: Ground, Air, International shipping, Pack & Ship, UPS Access Point, accepts mobile barcodes.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open location finder to search Miami.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open the locator to search Miami.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Cookie consent blocks interaction, so dismiss it first.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page has no elements, so navigate directly to locator.",
+      "url": "https://www.ups.com/gb/en/business-solutions/pickup-dropoff-options?loc=en_GB&WT.mc_id=VAN700980",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need US locator to search Miami drop-off points.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] The locator button should open correct finder page.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locations URL is dead, so I will use site search instead.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locator button should open correct finder tool.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locations page is broken so I will use site search.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locator page is broken, so I will try the header locator button.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locator page is 404 so I will use site search.",
+      "url": "https://www.ups.com/us/en/locations",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Current page is 404 so I will follow pickup link to find locator.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This button should open the location finder.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locator dialog is open so I will search Miami.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Miami is entered, so I will trigger the lookup.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The locator needs City State format, so I will refine the query.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Address is entered, now need to trigger lookup.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Zip code should satisfy validator and show Miami locations.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select Miami autocomplete suggestion before lookup.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result visible, need its details for completion.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 20,
+  "cost_usd": 0.010651,
+  "maliyet": 0.010651,
+  "elapsed_s": 96.0,
+  "sure_sn": 96.0,
+  "level": "medium",
+  "website": "https://www.ups.com/",
+  "domain": "www.ups.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00108255
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

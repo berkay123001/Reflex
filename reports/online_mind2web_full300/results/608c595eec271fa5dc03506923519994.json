@@ -1,0 +1,209 @@
+{
+  "task_id": "608c595eec271fa5dc03506923519994",
+  "task": "Calculate a FedEx Ground shipping rate for a 3-pound package from zip code 10019 to zip code 90028.",
+  "final_result_response": "FedEx Ground shipping rate for a 3-lb package from ZIP 10019 to ZIP 90028 (Your Packaging, Retail Rates, ship date Tuesday Nov 3, 2026):\n\n**FedEx Ground - $43.35**, Arrives Mon, Nov 9, Delivered by End of Day.\n\nOther retail rates shown for reference: First Overnight $243.98, Priority Overnight $202.67, Standard Overnight $181.63, 2Day AM $111.59, 2Day $99.02, Express Saver $85.61. Amounts in USD. Rates may differ from actual charges; account-specific rates require login.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Homepage has no usable elements, so navigate directly to rate calculator.",
+      "url": "https://www.fedex.com/en-us/shipping/rate-calculator.html",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The 404 page lists the correct rates link, so I will follow it.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Page shows no elements, likely still loading so wait briefly.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I must dismiss the blocking dialog to reach the rate form.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must dismiss cookie banner before filling shipping form.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Form is ready, so I will enter origin address.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[target_covered] Destination input is covered, so I will dismiss overlay first.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will enter the destination zip code next.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to resolve the incomplete address validation prompt.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Origin ZIP field is empty and must be filled first.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Origin is done, now need destination ZIP field exposed.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Destination dropdown shows Hollywood match, must select it.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal destination ZIP field and Continue button below fold.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Both ZIPs are set, so continue to next step.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal package weight and continue controls below fold.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Weight field is visible, entering 3 pounds next.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Form is complete, so show rates now.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Rates likely loaded below the fold after Show Rates.",
+      "url": "https://www.fedex.com/en-us/online/rating.html",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 18,
+  "cost_usd": 0.008586,
+  "maliyet": 0.008586,
+  "elapsed_s": 80.4,
+  "sure_sn": 80.4,
+  "level": "medium",
+  "website": "https://www.fedex.com/en-us/home.html",
+  "domain": "www.fedex.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00194505
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

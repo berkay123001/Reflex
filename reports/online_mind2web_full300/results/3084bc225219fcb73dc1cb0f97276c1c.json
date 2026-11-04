@@ -1,0 +1,423 @@
+{
+  "task_id": "3084bc225219fcb73dc1cb0f97276c1c",
+  "task": "Get quotes for a package weighing 10 lbs with dimensions of 2 inches in length, width, and height, being shipped from Long Beach, 90802 to Portland, 97201.",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I must dismiss cookies to proceed to quoting.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "RELOAD",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page has no elements, so I will reload to restore content.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access shipping quote tool via navigation menu.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal Calculate Shipping Cost link.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The calculator link is visible and must be opened next.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] I need to fill origin and destination to get quotes.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access ZIP fields below viewport to continue quote form.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] ZIP field is covered, scrolling to clear overlay.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] ZIP fields are below viewport so scrolling down is required.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Origin ZIP is required to get quotes.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Destination inputs are below viewport, need scrolling.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Ship To fields visible in text but not interactable, need to scroll.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Ship To fields are below viewport, so scroll down.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Ship To inputs not in element list, must scroll to expose them.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to scroll up to fill destination fields.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Ship To fields not in element list, need scrolling to expose them.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Destination fields are above viewport, must scroll up.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Must scroll up to access Ship To City and ZIP fields.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Ship To inputs are below viewport so scrolling down is needed.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to expose Ship To city and ZIP inputs to continue.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Ship To fields are not yet visible so scrolling down is required.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Must reach Ship To fields to enter Portland 97201.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to expose Ship To city and zip fields to fill them.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reach Ship To inputs to enter Portland 97201.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reveal Ship To inputs below fold.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reach Ship To fields to enter destination.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] I need to reveal the Ship To inputs to enter Portland 97201.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Must reach Ship To inputs to enter Portland destination.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to expose Ship To inputs to enter Portland 97201.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reach Ship To inputs to enter destination.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    },
+    {
+      "step": 30,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to expose Ship To inputs to enter Portland 97201.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/30_full_screenshot.png"
+    },
+    {
+      "step": 31,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to scroll up to access Ship To inputs.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/31_full_screenshot.png"
+    },
+    {
+      "step": 32,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reveal Ship To City ZIP fields below fold.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/32_full_screenshot.png"
+    },
+    {
+      "step": 33,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] I need to expose Ship To fields to enter Portland 97201.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/33_full_screenshot.png"
+    },
+    {
+      "step": 34,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] I need to reveal the Ship To form to enter Portland.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/34_full_screenshot.png"
+    },
+    {
+      "step": 35,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reach Ship To fields to enter destination.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/35_full_screenshot.png"
+    },
+    {
+      "step": 36,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to reach top form to complete quote inputs.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/36_full_screenshot.png"
+    },
+    {
+      "step": 37,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Destination fields are below viewport so I must scroll down.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/37_full_screenshot.png"
+    },
+    {
+      "step": 38,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Destination fields are below viewport so scrolling down is required.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/38_full_screenshot.png"
+    },
+    {
+      "step": 39,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to fill destination to get quotes.",
+      "url": "https://wwwapps.ups.com/ctc/request?loc=en_US",
+      "screenshot": "trajectory/39_full_screenshot.png"
+    }
+  ],
+  "status": "max_steps",
+  "steps": 40,
+  "cost_usd": 0.01626,
+  "maliyet": 0.01626,
+  "elapsed_s": 161.7,
+  "sure_sn": 161.7,
+  "level": "medium",
+  "website": "https://www.ups.com/",
+  "domain": "www.ups.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

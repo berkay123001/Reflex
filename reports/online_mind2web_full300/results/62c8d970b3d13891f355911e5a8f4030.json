@@ -1,0 +1,423 @@
+{
+  "task_id": "62c8d970b3d13891f355911e5a8f4030",
+  "task": "Find the top game listed in the Steam Deck's top-played list over the past year. Then, browse reviews for that game from players who have played over 100 hours and primarily use a Steam Deck.",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to locate Steam Deck top-played charts via store search.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to find Steam Deck top-played charts page.",
+      "url": "https://store.steampowered.com/steamdeck",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page top shows only header, need to reveal charts below.",
+      "url": "https://store.steampowered.com/steamdeck",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top Played chart link is visible and must be opened.",
+      "url": "https://store.steampowered.com/charts/steamdecktopplayed?snr=1_614_50_50_salesmartdecktopplayed&curator_clanid=39049601",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to switch chart period from past week to past year.",
+      "url": "https://store.steampowered.com/charts/steamdecktopplayed?snr=1_614_50_50_salesmartdecktopplayed&curator_clanid=39049601",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to switch period to past year to find top game.",
+      "url": "https://store.steampowered.com/charts/steamdecktopplayed/pastyear",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top game identified, now open its store page.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access reviews to filter by playtime and Deck.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/#app_reviews_hash",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need full reviews page to filter by playtime and Deck.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Previous review URL failed, so reopening game page directly.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[stale_retry_failed] [Anti-Loop: skipped already-visited link 'Recent Reviews: Mostly Positive (3,453)' -> scrolling down] Need to reach customer reviews section for filtering.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need full reviews list to filter by playtime and Deck.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to return to game page to access reviews correctly.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[stale_retry_failed] [Anti-Loop: skipped already-visited link 'Recent Reviews: Mostly Positive (3,453)' -> scrolling down] I need to open the reviews section to filter them.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need review browser with playtime and Deck filters via Community Hub.",
+      "url": "https://steamcommunity.com/app/2868840",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to open reviews to filter by playtime and Deck.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to access filter controls to find playtime and Deck options.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Store review page offers Playtime and Steam Deck filters.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Homepage is wrong, must reopen reviews page directly.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to return to reviews page to apply Deck filters.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] I need to open filter options to isolate 100h+ Deck reviews.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Store review page offers Playtime and Steam Deck filters.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to return to reviews page to verify Deck usage.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] I need to verify Steam Deck usage inside detailed reviews.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to verify Steam Deck badge in detailed review view.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Full review page should show Steam Deck playtime indicator.",
+      "url": "https://steamcommunity.com/profiles/76561198067558394/recommended/2868840/",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This review lacks Deck evidence, so return to list.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to verify Steam Deck usage inside detailed reviews.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] [Anti-Loop: skipped already-visited link 'https://steamcommunity.com/profiles/76561198067558394/recommended/2868840/' -> scrolling down] Need to verify Steam Deck badge on detailed review page.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to verify Steam Deck usage via store review filters.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    },
+    {
+      "step": 30,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to return to game page to access filtered reviews.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/30_full_screenshot.png"
+    },
+    {
+      "step": 31,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[stale_retry_failed] [Anti-Loop: skipped already-visited link 'Recent Reviews: Mostly Positive (3,453)' -> scrolling down] I need to open the reviews section to filter by playtime and Deck.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/31_full_screenshot.png"
+    },
+    {
+      "step": 32,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] [Anti-Loop: skipped already-visited link 'Recent Reviews: Mostly Positive (3,453)' -> scrolling down] Need to open reviews section to filter by playtime and Deck.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/32_full_screenshot.png"
+    },
+    {
+      "step": 33,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open reviews with playtime filter to verify Deck usage.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/33_full_screenshot.png"
+    },
+    {
+      "step": 34,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Community reviews page previously showed 100h+ playtimes successfully.",
+      "url": "https://steamcommunity.com/app/2868840/reviews/",
+      "screenshot": "trajectory/34_full_screenshot.png"
+    },
+    {
+      "step": 35,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Store review filters require navigation from store page.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/35_full_screenshot.png"
+    },
+    {
+      "step": 36,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] [Anti-Loop: skipped already-visited link 'Recent Reviews: Mostly Positive (3,453)' -> scrolling down] Need to open reviews to filter by playtime and Deck.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/36_full_screenshot.png"
+    },
+    {
+      "step": 37,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] [Anti-Loop: skipped already-visited link 'Recent Reviews: Mostly Positive (3,453)' -> scrolling down] I need to open the reviews page to filter them.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/",
+      "screenshot": "trajectory/37_full_screenshot.png"
+    },
+    {
+      "step": 38,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access filterable reviews section for Deck players.",
+      "url": "https://store.steampowered.com/app/2868840/Slay_the_Spire_2/#app_reviews_hash",
+      "screenshot": "trajectory/38_full_screenshot.png"
+    },
+    {
+      "step": 39,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need filtered reviews page to collect Deck 100h reviews.",
+      "url": "https://store.steampowered.com/",
+      "screenshot": "trajectory/39_full_screenshot.png"
+    }
+  ],
+  "status": "max_steps",
+  "steps": 40,
+  "cost_usd": 0.030177,
+  "maliyet": 0.030177,
+  "elapsed_s": 226.9,
+  "sure_sn": 226.9,
+  "level": "medium",
+  "website": "https://store.steampowered.com/",
+  "domain": "store.steampowered.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

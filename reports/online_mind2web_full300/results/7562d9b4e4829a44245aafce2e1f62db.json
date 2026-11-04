@@ -1,0 +1,79 @@
+{
+  "task_id": "7562d9b4e4829a44245aafce2e1f62db",
+  "task": "Find the nearest location to zip code 54620 that offers size 4 P.O. Boxes.",
+  "final_result_response": "Nearest location to ZIP 54620 offering Size 4 P.O. Boxes is Sparta Post Office, 123 W Main St, Sparta, WI 54656, 10.02 miles away. It lists Size 1, Size 2, Size 3, Size 4 Boxes Available. Closer facilities (Cataract 0.05mi, Melrose 8.31mi) do not offer Size 4.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access PO Box availability search for ZIP 54620.",
+      "url": "https://www.usps.com/manage/po-boxes.htm",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for PO Boxes near ZIP 54620.",
+      "url": "https://www.usps.com/manage/po-boxes.htm",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] ZIP is entered, so I will trigger the search.",
+      "url": "https://poboxes.usps.com/findBox.html?q=54620",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to enter ZIP code and trigger search.",
+      "url": "https://poboxes.usps.com/findBox.html?q=54620",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Sparta appears nearest with Size 4, need to verify details.",
+      "url": "https://poboxes.usps.com/findBox.html?q=54620",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.004487,
+  "maliyet": 0.004487,
+  "elapsed_s": 36.4,
+  "sure_sn": 36.4,
+  "level": "medium",
+  "website": "https://www.usps.com/",
+  "domain": "www.usps.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0015863
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

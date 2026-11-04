@@ -1,0 +1,89 @@
+{
+  "task_id": "bb518416a786fdb9b9bbf0c78515595e",
+  "task": "Browse the class schedule of graduate-level computer science courses.",
+  "final_result_response": "Browsed Ohio State CSE graduate-level class schedule at cse.osu.edu/courses filtered by Academic Career = Graduate (Columbus campus default).\n\nGraduate courses listed include:\n- 5000-level: CSE 5022, 5023, 5032, 5042, 5043, 5052, 5194.01, 5231, 5232, 5234, 5235, 5236, 5239, 5241, 5242, 5243, 5245, 5249, 5251, 5321, 5329, 5331, 5339, 5341, 5343, 5349, 5351, 5359, 5361, 5421, 5429, 5431, 5432, 5433, 5434, 5439, 5441, 5442, 5449, 5461, 5462, 5463, 5469, 5471, 5472, 5473, 5474, 5477.01, 5477.02, 5479, 5501, 5521-5526, 5531, 5539, 5541-5546, 5559, 5781, 5821, 5889, 5891, 5911-5915, 5917.01H\n- 6000-level: CSE 6011, 6012, 6013, 6193, 6239, 6249, 6321, 6329, 6331, 6332, 6333, 6339, 6341, 6349, 6359, 6421, 6422, 6429, 6431, 6439, 6441, 6449, 6461, 6469, 6479, 6520, 6521, 6539, 6559, 6891, 6998, 6999\n- 8000-level Doctoral: CSE 8998, 8999\n\nEach entry on the site is expandable (e.g., CSE 1110 button pattern) for description, credits, and schedule details. Page showed error banner \"Oops, something went wrong\" but full course index text was still readable. Contact: Dept of Computer Science and Engineering, 395 Dreese Labs, 2015 Neil Ave, Columbus OH 43210, (614) 292-5813.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for graduate CS class schedule.",
+      "url": "https://www.osu.edu/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search dialog is open, so I will enter query.",
+      "url": "https://www.osu.edu/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Query typed but not submitted, so submit it.",
+      "url": "https://www.osu.edu/search?query=computer%20science%20courses",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search found CSE courses page, need to open it.",
+      "url": "https://cse.osu.edu/courses",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SELECT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need graduate-level courses so select Graduate filter.",
+      "url": "https://cse.osu.edu/courses",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate is selected so I must click Search to apply filter.",
+      "url": "https://cse.osu.edu/courses?field_subject_target_id=All&field_campus_target_id=All&field_academic_career_target_id=132&field_level_target_id=All",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 6,
+  "cost_usd": 0.006558,
+  "maliyet": 0.006558,
+  "elapsed_s": 41.6,
+  "sure_sn": 41.6,
+  "level": "easy",
+  "website": "https://www.osu.edu/",
+  "domain": "www.osu.edu",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00240605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,109 @@
+{
+  "task_id": "7211af65d266402f99499053924262e9",
+  "task": "View the most recent job posting for a full-time pharmacy position in the US.",
+  "final_result_response": "Most recent full-time US pharmacy job on amazon.jobs (sorted by recent, filtered Full-Time + USA):\n\nTitle: Overnight Staff Pharmacist, Amazon Pharmacy\nJob ID: 10595786 | PillPack, LLC\nLocation: USA, NJ, Monroe Township\nCategory: Medical, Health, & Safety\nSalary: 103,800.00 - 146,400.00 USD annually + sign-on + RSUs + benefits\n\nDescription: Join Amazon Pharmacy to remove barriers to medications, providing transparent pricing, 24/7 support, doorstep delivery. Duties include clinical data review, prescription verification, virtual consultations, end-to-end fulfillment with Parata Max2, DUR, inventory, quality/safety compliance.\n\nBasic Qualifications: Bachelor's in Science or PharmD, knowledge of pharmacy laws, computer proficiency, active unrestricted pharmacist license in state of employment.\n\nURL: https://www.amazon.jobs/en/jobs/10595786/overnight-staff-pharmacist-amazon-pharmacy",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must clear cookie banner before searching jobs.",
+      "url": "https://www.amazon.jobs/en/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for pharmacy positions using site search.",
+      "url": "https://www.amazon.jobs/en/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Keyword is ready, so execute the search now.",
+      "url": "https://www.amazon.jobs/en/search?base_query=pharmacy&loc_query=",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results are below fold, need to scroll to view them.",
+      "url": "https://www.amazon.jobs/en/search?base_query=pharmacy&loc_query=",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to filter to full-time US jobs before picking most recent.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&job_type%5B%5D=Full-Time&distanceType=Mi&radius=24km&latitude=&longitude=&loc_group_id=&loc_query=&base_query=pharmacy&city=&country=&region=&county=&query_options=&",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to restrict results to US full-time pharmacy jobs.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&job_type%5B%5D=Full-Time&country%5B%5D=USA&distanceType=Mi&radius=24km&latitude=&longitude=&loc_group_id=&loc_query=&base_query=pharmacy&city=&country=&region=&county=&query_options=&",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to sort by most recent to find the newest posting.",
+      "url": "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=recent&job_type%5B%5D=Full-Time&country%5B%5D=USA&distanceType=Mi&radius=24km&latitude=&longitude=&loc_group_id=&loc_query=&base_query=pharmacy",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The list is sorted by most recent, so I will open the top job.",
+      "url": "https://www.amazon.jobs/en/jobs/10595786/overnight-staff-pharmacist-amazon-pharmacy",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.006095,
+  "maliyet": 0.006095,
+  "elapsed_s": 39.4,
+  "sure_sn": 39.4,
+  "level": "medium",
+  "website": "https://www.amazon.jobs/",
+  "domain": "www.amazon.jobs",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00186455
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

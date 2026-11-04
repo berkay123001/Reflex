@@ -1,0 +1,159 @@
+{
+  "task_id": "a8b9edd598561d2de901864d5f40fe67",
+  "task": "Calculate the shipping cost for 4 pound package from Texas to New York.",
+  "final_result_response": "Shipping cost for 4 lb package from Texas (75201 Dallas) to New York (10007 NYC) on FedEx.com, FedEx Retail Rates for shipment on Tuesday, November 3, 2026 (USD):\n\n- FedEx First Overnight (Wed Nov 4 by 8:00 AM): $243.73\n- FedEx Priority Overnight (by 10:30 AM): $202.43\n- FedEx Standard Overnight (by 5:00 PM): $188.30\n- FedEx 2Day AM (Thu Nov 5 by 10:30 AM): $122.05\n- FedEx 2Day (by 5:00 PM): $111.58\n- FedEx Express Saver (Fri Nov 6 by 5:00 PM): $88.62\n- FedEx Ground (End of Day): $52.67\n\nCheapest option is FedEx Ground at $52.67. Rates are retail rates and may differ from actual charges.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access rate calculator to estimate shipping cost.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open rate calculator tab to enter shipment details.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Cookie banner blocks interaction, so reject optional cookies first.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to fill origin to start rate calculation.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to confirm origin to proceed with rate quote.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] To field is empty, so I will fill it.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Destination dropdown is open, must select New York option.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Weight field and rate button are below the fold.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Weight field is below viewport, scrolling down.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Weight field is visible, need to enter 4 pounds.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to scroll to find Show Rates button.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] All inputs ready, now need to show rates.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Rates may be displayed above current viewport position.",
+      "url": "https://www.fedex.com/en-us/home.html",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 13,
+  "cost_usd": 0.008626,
+  "maliyet": 0.008626,
+  "elapsed_s": 59.3,
+  "sure_sn": 59.3,
+  "level": "medium",
+  "website": "https://www.fedex.com/en-us/home.html",
+  "domain": "www.fedex.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00162455
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

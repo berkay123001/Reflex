@@ -1,0 +1,329 @@
+{
+  "task_id": "d4fb78b7e74508cd3b33f01cf9200997",
+  "task": "Show the figure comparing Occupational Fatalities Trends between Ohio and New York.",
+  "final_result_response": "The Occupational Fatalities Trends comparison figure for Ohio vs New York is displayed on Americas Health Rankings at: https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare/NY. The page shows heading 'State Comparison - Ohio / New York - Occupational Fatalities Trends' with definition: Number of fatal occupational injuries in construction, manufacturing, trade, transportation and utility industries as well as professional and business services per 100,000 workers (3-year estimate), Population: General Population, Source: U.S. Department of Labor, Bureau of Labor Statistics, Census of Fatal Occupational Injuries, with trend lines for Ohio and New York.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to find Occupational Fatalities topic page first.",
+      "url": "https://www.americashealthrankings.org/health-topics",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Annual Report likely contains Occupational Fatalities measure list.",
+      "url": "https://www.americashealthrankings.org/health-topics?topics=14",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Overlay blocks search, so I will dismiss it first.",
+      "url": "https://www.americashealthrankings.org/health-topics?topics=14",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[target_covered] Need to clear modal blocking search input.",
+      "url": "https://www.americashealthrankings.org/health-topics?topics=14",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Occupational Fatalities likely under Physical Environment measures list.",
+      "url": "https://www.americashealthrankings.org/health-topics/40/comparison-plot?topics=14",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Occupational Fatalities is not in Physical Environment, so I will go back to topics.",
+      "url": "https://www.americashealthrankings.org/health-topics?topics=14",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Occupational Fatalities likely under Social and Economic Factors measures.",
+      "url": "https://www.americashealthrankings.org/health-topics/29/comparison-plot?topics=14",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I found Occupational Fatalities listed and will select Ohio first.",
+      "url": "https://www.americashealthrankings.org/health-topics/29/comparison-plot?topics=14",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to reveal the Occupational Fatalities trend link below.",
+      "url": "https://www.americashealthrankings.org/health-topics/29/comparison-plot?topics=14",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to scroll to reveal the Occupational Fatalities detail link.",
+      "url": "https://www.americashealthrankings.org/health-topics/29/comparison-plot?topics=14",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] The target measure is now visible, so I will open it.",
+      "url": "https://www.americashealthrankings.org/health-topics/29/comparison-plot?topics=14",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Trends section is below fold, need to scroll to it.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] I need to scroll to the Trends figure to add Ohio and New York.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Trends section is below current viewport so scroll down.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Trends section is below current viewport so scroll further.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Trends figure is just below current viewport so scroll further.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Trends heading is visible so chart controls are just below.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Trends figure controls are above current position.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Trends section is present but selectors need scrolling into view.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Trends section is above current position, need to scroll up.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] The Trends section is visible but its selectors need scrolling into view.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[fruitless_scroll] I will open the Ohio page to access its trend comparison figure.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Compare States link should allow adding New York comparison.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to add New York to display the Ohio vs New York trend.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Dropdown shows New York, must select it to display comparison.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The compare page is loaded but chart is below fold, so scroll down.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare/NY",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Trend section is at top but chart needs scrolling into view.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare/NY",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Trend figure is above current viewport so scroll up.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare/NY",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Trend figure is at top, need to scroll up to display it.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare/NY",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The trend heading is present but chart needs scrolling into view.",
+      "url": "https://www.americashealthrankings.org/explore/measures/WorkFatalities/OH/compare/NY",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 30,
+  "cost_usd": 0.015024,
+  "maliyet": 0.015024,
+  "elapsed_s": 165.9,
+  "sure_sn": 165.9,
+  "level": "hard",
+  "website": "https://www.americashealthrankings.org/",
+  "domain": "www.americashealthrankings.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00106405
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,219 @@
+{
+  "task_id": "1aeca99e6a60b0e3aefb3ef212bdce79",
+  "task": "Find full-time legal occupation jobs in San Diego County with a minimum salary of $4,000+ per month.",
+  "final_result_response": "Found 6 full-time Legal Occupation jobs in San Diego County on CalCareers (ca.gov state jobs), all with salary well above $4,000/month, all Permanent Fulltime, Hybrid telework:\n\n1. ATTORNEY III - Staff Attorney for the LCO (JC 536056) - Dept. of Industrial Relations - $10,852-$15,325/mo - Published 10/19/2026, Deadline 11/9/2026\n2. ATTORNEY III - Staff Attorney (JC 537781) - Dept. of Industrial Relations - $10,852-$15,325/mo - Published 11/3/2026, Deadline 11/25/2026\n3. ATTORNEY V - Attorney V (JC 535276) - Dept. of Transportation - $12,659-$16,883/mo - Published 10/12/2026, Deadline 11/6/2026\n4. DEPUTY ATTORNEY GENERAL IV - Medicaid Fraud Attorney Civil Litigation (JC 531453) - Dept. of Justice - $11,993-$16,096/mo - Published 9/30/2026, Deadline 11/4/2026\n5. DEPUTY ATTORNEY GENERAL IV - Criminal Prosecutions Attorney (JC 537011) - Dept. of Justice - $11,993-$16,096/mo - Published 10/28/2026, Deadline 11/12/2026\n6. DEPUTY ATTORNEY GENERAL IV - Employment Law Section DAG IV (JC 537352) - Dept. of Justice - $11,993-$16,096/mo - Published 11/3/2026, Deadline 12/18/2026\n\nSearch filters used: Job Category=Legal Occupations, Location=San Diego County, Work Type=Full-Time, Min Salary=$4000. All results meet criteria. Details at CalCareers Job Search Results page.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reach state jobs search to filter legal jobs.",
+      "url": "https://calcareers.ca.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Advanced search allows filtering by occupation, county, and salary.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set Legal category filter first.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Typing Legal will reveal the legal occupation category to select.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open categories list to confirm Legal selection.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Legal category is below visible list so scrolling is needed.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will confirm Legal selection to apply category filter.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set Legal, San Diego, full-time, salary filters.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to set Legal category filter first.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Legal is set, now need to filter location next.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Location list is open, typing will filter to San Diego County.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Location and category are set, now need work type filter.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will set Work Type to full-time next.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to set minimum salary before searching.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set minimum salary to meet requirement.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Filters are set but search not yet executed, so scroll to find submit.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/AdvancedJobSearch.aspx",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] All filters entered, now execute the search.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/JobSearchResults.aspx#locid=481&socmajorcode=23-0000",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "RELOAD",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results page empty, need reload to display listings.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/JobSearchResults.aspx#locid=481&socmajorcode=23-0000",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page shows Loading, so waiting will reveal job listings.",
+      "url": "https://calcareers.ca.gov/CalHRPublic/Search/JobSearchResults.aspx#locid=481&socmajorcode=23-0000",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 19,
+  "cost_usd": 0.008824,
+  "maliyet": 0.008824,
+  "elapsed_s": 88.0,
+  "sure_sn": 88.0,
+  "level": "medium",
+  "website": "https://www.ca.gov/",
+  "domain": "www.ca.gov",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0019803
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

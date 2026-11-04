@@ -1,0 +1,423 @@
+{
+  "task_id": "33bd2cdcea4fcc42a09a8a1e4e5841c6_110325",
+  "task": "Add a Box Combo to my bag with Diet Coke as the drink, and a Kids Combo with milk as the drink. Select the store closest to ZIP 10001 for pickup tomorrow at 12:00 PM.",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must start ordering on official order site.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Cookie banner blocks input so reject it first.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for stores near ZIP 10001.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] ZIP entered but search not yet executed, so click Search.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Search button failed, so I will try Enter key.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Search button stuck, so try alternate find button.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search did not trigger, so retype ZIP and search again.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Search must be triggered to list stores near ZIP.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Search button is ineffective, so I will press Enter in input.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Search button is ineffective, so I will submit via the input itself.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Search button is broken, so submit via input field directly.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] Need to submit ZIP via Enter on input field.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] I will focus the location input to enable Enter search.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] Search button clicks failed, so try Enter on input.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Zip search is not triggering results, so I will try city name.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to submit the location search to list stores.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search button is ineffective so I will re-enter ZIP clearly.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to wait for autocomplete dropdown to appear.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to allow autocomplete dropdown to load before selecting.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Search button fails, so try submitting from input itself.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Pressing Enter on the input may trigger autocomplete search.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Clicking the address field may reveal autocomplete suggestions.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] I will click Search to submit the ZIP query.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Search button is ineffective, so I will submit via keyboard.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Fuller location text may trigger autocomplete suggestions.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to submit location search to list stores.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Search button is stuck, so submit via input Enter instead.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Search button is ineffective, so I will focus the input field.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will retype address to trigger suggestions dropdown.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will retype ZIP to trigger autocomplete suggestions.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    },
+    {
+      "step": 30,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] Waiting may allow autocomplete suggestions to appear for selection.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/30_full_screenshot.png"
+    },
+    {
+      "step": 31,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to activate autocomplete dropdown to select location.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/31_full_screenshot.png"
+    },
+    {
+      "step": 32,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Need to focus input to trigger autocomplete suggestions.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/32_full_screenshot.png"
+    },
+    {
+      "step": 33,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] Address field has 10001, so triggering Search should list stores.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/33_full_screenshot.png"
+    },
+    {
+      "step": 34,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Enter may trigger location lookup instead of button.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/34_full_screenshot.png"
+    },
+    {
+      "step": 35,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] I will refocus the input to break the loop.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/35_full_screenshot.png"
+    },
+    {
+      "step": 36,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[oscillation] I will confirm the entered ZIP to load nearby stores.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/36_full_screenshot.png"
+    },
+    {
+      "step": 37,
+      "operation": "RELOAD",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Reload will clear stuck state to retry location search.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/37_full_screenshot.png"
+    },
+    {
+      "step": 38,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will open the location finder to search near ZIP 10001.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/38_full_screenshot.png"
+    },
+    {
+      "step": 39,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will enter ZIP 10001 and search again.",
+      "url": "https://order.raisingcanes.com/?_gl=1*9nqrpc*_ga*NjUzNjU5ODQyLjE3OTM3NTA3OTE.*_ga_D3JCTFHTZH*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw*_ga_MB87HJZBMG*czE3OTM3NTA3OTEkbzEkZzAkdDE3OTM3NTA3OTEkajYwJGwwJGgw",
+      "screenshot": "trajectory/39_full_screenshot.png"
+    }
+  ],
+  "status": "max_steps",
+  "steps": 40,
+  "cost_usd": 0.013582,
+  "maliyet": 0.013582,
+  "elapsed_s": 229.1,
+  "sure_sn": 229.1,
+  "level": "hard",
+  "website": "https://raisingcanes.com/",
+  "domain": "raisingcanes.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

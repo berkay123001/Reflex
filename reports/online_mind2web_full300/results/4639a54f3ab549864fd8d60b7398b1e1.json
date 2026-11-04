@@ -1,0 +1,28 @@
+{
+  "task_id": "4639a54f3ab549864fd8d60b7398b1e1",
+  "task": "Find a white female kitten within 35 miles of zip 77494.",
+  "final_result_response": "Could not find a white female kitten within 35 miles of 77494 because adoptapet.com is not accessible. The homepage returns a 403 ERROR: The Amazon CloudFront distribution is configured to block access from your country. No search or listing could be performed. Please try again from an allowed location or use a different network.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.00183,
+  "maliyet": 0.00183,
+  "elapsed_s": 9.8,
+  "sure_sn": 9.8,
+  "level": "medium",
+  "website": "https://www.adoptapet.com/",
+  "domain": "www.adoptapet.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0015698
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

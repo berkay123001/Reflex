@@ -1,0 +1,59 @@
+{
+  "task_id": "ade4c09ad3fdb1607209750924cd232f",
+  "task": "Compare available plans for the AeroAPI on Flightaware.",
+  "final_result_response": "AeroAPI Plans Comparison on FlightAware (https://www.flightaware.com/commercial/aeroapi/):\n\nMODEL: Usage-based, query-based REST API with 60+ endpoints. Pricing based on result sets (1 set = 15 records). Example: GET /flights/search $0.050 / result set, GET /flights/search/count $0.020 / result set. Prices may change.\n\n1. PERSONAL Tier - signup: /aeroapi/signup/personal\n- Use: Storage/distribution of derivative works for personal or academic purposes ONLY.\n- Includes: Current flight status and tracks, Internal Use for Personal, Academic use.\n- NOT included: Up-time guarantee, Email Support, Phone Support, Invoicing.\n- No historical data, no alerting mentioned.\n\n2. STANDARD Tier - signup: /aeroapi/signup/standard\n- Use: For business or business-to-consumer purposes.\n- Everything in Personal PLUS: Historical data access (back to 2011), Flight Alerting (departure, arrival, cancels, hold, impending departure/arrival), Email support.\n- NOT included: Up-time guarantee, Phone Support, Invoicing.\n- Eligible for Volume Discounting.\n\n3. PREMIUM Tier - signup: /aeroapi/signup/premium\n- Use: For business, B2C commercial, and all B2B commercial purposes.\n- Everything in Standard PLUS: Advanced datasets including Aireon space-based ADS-B, Foresight Predictions (predictive ETAs via ML + weather + historical data), Enterprise grade services with email + phone support, 99.5% up-time guarantee, Invoicing Available.\n- Eligible for Volume Discounting.\n\nVOLUME DISCOUNTING (Standard & Premium only):\n$0-1000/mo: No discount; $1000-2000: 30% off; $2000-4000: 51% off; $4000-8000: 65% off; $8000-16000: 76% off; $16000-32000: 83% off; $32000-64000: 88% off; Above $64000: 94% off. First $1000 always at list price. Extra discount for 3-4 year commitments (contact FlightAware).\n\nCommon features all tiers: Easy REST integration, 60+ endpoints, comprehensive docs + interactive portal, customized pay-only-for-what-you-request, global coverage (~41k ADS-B receivers + Aireon).",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] AeroAPI page likely contains plan comparison.",
+      "url": "https://www.flightaware.com/commercial/aeroapi/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Pricing cards are further down the long page.",
+      "url": "https://www.flightaware.com/commercial/aeroapi/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need pricing details so jump directly to pricing cards.",
+      "url": "https://www.flightaware.com/commercial/aeroapi/#pricing-cards",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.003941,
+  "maliyet": 0.003941,
+  "elapsed_s": 26.4,
+  "sure_sn": 26.4,
+  "level": "easy",
+  "website": "https://www.flightaware.com/",
+  "domain": "www.flightaware.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00187105
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,59 @@
+{
+  "task_id": "502e864440283214e0180645015f568b_110325",
+  "task": "Check permit availability for a group of 4 in Brooks Camp, Katmai National Park for next Saturday.",
+  "final_result_response": "Availability check for Brooks Camp Camping Permit (Katmai National Park) for a group of 4 for next Saturday, November 7, 2026:\n\nNOT AVAILABLE - Registration is Closed.\n\nSource page: https://www.recreation.gov/permits/249991 (Brooks Camp Camping Permit)\n\nDetails from page:\n- Status banner: \"Registration is Closed - Reservations have not been released yet.\"\n- Season: May 1 to Oct 31 only. Peak June 1 - Sept 17. Off-peak Sept 18 - Oct 31 with reduced services. Campground is closed in November, so Nov 7 is outside operating season.\n- 2026 release blocks: Jan 7 for May-June, Feb 7 for July-Aug, Mar 7 for Sept-Oct.\n- Quota: 60 people total per day. Trip leaders can reserve for up to 6 people, so a group of 4 would be within the max group size when season is open.\n\nDefault assumption used (user not available): next Saturday = November 7, 2026. No permit inventory can be booked for that date.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for Brooks Camp on recreation.gov",
+      "url": "https://www.recreation.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Text is entered, need to submit search.",
+      "url": "https://www.recreation.gov/search?q=Brooks%20Camp",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches the requested permit, so I will open it.",
+      "url": "https://www.recreation.gov/permits/249991",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.004241,
+  "maliyet": 0.004241,
+  "elapsed_s": 28.8,
+  "sure_sn": 28.8,
+  "level": "medium",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00182555
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

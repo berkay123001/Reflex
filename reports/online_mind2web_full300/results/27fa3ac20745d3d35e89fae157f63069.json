@@ -1,0 +1,422 @@
+{
+  "task_id": "27fa3ac20745d3d35e89fae157f63069",
+  "task": "Browse the class schedule of graduate-level chemistry courses on Monday afternoons in the winter of 2023.",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to locate class schedule via Stanford search.",
+      "url": "https://www.stanford.edu/search",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for chemistry course schedule.",
+      "url": "https://www.stanford.edu/search",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to submit the typed query to get results.",
+      "url": "https://www.stanford.edu/search",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results are below fold, need to scroll to view them.",
+      "url": "https://www.stanford.edu/search",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current Courses page likely links to Navigator schedule filtering.",
+      "url": "https://chemistry.stanford.edu/academics/current-courses",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Current list lacks Winter 2023, Navigator holds historic schedules.",
+      "url": "https://navigator.stanford.edu/classes",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Search form may be below fold, so scroll down.",
+      "url": "https://navigator.stanford.edu/classes",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search filters likely at top of Navigator page.",
+      "url": "https://navigator.stanford.edu/classes",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "GO_BACK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[navigation_timeout] Navigator search is not rendering, so I will check chemistry department listing.",
+      "url": "https://chemistry.stanford.edu/academics/current-courses",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Current list lacks Winter 2023 so I will search within site.",
+      "url": "https://chemistry.stanford.edu/academics/current-courses",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to apply the entered Winter 2023 search filter.",
+      "url": "https://chemistry.stanford.edu/search?search=Winter+2023",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This search path yields no schedules, so I will revisit courses page.",
+      "url": "https://chemistry.stanford.edu/academics/current-courses",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search the course list for Winter offerings.",
+      "url": "https://chemistry.stanford.edu/academics/current-courses",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal more filters and courses below fold.",
+      "url": "https://chemistry.stanford.edu/academics/current-courses",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current list lacks Winter 2023 so I will try bulletin archive.",
+      "url": "https://exploredegrees.stanford.edu/coursedescriptions/chem/",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] 404 page directs to new Bulletin site link.",
+      "url": "https://bulletin.stanford.edu/",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Winter 2023 schedule is in archived bulletin, not current.",
+      "url": "https://archived-bulletin.stanford.edu/",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Winter 2023 belongs to 2022-23 bulletin, so open it.",
+      "url": "https://22-23.bulletin.stanford.edu/",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Schedule of Classes holds term-specific meeting times needed.",
+      "url": "https://explorecourses.stanford.edu/",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need Winter 2023 year context before filtering Chemistry courses.",
+      "url": "https://explorecourses.stanford.edu/browse?academicYear=20222023",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Chemistry link is visible and leads to filtered catalog.",
+      "url": "https://explorecourses.stanford.edu/search?view=catalog&academicYear=20222023&page=0&q=CHEM&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Schedule view will show days and times for filtering.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&academicYear=20222023&page=0&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to narrow results to Winter 2022-2023 term first.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&collapse=&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Filters for career and meeting time are below the fold.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&collapse=&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal graduate-level Monday afternoon entries below fold.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&collapse=&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate 200+ courses are on later result pages.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&filter-term-Winter=on&academicYear=20222023&page=1&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate courses are lower on this long results page.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&filter-term-Winter=on&academicYear=20222023&page=1&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Graduate courses are further down this results page.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&filter-term-Winter=on&academicYear=20222023&page=1&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Graduate courses numbered 200+ likely on last results page.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&filter-term-Winter=on&academicYear=20222023&page=2&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to filter Monday afternoon graduate courses from Winter list.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&filter-term-Winter=on&academicYear=20222023&page=2&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    },
+    {
+      "step": 30,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will filter to Monday to isolate Monday courses.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/30_full_screenshot.png"
+    },
+    {
+      "step": 31,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to find afternoon and graduate filters below fold.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/31_full_screenshot.png"
+    },
+    {
+      "step": 32,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to see graduate courses times on Monday afternoon.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/32_full_screenshot.png"
+    },
+    {
+      "step": 33,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to see graduate course times on Monday afternoon.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/33_full_screenshot.png"
+    },
+    {
+      "step": 34,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Graduate courses are lower on the page and need scrolling.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/34_full_screenshot.png"
+    },
+    {
+      "step": 35,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate courses are lower on this filtered list.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/35_full_screenshot.png"
+    },
+    {
+      "step": 36,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate courses are lower on the page.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/36_full_screenshot.png"
+    },
+    {
+      "step": 37,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate courses are lower on the page.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/37_full_screenshot.png"
+    },
+    {
+      "step": 38,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate courses are further down the page.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/38_full_screenshot.png"
+    },
+    {
+      "step": 39,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Graduate courses listed lower, need to scroll further.",
+      "url": "https://explorecourses.stanford.edu/search?q=CHEM&view=timeschedule&page=0&academicYear=20222023&filter-term-Winter=on&filter-day-2=on&collapse=%2C5%2C&filter-catalognumber-CHEM=on&filter-departmentcode-CHEM=on&filter-coursestatus-Active=on&filter-catalognumber-CHEM=on",
+      "screenshot": "trajectory/39_full_screenshot.png"
+    }
+  ],
+  "status": "max_steps",
+  "steps": 40,
+  "cost_usd": 0.021662,
+  "maliyet": 0.021662,
+  "elapsed_s": 233.4,
+  "sure_sn": 233.4,
+  "level": "hard",
+  "website": "https://www.stanford.edu/",
+  "domain": "www.stanford.edu",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

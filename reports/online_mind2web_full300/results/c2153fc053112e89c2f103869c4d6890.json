@@ -1,0 +1,69 @@
+{
+  "task_id": "c2153fc053112e89c2f103869c4d6890",
+  "task": "Find a house cleaning service in 10001 on a weekly basis.",
+  "final_result_response": "Found weekly house cleaning services in 10001 on Thumbtack (Frequency: Every week selected):\n\n1. Sara Fernandes Cleaning Services - Exceptional 5.0 (12 reviews) - 22 hires, responds in ~3 hours - Great value\n2. Irina Home Cleaning NYC LLC - Top Pro, Exceptional 5.0 (124 reviews) - 307 hires, responds in ~2 min\n3. Open Light Cleaning LLC - Top Pro, Great 4.7 (34 reviews) - 62 hires, Online Now responds ~9 min\n4. Homeaglow - Good 4.0 (97 reviews) - 32 hires, Online Now responds ~1 min\n5. Sparkle by Anna - New on Thumbtack - Serves New York, NY, responds in ~1 hour\n\nDefault used: No bedroom/bathroom count specified, showing all matching pros for weekly frequency in zip 10001. Use 'Get 4 quotes' / View profile on Thumbtack to contact pros.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will start search by entering service type.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Project is set, now I need to enter zip code.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Inputs are ready so I will submit the search.",
+      "url": "https://www.thumbtack.com/instant-results/?deprecate_spr=true&keyword_pk=102906936611670860&search_bar_query_pk=594607311025676289&zip_code=10001&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594607321559015426",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] I will select the weekly frequency to filter results.",
+      "url": "https://www.thumbtack.com/instant-results/?deprecate_spr=true&keyword_pk=102906936611670860&zip_code=10001&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594607321559015426&project_pk=594607323746623491&encoded_answers=eyJzZl9wayI6IjU1Nzc5MDUwODU1NDEwODk0MiIsImFucyI6eyIxIjpbMV19fQ%3D%3D",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.005278,
+  "maliyet": 0.005278,
+  "elapsed_s": 40.4,
+  "sure_sn": 40.4,
+  "level": "easy",
+  "website": "https://www.thumbtack.com/",
+  "domain": "www.thumbtack.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0015743
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

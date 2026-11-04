@@ -1,0 +1,109 @@
+{
+  "task_id": "ec78d3a635e417bc2a80d03ca93d7165",
+  "task": "What are the benefits and financial support a single person living in England, over the state pension age, unemployed, with no health conditions, or caring for someone with one, can get?",
+  "final_result_response": "For a single person living in England, over State Pension age, unemployed, with no health conditions:\n\n**1. Main benefit - Pension Credit:**\n- Gives extra money for living costs if over State Pension age and on low income. Separate from State Pension. Can get even with other income, savings or home ownership.\n- Tops up single person to £238/week, plus extra amounts: Carer addition +£48.15/week, Severe disability +£86.05/week.\n- Extra help that comes with Pension Credit: Housing Benefit, Cold Weather Payments, Support for Mortgage Interest, Council Tax Reduction, free TV licence if 75+, help with NHS costs, Warm Home Discount, Royal Mail redirection discount.\n\n**2. If caring for someone (at least 35 hours/week who gets certain disability benefits):**\n- Carer's Allowance is £86.45/week, paid weekly in advance or every 4 weeks.\n- Each week gives automatic Class 1 National Insurance credits. May also qualify for Council Tax Reduction, Universal Credit, Pension Credit, training grants.\n- If State Pension is over £86.45/week, no Carer's Allowance payment is made but Pension Credit increases instead (carer addition). If pension is less, Carer's Allowance tops up the difference.\n- Claiming Carer's Allowance can stop the cared-for person's severe disability premium / extra Pension Credit amount and reduced Council Tax - check with Jobcentre Plus, local council, Pension Service Helpline or Universal Credit.\n- You are not affected by the benefit cap when claiming Carer's Allowance. You cannot build up extra State Pension during any period you get Carer's Allowance, but delaying State Pension claim could increase later payments.\n\nDefault assumed: single, no partner, England residence as stated.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search GOV.UK for relevant benefits for this group.",
+      "url": "https://www.gov.uk/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term is ready, need to execute search.",
+      "url": "https://www.gov.uk/search/all?keywords=Pension+Credit",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need detailed eligibility and amounts for single pensioner.",
+      "url": "https://www.gov.uk/pension-credit",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +2, rej 0) Need specific amounts and carer additions for single pensioner.",
+      "url": "https://www.gov.uk/pension-credit/what-youll-get",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need carer benefits to cover second part of question.",
+      "url": "https://www.gov.uk/browse/benefits/help-for-carers",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Carer's Allowance is key extra for carers over pension age.",
+      "url": "https://www.gov.uk/carers-allowance",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Eligibility determines if pension-age carer can claim Carer's Allowance.",
+      "url": "https://www.gov.uk/carers-allowance/eligibility",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need interaction details to complete answer.",
+      "url": "https://www.gov.uk/carers-allowance/effect-on-other-benefits",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.007005,
+  "maliyet": 0.007005,
+  "elapsed_s": 47.8,
+  "sure_sn": 47.8,
+  "level": "hard",
+  "website": "https://www.gov.uk/",
+  "domain": "www.gov.uk",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0025488
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,78 @@
+{
+  "task_id": "239a29bde438fe44fe17fe1390ef1634",
+  "task": "Find me a gluten-free diet to lose weight for a pregnant woman.",
+  "final_result_response": "Based on Healthline.com:\n\n**1. What is Gluten-Free? (from https://www.healthline.com/nutrition/gluten-free-diet)**\n- Eliminates wheat, barley, rye and products made with them (bread, pasta, cookies, etc.)\n- Mainly intended for celiac disease or gluten sensitivity, not automatically for weight loss\n- Risk: can be low in fiber, B-vitamins, iron, magnesium if not planned well. Choose naturally gluten-free whole foods.\n\n**2. Healthy Eating During Pregnancy (from https://www.healthline.com/health/pregnancy/diet-nutrition)**\n- Do NOT diet to lose weight while pregnant unless directed by your doctor. Aim for only ~300 extra calories/day, focus on balance and variety.\n- Complex carbs: vegetables, beans, legumes, gluten-free whole grains like brown rice, quinoa, buckwheat, certified gluten-free oats\n- Protein every meal: eggs, fish low in mercury, chicken/turkey, beans, nuts, seeds, Greek yogurt, cheese\n- Healthy fats: avocado, walnuts, chia/flaxseed, olive oil, fatty fish for omega-3 for baby brain development\n- Fiber + fluids: fruits, vegetables, legumes + plenty water to avoid constipation and dehydration\n- Key nutrients: Folic acid, Choline (~450-930mg/day), Iron + Vitamin C for absorption, Calcium + Vitamin D, Iodine, B-12 (especially if vegetarian/vegan - use supplement/nutritional yeast), Vitamin A, C, B-6\n- Limit: simple carbs (white bread, cookies, chips, added sugar), fried/trans fats, excess salt restriction not needed, caffeine max 200mg/day\n\n**Sample Gluten-Free Day for Pregnant Woman (weight-control, not weight-loss):**\nBreakfast: Greek yogurt + berries + chia seeds + certified gluten-free oats\nSnack: apple + almond butter\nLunch: quinoa bowl with chicken, avocado, veggies, olive oil\nSnack: carrots + hummus\nDinner: salmon + brown rice + steamed broccoli + lentils\n\n**SAFETY DISCLAIMER:** This is informational only, not medical advice. Weight loss is generally NOT recommended during pregnancy. Consult your OB-GYN / dietitian before starting gluten-free or calorie-restricted diet, and take a complete prenatal vitamin with choline and folate.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for gluten-free pregnancy diet articles.",
+      "url": "https://www.healthline.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search Healthline for the requested topic.",
+      "url": "https://www.healthline.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search query is ready, submitting will show relevant articles.",
+      "url": "https://www.healthline.com/search?q1=gluten%20free%20pregnancy",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +2, rej 0) Search returned relevant guides, so I will queue and open them.",
+      "url": "https://www.healthline.com/nutrition/gluten-free-diet",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need pregnancy-specific nutrition guidance to complete the task safely.",
+      "url": "https://www.healthline.com/health/pregnancy/diet-nutrition",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.006967,
+  "maliyet": 0.006967,
+  "elapsed_s": 63.0,
+  "sure_sn": 63.0,
+  "level": "medium",
+  "website": "https://www.healthline.com/",
+  "domain": "www.healthline.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00367225
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

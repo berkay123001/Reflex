@@ -1,0 +1,209 @@
+{
+  "task_id": "6174e5ddd40cfbdc33ee1502f40bac39",
+  "task": "Find a day-use park that offers horseback riding near Nashville.",
+  "final_result_response": "Found day-use park near Nashville offering horseback riding:\n\n**Cook Day Use Area, J Percy Priest Lake**\n- Location: Near Hermitage, Tennessee, about 10 miles east of downtown Nashville (From downtown Nashville, take I-40 east for 7 miles to exit 221B...).\n- Type: Day Use - offers two large group shelters for day use for 75 and 100 guests.\n- Horseback riding: Listed under Recreation: \"visitors have numerous activities to choose from, including fishing, hunting, picnicking, boating, canoeing, hiking, horseback riding and wildlife viewing.\"\n- Link: https://www.recreation.gov/camping/campgrounds/232556?tab=info",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search recreation.gov for Nashville day-use options.",
+      "url": "https://www.recreation.gov/search?q=Nashville&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to filter for horseback riding activity.",
+      "url": "https://www.recreation.gov/search?q=Nashville&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Horseback filter is below fold, must scroll to find it.",
+      "url": "https://www.recreation.gov/search?q=Nashville&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to view filtered results to identify horseback option.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open filters to select horseback riding activity.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Horseback filter is below viewport so scroll down.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to view results to identify horseback riding parks.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open filter panel to select horseback riding activity.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Horseback filter is below viewport so scrolling will reveal it.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to see result list to find horseback riding parks.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to open filters to select horseback riding activity.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Closing filter panel will expose the 43 results to inspect.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to apply horseback riding filter to narrow results.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Horseback filter is below viewport, so scroll down.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to see result list to find horseback riding park.",
+      "url": "https://www.recreation.gov/search?q=Nashville&start=0&inventory_type=venues&inventory_type=day%20use",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +4, rej 0) Need to inspect facility pages for horseback riding activity.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232556",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to see activities to verify horseback riding.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232556",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to verify horseback riding in facility details.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232556?tab=info",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 18,
+  "cost_usd": 0.011535,
+  "maliyet": 0.011535,
+  "elapsed_s": 107.6,
+  "sure_sn": 107.6,
+  "level": "medium",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0021173
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

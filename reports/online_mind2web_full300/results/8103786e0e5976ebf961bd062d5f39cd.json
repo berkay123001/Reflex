@@ -1,0 +1,149 @@
+{
+  "task_id": "8103786e0e5976ebf961bd062d5f39cd",
+  "task": "Find possible causes for the symptoms of chest pain which is sharp which is accompanied by anxiety.",
+  "final_result_response": "Using Mayo Clinic Symptom Checker for Chest pain in adults with filters Pain best described as Sharp + Accompanied by Anxiety, the View possible causes results are:\n\n1. Angina\n2. Heart attack\n3. Panic attacks and panic disorder\n4. Pericarditis\n5. Pleurisy\n6. Pulmonary embolism\n\nThese are listed as diseases and conditions matching at least one of the selected factors, with most matches first. Source: https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075\n\nNote: Mayo Clinic advises to get emergency medical care if chest pain has pressure/fullness/squeezing > few minutes, is accompanied by shortness of breath/sweating/nausea/dizziness/fainting, or radiates to arms/neck.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for chest pain causes on Mayo Clinic.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Cookie banner covers search, so I will dismiss it first.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for chest pain causes on Mayo Clinic.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for chest pain symptoms.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Query is typed, now submit search.",
+      "url": "https://www.mayoclinic.org/search/search-results?q=chest%20pain",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +1, rej 0) Need symptom checker to filter by sharp pain and anxiety.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to check Sharp then Anxiety to view causes.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Anxiety checkbox is below viewport so scroll down.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Anxiety checkbox is below viewport, must scroll to access it.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Anxiety checkbox is visible and must be selected.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The causes button is below current viewport, so scroll down.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Both filters are set, now view possible causes.",
+      "url": "https://www.mayoclinic.org/symptom-checker/chest-pain-in-adults-adult/related-factors/itt-20009075",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 12,
+  "cost_usd": 0.010054,
+  "maliyet": 0.010054,
+  "elapsed_s": 57.0,
+  "sure_sn": 57.0,
+  "level": "medium",
+  "website": "https://www.mayoclinic.org/",
+  "domain": "www.mayoclinic.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0016413
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

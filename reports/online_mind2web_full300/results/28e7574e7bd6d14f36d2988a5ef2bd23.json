@@ -1,0 +1,133 @@
+{
+  "task_id": "28e7574e7bd6d14f36d2988a5ef2bd23",
+  "task": "Get a part-time job within 5 miles of Moscow, Idaho in the accommodation and food services industry, as a chef, and show jobs for corporate only.",
+  "final_result_response": "Could not show the requested jobs on ohio.gov (OhioMeansJobs).\n\nWhat was tried: Searched Keywords=chef, Location=Moscow, State=OH, Radius=5 miles. Result: 0 jobs found. Available refine filters on the page include Industry, Job Type, and under Other Opportunities: Show Corporate Sites Only, Exclude Staffing Agencies, etc.\n\nWhy it cannot be completed here:\n- Location mismatch: ohio.gov / OhioMeansJobs is an Ohio-only job board (State defaults to OH). It cannot search within 5 miles of Moscow, Idaho. The current search resolved to Moscow, OH with 0 chef results.\n- Because there are 0 base results, part-time, Accommodation and Food Services industry, and Show Corporate Sites Only filters have no listings to filter.\n\nDefault picked: kept Radius=5 miles and Keywords=chef as requested, no substitute location presented.\nTo get part-time chef jobs within 5 miles of Moscow, Idaho in Accommodation and Food Services (corporate only), please use an Idaho / national job board (e.g. Idaho Department of Labor or a national aggregator) instead of ohio.gov.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to start job search for chef positions.",
+      "url": "https://ohiomeansjobs.ohio.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Keyword is entered, so I will submit the search now.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=chef",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to open filter panel for detailed criteria.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=chef",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[target_covered] Overlay blocks location input so I will dismiss it first.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=chef",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must set location to Moscow before other filters.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=chef",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SELECT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Set radius to 5 miles before searching.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?pg=1&sid=68&rad=20&rad_units=miles&q=chef",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to execute search with Moscow and 5-mile radius.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?sort=date&pg=1&q=chef&cnme=Moscow&sid=68&rad=5&rad_units=miles",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to apply part-time and industry filters via Filters panel.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?sort=date&pg=1&q=chef&cnme=Moscow&sid=68&rad=5&rad_units=miles",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set part-time, industry and corporate filters next.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?sort=date&pg=1&q=chef&cnme=Moscow&sid=68&rad=5&rad_units=miles",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set part-time and other filters step by step.",
+      "url": "https://jobs.ohiomeansjobs.applygovt.com/Search.aspx?sort=date&pg=1&q=chef&cnme=Moscow&sid=68&rad=5&rad_units=miles",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 10,
+  "cost_usd": 0.009279,
+  "maliyet": 0.009279,
+  "elapsed_s": 84.8,
+  "sure_sn": 84.8,
+  "level": "hard",
+  "website": "https://ohiomeansjobs.ohio.gov/",
+  "domain": "ohiomeansjobs.ohio.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "fail",
+      "unmet": [
+        "Location must be Moscow, Idaho (agent searched Moscow, OH instead)",
+        "Job Type filter: part-time not applied/shown",
+        "Industry filter: Accommodation and Food Services not applied/shown",
+        "Corporate-only filter not applied/shown"
+      ],
+      "cost_usd": 0.00249955
+    }
+  ],
+  "answer_check_rejections": 1,
+  "schema_version": "online-mind2web-v2"
+}

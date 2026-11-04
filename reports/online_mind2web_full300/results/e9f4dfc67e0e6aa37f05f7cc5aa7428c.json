@@ -1,0 +1,33 @@
+{
+  "task_id": "e9f4dfc67e0e6aa37f05f7cc5aa7428c",
+  "task": "Browse pediatricians near zip code 90028 who specialize in Internal Medicine and have a rating of at least 4 stars.",
+  "final_result_response": "Could not browse pediatricians near zip code 90028 on healthgrades.com because the site shows 'This page is not available in your area' - access is blocked from the current region. No search for pediatricians, filtering by Internal Medicine specialty, or 4+ star rating could be performed. To complete this, please retry from a US location or US VPN, then search Pediatricians near 90028 and filter for Internal Medicine with at least 4 stars.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.002441,
+  "maliyet": 0.002441,
+  "elapsed_s": 13.3,
+  "sure_sn": 13.3,
+  "level": "medium",
+  "website": "https://www.healthgrades.com/",
+  "domain": "www.healthgrades.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00101805
+    },
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00098155
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

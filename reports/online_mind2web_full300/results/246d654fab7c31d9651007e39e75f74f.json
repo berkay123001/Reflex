@@ -1,0 +1,108 @@
+{
+  "task_id": "246d654fab7c31d9651007e39e75f74f",
+  "task": "Open the most helpful 5-star reviews of Alpine Ridge.",
+  "final_result_response": "Opened the most helpful 5-star reviews of Alpine Ridge (DeGray Lake, campground 233415) on Recreation.gov. Sort is set to Most Helpful and filter shows 5 Stars (118 reviews). Top reviews visible: Bradley P (8/24/20, Site 21, 3 helpful votes) praising water hookups, Greg J (9/14/20, Site 20, 2 helpful votes) noting great camping close to water, and Jason P (8/10/20, Site 36, 1 helpful vote). Page URL: https://www.recreation.gov/camping/campgrounds/233415?tab=ratings",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for Alpine Ridge facility.",
+      "url": "https://www.recreation.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term is entered, need to submit it.",
+      "url": "https://www.recreation.gov/search?q=Alpine%20Ridge",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches target, so open its detail page.",
+      "url": "https://www.recreation.gov/camping/campgrounds/233415",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open reviews panel to filter 5-star helpful reviews.",
+      "url": "https://www.recreation.gov/camping/campgrounds/233415?tab=ratings",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal sort and 5-star filter controls below.",
+      "url": "https://www.recreation.gov/camping/campgrounds/233415?tab=ratings",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SELECT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need Most Helpful order before filtering 5 stars.",
+      "url": "https://www.recreation.gov/camping/campgrounds/233415?tab=ratings",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Sort is done, now apply 5-star filter to show target reviews.",
+      "url": "https://www.recreation.gov/camping/campgrounds/233415?tab=ratings",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page shows filter active but empty, scrolling may load reviews.",
+      "url": "https://www.recreation.gov/camping/campgrounds/233415?tab=ratings",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.006745,
+  "maliyet": 0.006745,
+  "elapsed_s": 43.6,
+  "sure_sn": 43.6,
+  "level": "easy",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0021463
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

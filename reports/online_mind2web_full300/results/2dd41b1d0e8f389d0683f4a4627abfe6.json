@@ -1,0 +1,68 @@
+{
+  "task_id": "2dd41b1d0e8f389d0683f4a4627abfe6",
+  "task": "Show houses for sale in Maryland with a maximum price of $60,000.",
+  "final_result_response": "Found 3 houses for sale in Maryland up to $60,000 on landwatch.com:\n\n1. $35,000 - 1 acre - 1 bed / 2 baths / 1,820 sqft - 5410 BURNETTSVILLE Road, Marion, MD 21838, Somerset County\n2. $44,000 - 1 acre - 2 beds / 1 bath / 768 sqft - 2603 Toddville Road, Toddville, MD 21672, Dorchester County\n3. $42,000 - 1 acre - 2 beds / 1 bath / 768 sqft - 2603 Toddville Road, Toddville, MD 21672, Dorchester County\n\nPage: https://www.landwatch.com/maryland-land-for-sale/homes/price-under-60000 - Title: \"Maryland Houses for Sale up to $60K - 1-3 of 3 Listings\" with filters Maryland + House + $0-$60,000 active.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to navigate to Maryland listings via state search.",
+      "url": "https://www.landwatch.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Maryland state link not in viewport, so navigate directly to its listing page.",
+      "url": "https://www.landwatch.com/maryland-land-for-sale",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to show houses, so apply House type filter first.",
+      "url": "https://www.landwatch.com/maryland-land-for-sale/homes",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page shows price filters, so I will navigate to under-$60,000 listing view.",
+      "url": "https://www.landwatch.com/maryland-land-for-sale/homes/price-under-60000",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.005251,
+  "maliyet": 0.005251,
+  "elapsed_s": 34.1,
+  "sure_sn": 34.1,
+  "level": "medium",
+  "website": "https://www.landwatch.com/",
+  "domain": "www.landwatch.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00122455
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

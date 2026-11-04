@@ -1,0 +1,109 @@
+{
+  "task_id": "783ce6a3499fa7cf25bc12f8f0ecbbbb",
+  "task": "Find Florida internship programs in the Mayo Clinic College of Medicine and Science.",
+  "final_result_response": "Found 24 Florida internship programs in Mayo Clinic College of Medicine and Science (filtered by Location=Florida, Type=Internship on college.mayo.edu/academics):\n\n1-10:\n1. Administrative Internship Program (Florida)\n2. Audiology Externship (Florida)\n3. Biomedical Sciences International Internship (Florida)\n4. Biostatistics and Data Science Internship Program (Florida)\n5. Cardiovascular Medicine Exercise Physiology Internship (Florida)\n6. Cardiovascular Technology Internship (Florida)\n7. Clinical Research Coordinator Internship (Florida)\n8. Clinical Research Internship Study Program (Florida)\n9. Convergence Science Internship: Engineering (Florida)\n10. Dietetic Internship (Florida)\n\n11-20:\n11. Echocardiography Internship (Florida)\n12. FOUR Stroke Education Internship (Florida)\n13. Genetic Counseling Internship (Florida)\n14. Health Information Management Internship (Arizona and Florida)\n15. Historical Archivist Internship (Florida)\n16. Magnetic Resonance Imaging (MRI) Internship (Florida)\n17. Mayo Clinic Physics Chemistry Engineering Internship (Florida)\n18. Physical or Occupational Therapy Internship (Florida)\n19. Public Health Internship Program (Florida)\n20. Social Work Internship (Florida)\n\n21-24:\n21. Speech Language Pathology Internship (Florida) - 1 semester, Health Sciences\n22. Speech Pathology Graduate Internship in Voice and Upper Airway (Florida) - 1-2 semesters, Health Sciences\n23. Undergraduate Biomedical Research Internship (Florida) - 2 semesters, Health Sciences\n24. Vascular Interventional Radiologic Technology Internship (Florida) - 8 months, Health Sciences\n\nAll listed under Jacksonville, Florida campus, Mayo Clinic School of Health Sciences and non-clinical education tracks.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Students link leads to College of Medicine and Science.",
+      "url": "https://college.mayo.edu/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Must close cookie dialog before searching for internships.",
+      "url": "https://college.mayo.edu/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access program search form to filter internships in Florida.",
+      "url": "https://college.mayo.edu/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "SELECT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to filter programs by Florida and Internship type.",
+      "url": "https://college.mayo.edu/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SELECT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Florida is set, now select Internship type before searching.",
+      "url": "https://college.mayo.edu/",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Filters are set, now I must execute the search.",
+      "url": "https://college.mayo.edu/academics/?keywords=&location=Florida&type=Internship",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +10, rej 0) Page 1 shows 10 of 24 programs, so I will queue them and continue.",
+      "url": "https://college.mayo.edu/academics/?location=Florida&type=Internship&page=2",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +10, rej 0) Page 2 lists 10 programs, need to queue them and check final page.",
+      "url": "https://college.mayo.edu/academics/?location=Florida&type=Internship&page=3",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.006285,
+  "maliyet": 0.006285,
+  "elapsed_s": 45.0,
+  "sure_sn": 45.0,
+  "level": "easy",
+  "website": "https://www.mayoclinic.org/",
+  "domain": "www.mayoclinic.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00131505
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

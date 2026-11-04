@@ -1,0 +1,59 @@
+{
+  "task_id": "e3ab665e01e7632ce33ac1aeca14aff6",
+  "task": "Find the next available dates for Alley Creek Camp.",
+  "final_result_response": "Alley Creek Camp (Lake O' The Pines near Avinger, Texas - Campground ID 232512) shows Next Available in March for 5 Days view. In the displayed March 1-10 window (Mon 1 through Wed 10), almost all sites are marked 'A' = Available, including E101-E108, E110-E119, E201-E204, E206-E230, G016, T101-T215. Exceptions: E109 is Reserved (R) on Sat 7 - Mon 9, and E205 is Reserved (R) for the entire 1-10 window. Therefore the next available dates for general booking are March 1 onward, with wide availability across Electric and Tent loops. Default assumed: flexible 5-day view, no date filter applied.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for Alley Creek Camp on recreation.gov",
+      "url": "https://www.recreation.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term is entered, now submit it.",
+      "url": "https://www.recreation.gov/search?q=Alley%20Creek%20Camp",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches target, so open its detail page.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232512",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.004699,
+  "maliyet": 0.004699,
+  "elapsed_s": 30.3,
+  "sure_sn": 30.3,
+  "level": "easy",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00185005
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,49 @@
+{
+  "task_id": "a11ecdff735b51372d536c866011af6f",
+  "task": "Explore courses related to Psychology.",
+  "final_result_response": "Explored Psychology courses on Coursera (coursera.org/search?query=Psychology). Found:\n\n1. Introduction to Psychology - Yale University - Course, Beginner, 1-3 Months, 4.9 (33K), Bestseller\n2. Psychology of Anxiety, Mood, Substance Use, and Addictive Behaviors - American Psychological Association - Specialization, Beginner, 3-6 Months, 4.8 (364), Trending\n3. The science of mind and decision making - University of Cambridge - Specialization, Beginner, 3-6 Months, 4.5 (205), Bestseller\n4. Psychology of Disorders Related to Trauma, Anxiety, & Stress - American Psychological Association - Specialization, Beginner, 3-6 Months, 4.8 (301)\n5. Introduction to Cognitive Psychology and Neuropsychology - University of Cambridge - Course, Mixed, 1-3 Months, 4.5 (118)\n6. Foundations of Positive Psychology - University of Pennsylvania - Specialization, Beginner, 3-6 Months, 4.8 (8.7K), Bestseller\n7. Managing ADHD, Autism, Learning Disabilities, and Concussion in School - University of Colorado System - Course, Mixed, 1-4 Weeks, 4.8 (1.8K)\n8. Psychological First Aid - Johns Hopkins University - Course, Mixed, 1-3 Months, 4.8 (20K)\n9. Abnormal Psychology - Wesleyan University - Specialization, Beginner, 3-6 Months, 4.8 (776)\n10. General Psychology - Pearson - Specialization, Beginner, 1-3 Months, New\n11. Social Psychology - Wesleyan University - Course, Beginner, 1-3 Months, 4.7 (5.2K)\n12. Psychological Research - American Psychological Association - Specialization, Beginner, 3-6 Months, 4.8 (304), Trending\n\nDefault pick for beginner: Start with Yale's Introduction to Psychology (Bestseller, highest rated).",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for Psychology using the catalog search.",
+      "url": "https://www.coursera.org/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term is typed, need to submit it.",
+      "url": "https://www.coursera.org/search?query=Psychology",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 2,
+  "cost_usd": 0.004222,
+  "maliyet": 0.004222,
+  "elapsed_s": 23.2,
+  "sure_sn": 23.2,
+  "level": "easy",
+  "website": "https://www.coursera.org/",
+  "domain": "www.coursera.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00165605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,109 @@
+{
+  "task_id": "a7a73c8fa75441fc76df9746c327bdd6",
+  "task": "Estimate the cost of a photographer in 07055 for a 4-hour project.",
+  "final_result_response": "Estimated cost for a photographer in 07055 for a 4-hour project on Thumbtack:\n\nThumbtack national data (applies to 07055 as no zip-specific pricing published):\n- Average project range: $233-$486, Low $149, High $1,053, National Avg $570\n- Hourly rates by type:\n  Aerial $125/hr, Nature/Pet/Real Estate/Sports/Wedding-Event $150/hr, Commercial $198/hr, Boudoir/Engagement $200/hr\n\n4-hour estimate calculation:\n- At typical $150/hr (most common: wedding/event, sports, real estate, pet, nature): 4 x $150 = $600\n- Low-end at $125/hr: 4 x $125 = $500\n- High-end general at $198-$200/hr: 4 x $198-200 = $792-$800\n- Wedding/Event average total $756 (range $569-$1,005) aligns with ~4 hours at $150/hr plus editing.\n\nSensible default for general 4-hour project in 07055: $500-$800, centered around $600. For wedding/event specifically: $569-$1,005, average ~$756.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to start search for photographers in 07055.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Overlay blocks zip input so I will dismiss it first.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to enter zip code before searching.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Both fields are filled, so I will submit the search now.",
+      "url": "https://www.thumbtack.com/instant-results/?deprecate_spr=true&keyword_pk=102906937000741842&search_bar_query_pk=594608595533225988&zip_code=07055&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594608609627734018",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results page shows no pricing, so I will open cost guide.",
+      "url": "https://www.thumbtack.com/prices",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need detailed hourly rates to estimate 4-hour cost.",
+      "url": "https://www.thumbtack.com/p/photographer-prices",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need the exact hourly rate to calculate 4-hour cost.",
+      "url": "https://www.thumbtack.com/p/photographer-prices",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] I need to confirm hourly rates to estimate 4-hour cost.",
+      "url": "https://www.thumbtack.com/p/photographer-prices",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.009169,
+  "maliyet": 0.009169,
+  "elapsed_s": 55.1,
+  "sure_sn": 55.1,
+  "level": "medium",
+  "website": "https://www.thumbtack.com/",
+  "domain": "www.thumbtack.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00469005
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

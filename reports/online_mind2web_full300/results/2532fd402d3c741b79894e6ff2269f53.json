@@ -1,0 +1,69 @@
+{
+  "task_id": "2532fd402d3c741b79894e6ff2269f53",
+  "task": "find electricians near 10203.",
+  "final_result_response": "Found electricians near ZIP 10203 on Thumbtack (Best Electricians near 10203):\n\nTop matches:\n1. Unlimited Electrical Solutions Group inc. - Top Pro, Great 4.8 (36 reviews), Licensed, 40 hires, Serves New York, NY, Responds in about 1 hour. Review: \"Georgie is amazing Found my electrician for life!!\"\n2. Voltair Solutions - Top Pro, Great 4.8 (87 reviews), 144 hires, Serves New York, NY, Responds in about 3 hours.\n3. Wright's Electric - Exceptional 5.0 (30 reviews), Online Now responds in ~4 hours, 39 hires, Serves New York, NY.\n4. Mike Electric Service - Exceptional 5.0 (19 reviews), Online Now responds within a day, 25 hires, Serves New York, NY.\n5. FIXSERVICE LLC - Top Pro, Exceptional 5.0 (114 reviews), 137 hires, Serves New York, NY, Responds in about 4 hours.\n6. Pro Grid Electric - Top Pro, Excellent 4.9 (227 reviews)\n7. M1-Electrical Solutions & Low voltage LLC - Top Pro, Great 4.7\n8. Solaris Wiring - Top Pro, Exceptional 5.0 (8 reviews)\n9. LM - Top Pro, Great 4.8 (67 reviews), 91 hires\n10. Theodore Warren, GT DYNAMICS ELECTRIC INC, Dera Electric (5.0), Freddy Electric Works, Danielyan, and others also serve New York, NY for zip 10203.\n\nDefault used: No specific project details provided, so listed general Electrical and Wiring Repair matches. Use Thumbtack \"Get 4 quotes\" / \"View profile\" to contact pros.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to enter service and zip to find electricians.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[target_covered] Need to clear overlay before typing zip code.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Entering zip code to enable search for electricians.",
+      "url": "https://www.thumbtack.com/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Both fields filled, now submit search.",
+      "url": "https://www.thumbtack.com/instant-results/?deprecate_spr=true&keyword_pk=102906937284094959&search_bar_query_pk=594602981379162113&zip_code=10203&ir_referrer=HOME_PAGE_SEARCH&user_query_pk=594602991919308807",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.004861,
+  "maliyet": 0.004861,
+  "elapsed_s": 30.9,
+  "sure_sn": 30.9,
+  "level": "easy",
+  "website": "https://www.thumbtack.com/",
+  "domain": "www.thumbtack.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00209655
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,39 @@
+{
+  "task_id": "95cad96f2e43f3c0d8efad1331c77c8c",
+  "task": "View the list of the Most Popular TV on rotten tomatoes.",
+  "final_result_response": "Most Popular TV Shows on Rotten Tomatoes (Best TV Shows November 2026, Sort: Most Popular):\n\n1. Nocturne - 88% Tomatometer / 56% Popcornmeter - Latest Episode: Oct 30\n2. The Terminal List - 57% / 93% - Oct 21\n3. Phony - 93% / 91% - Nov 03\n4. Time - 97% / 89% - Oct 18\n5. VisionQuest - 85% / 82% - Oct 28\n6. Dexter: Resurrection - 92% / 94% - Oct 30\n7. Lupin - 98% / 64% - Oct 23\n8. Minimum Wage - 82% / - - Oct 26\n9. Crystal Lake - 77% / 88% - Oct 15\n10. Below - 87% / 50% - Oct 08\n11. Avatar: Seven Havens - 100% / 81% - Oct 30\n12. Cyberpunk: Edgerunners - 88% / 80% - Oct 20\n13. Carrie - 85% / 82% - Oct 07\n14. The Diplomat - 93% / 77% - Oct 15\n15. East of Eden - 88% / 85% - Oct 01\n16. A Couple of Lies - No score yet - Oct 30\n17. YAGA - 79% / 93% - Oct 30\n18. War - 85% / 68% - Oct 29\n19. Dead-End Job - 100% / No audience yet - Oct 30\n20. The Final Problem - 100% / 59% - Sep 25\n21. American Horror Story - 75% / 64% - Oct 29\n22. Nobody Wants This - 87% / 70% - Oct 22\n23. Slow Horses - 97% / 87% - Oct 21\n24. The Gilded Age - 89% / 70% - Nov 01\n25. MobLand - 83% / 74% - Oct 30\n26. The One About Matthew Perry - 95% / No audience yet - Oct 27\n27. Cupertino - 100% / 79% - Oct 29\n28. From - 96% / 76%\n\nViewed at: https://www.rottentomatoes.com/browse/tv_series_browse/sort:popular",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The Tv shows link leads to popular TV browse.",
+      "url": "https://www.rottentomatoes.com/browse/tv_series_browse/sort:popular",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 1,
+  "cost_usd": 0.003561,
+  "maliyet": 0.003561,
+  "elapsed_s": 21.2,
+  "sure_sn": 21.2,
+  "level": "easy",
+  "website": "https://www.rottentomatoes.com/",
+  "domain": "www.rottentomatoes.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00185255
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

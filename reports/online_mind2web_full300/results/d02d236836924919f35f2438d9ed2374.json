@@ -1,0 +1,423 @@
+{
+  "task_id": "d02d236836924919f35f2438d9ed2374",
+  "task": "Browse the top 250 movies and find one movie that is available on AMC+.",
+  "final_result_response": null,
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to open the Top 250 chart directly.",
+      "url": "https://www.imdb.com/chart/top/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +7, rej 0) Top 250 is visible, now need to check streaming availability.",
+      "url": "https://www.imdb.com/chart/top/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to check watch providers on top-ranked titles first.",
+      "url": "https://www.imdb.com/title/tt0111161/?ref_=chttp_t_1",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current title lacks AMC+ info, so I will check next queued movie.",
+      "url": "https://www.imdb.com/title/tt0068646/?ref_=chttp_t_2",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Godfather lacks AMC+, so I check next queued movie.",
+      "url": "https://www.imdb.com/title/tt0468569/?ref_=chttp_t_3",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Dark Knight lacks AMC+, so I check next queued movie.",
+      "url": "https://www.imdb.com/title/tt0071562/?ref_=chttp_i_4",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This title lacks AMC+, so I will check the next queued film.",
+      "url": "https://www.imdb.com/title/tt0167260/?ref_=chttp_i_5",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current film lacks AMC+ so I check next queued title.",
+      "url": "https://www.imdb.com/title/tt0110912/?ref_=chttp_i_9",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Pulp Fiction lacks AMC+, so check next queued Top 250 title.",
+      "url": "https://www.imdb.com/title/tt0137523/?ref_=chttp_i_14",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This movie lacks AMC+, so I must resume checking the chart.",
+      "url": "https://www.imdb.com/chart/top/",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +10, rej 0) Need to continue checking Top 250 titles for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0050083/?ref_=chttp_i_6",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] No watch provider shown, so continue checking next queued title.",
+      "url": "https://www.imdb.com/title/tt0108052/?ref_=chttp_i_7",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This title lacks AMC+ so I continue checking the queue.",
+      "url": "https://www.imdb.com/title/tt0120737/?ref_=chttp_i_8",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current title lacks AMC+, so check next queued movie.",
+      "url": "https://www.imdb.com/title/tt0167261/?ref_=chttp_i_10",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current title lacks AMC+, so continue checking queued titles.",
+      "url": "https://www.imdb.com/title/tt0060196/?ref_=chttp_i_11",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This title lacks AMC+, so I continue checking queued titles.",
+      "url": "https://www.imdb.com/title/tt0109830/?ref_=chttp_i_12",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Forrest Gump only offers Prime rent, so continue queue.",
+      "url": "https://www.imdb.com/title/tt1375666/?ref_=chttp_i_13",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue checking queued Top 250 movies for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0080684/?ref_=chttp_i_15",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to continue checking queued movies for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0133093/?ref_=chttp_i_16",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Current title lacks AMC+, so continue queue.",
+      "url": "https://www.imdb.com/title/tt0816692/?ref_=chttp_i_17",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue checking queued Top 250 movies for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0099685/?ref_=chttp_i_18",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Streaming section may be below fold, need to scroll.",
+      "url": "https://www.imdb.com/title/tt0099685/?ref_=chttp_i_18",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Streaming availability appears lower on title pages.",
+      "url": "https://www.imdb.com/title/tt0099685/?ref_=chttp_i_18",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Watch options are at top of title page, need to scroll up.",
+      "url": "https://www.imdb.com/title/tt0099685/?ref_=chttp_i_18",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to see streaming providers at top of page.",
+      "url": "https://www.imdb.com/title/tt0099685/?ref_=chttp_i_18",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to reveal streaming availability section below.",
+      "url": "https://www.imdb.com/title/tt0099685/?ref_=chttp_i_18",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to continue checking Top 250 movies systematically.",
+      "url": "https://www.imdb.com/chart/top/",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +5, rej 0) Continue checking unvisited Top 250 titles for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0073486/?ref_=chttp_i_19",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This title shows no AMC+ availability, so I continue checking queued titles.",
+      "url": "https://www.imdb.com/title/tt0114369/?ref_=chttp_i_20",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    },
+    {
+      "step": 29,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Se7en lacks AMC+ so continue checking queued movies.",
+      "url": "https://www.imdb.com/title/tt0038650/?ref_=chttp_i_21",
+      "screenshot": "trajectory/29_full_screenshot.png"
+    },
+    {
+      "step": 30,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to continue checking queued titles for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0102926/?ref_=chttp_i_22",
+      "screenshot": "trajectory/30_full_screenshot.png"
+    },
+    {
+      "step": 31,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This movie lacks AMC+, so continue queue.",
+      "url": "https://www.imdb.com/title/tt0120815/?ref_=chttp_i_23",
+      "screenshot": "trajectory/31_full_screenshot.png"
+    },
+    {
+      "step": 32,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This film lacks AMC+ so I continue checking the queue.",
+      "url": "https://www.imdb.com/title/tt0047478/?ref_=chttp_i_24",
+      "screenshot": "trajectory/32_full_screenshot.png"
+    },
+    {
+      "step": 33,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to continue checking the next Top 250 titles for AMC+.",
+      "url": "https://www.imdb.com/chart/top/",
+      "screenshot": "trajectory/33_full_screenshot.png"
+    },
+    {
+      "step": 34,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +4, rej 0) Continue checking movies sequentially for AMC+ availability.",
+      "url": "https://www.imdb.com/title/tt0120689/?ref_=chttp_i_25",
+      "screenshot": "trajectory/34_full_screenshot.png"
+    },
+    {
+      "step": 35,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue checking queued Top 250 titles for AMC+.",
+      "url": "https://www.imdb.com/title/tt0317248/?ref_=chttp_i_26",
+      "screenshot": "trajectory/35_full_screenshot.png"
+    },
+    {
+      "step": 36,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] No watch provider info here, so I continue with queued titles.",
+      "url": "https://www.imdb.com/title/tt0118799/?ref_=chttp_i_27",
+      "screenshot": "trajectory/36_full_screenshot.png"
+    },
+    {
+      "step": 37,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This title lacks AMC+ so I continue queue.",
+      "url": "https://www.imdb.com/title/tt0103064/?ref_=chttp_i_28",
+      "screenshot": "trajectory/37_full_screenshot.png"
+    },
+    {
+      "step": 38,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue checking queued Top 250 titles for AMC+.",
+      "url": "https://www.imdb.com/title/tt0088763/?ref_=chttp_i_29",
+      "screenshot": "trajectory/38_full_screenshot.png"
+    },
+    {
+      "step": 39,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This title lacks AMC+ so continue checking next titles.",
+      "url": "https://www.imdb.com/chart/top/",
+      "screenshot": "trajectory/39_full_screenshot.png"
+    }
+  ],
+  "status": "max_steps",
+  "steps": 40,
+  "cost_usd": 0.03711,
+  "maliyet": 0.03711,
+  "elapsed_s": 284.7,
+  "sure_sn": 284.7,
+  "level": "hard",
+  "website": "https://www.imdb.com/",
+  "domain": "www.imdb.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

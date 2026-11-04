@@ -1,0 +1,139 @@
+{
+  "task_id": "9b5dfe54a1c14c5c6336bae7374c3bb5",
+  "task": "Find a UPS Access Point near SPRING, TX and services provided by them.",
+  "final_result_response": "UPS Access Point near SPRING, TX:\n\nThe UPS Store - UPS Access Point: U50355254\n2129 FM 2920 RD, Suite 190\nSPRING, TX 77388\nPhone: (281) 528-8855\n\nHours: Mon-Fri 8:30 AM - 7:00 PM, Sat 9:00 AM - 3:00 PM, Sun Closed\n\nDrop-Off Deadlines: Ground/Air Mon-Fri 6:45 PM, Sat Air 2:45 PM\n\nAvailable Services:\n- Purchase Packaging Supplies, Office Supplies and Services\n- Standard and Color Copying, Professional Printing Services\n- Mail and Package Receiving, Document Shredding, Notary Services\n- Packing and Shipping Services, Staffed Locations\n- Ground, Air, International Shipping, Pack & Ship Guarantee\n- Apple Returns Program, Bill My Account\n- UPS Access Point, Accepts Restricted Articles, Accepts Mobile Barcodes, Accepts No Box No Label",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open location finder to search Spring TX",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open UPS location finder to search Spring TX.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Cookie banner blocks interaction, so dismiss it first.",
+      "url": "https://www.ups.com/us/en/home",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Home page unreadable, so I open locator directly.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options?loc=en_US",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to open UPS locator to search Spring TX.",
+      "url": "https://www.ups.com/us/en/business-solutions/pickup-dropoff-options?loc=en_US",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] The find button loops, so I will follow drop-off link.",
+      "url": "https://www.ups.com/us/en/business-solutions/expand-your-online-business/ups-access-point",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open location finder to search Spring TX.",
+      "url": "https://www.ups.com/us/en/business-solutions/expand-your-online-business/ups-access-point",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Dialog is open so I will search directly in it.",
+      "url": "https://www.ups.com/us/en/business-solutions/expand-your-online-business/ups-access-point",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Address is entered, now must submit search.",
+      "url": "https://www.ups.com/us/en/business-solutions/expand-your-online-business/ups-access-point",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results failed to load, so retry the lookup action.",
+      "url": "https://www.ups.com/us/en/business-solutions/expand-your-online-business/ups-access-point",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search shows results, now need details for one location.",
+      "url": "https://www.ups.com/us/en/business-solutions/expand-your-online-business/ups-access-point",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 11,
+  "cost_usd": 0.006743,
+  "maliyet": 0.006743,
+  "elapsed_s": 58.9,
+  "sure_sn": 58.9,
+  "level": "medium",
+  "website": "https://www.ups.com/",
+  "domain": "www.ups.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00147155
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,259 @@
+{
+  "task_id": "d8e2a81fa621ce4737e5ea85671b630e_110325",
+  "task": "Search for in-person, full-time jobs within 10 miles of ZIP code 14810 that allow Quick Apply.",
+  "final_result_response": "Found 101 in-person, full-time jobs within 10 miles of ZIP 14810 that allow Quick Apply on ZipRecruiter. Filters applied: Location 14810, Radius 10 miles, Employment=Full-time, Location Type=On-site, Apply Type=Quick Apply. Examples include: Driver at Steuben Center ($16-19/hr, Bath NY), Equipment Rental Specialist at Pinnacle Rental ($16-22/hr, Quick apply), Automotive Mechanic at Pro Fix Auto ($16-20/hr, Quick apply), Warehouse Manager, Financial Case Manager ($21/hr), and many others. Results URL: https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&refine_by_employment=full_time&refine_by_location_type=on_site&refine_by_apply_type=quick_apply",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need US site for ZIP 14810 search.",
+      "url": "https://www.ziprecruiter.ie/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need US site for ZIP 14810 search.",
+      "url": "https://www.ziprecruiter.ie/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Cloudflare needs time, then try direct US search URL.",
+      "url": "https://www.ziprecruiter.ie/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Bypass .ie block by loading US search directly.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&lk=ZQs1_BkDqv9MLLLZ8r4Vjg",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to apply in-person, full-time, distance and Quick Apply filters.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&lk=ZQs1_BkDqv9MLLLZ8r4Vjg",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set On-site, 10 miles, full-time, Quick Apply filters.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&lk=ZQs1_BkDqv9MLLLZ8r4Vjg",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[action_rejected] Distance must be reduced to 10 miles per task.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&lk=ZQs1_BkDqv9MLLLZ8r4Vjg",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[action_rejected] Slider input failed, so I will set radius directly in URL.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Radius is set, now I need full-time, on-site and Quick Apply filters.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to select Full Time employment type filter.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to reveal On-site radio above viewport before selecting filters.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Need to access On-site radio above viewport before applying filters.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Need to select On-site filter as required.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Filters dialog needs scrolling to reveal employment and Quick Apply options.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Need Full Time selected before Quick Apply filter.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Filters for location and distance are set, so apply them now.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true#intsrc=zds.fe.go-serp-page.jobseeker-header",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Filters panel must be opened to set full-time and Quick Apply.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to reveal Full-Time and Quick Apply options below.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Need to scroll filters dialog to find Quick Apply.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Need to set Full Time employment type before Quick Apply.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] [Anti-Loop: skipped already-visited link 'Full Time' -> scrolling down] Need to activate Full Time before applying filters.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Filters dialog is open so select Full Time now.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=&refine_by_location_type=no_remote&refine_by_salary=&refine_by_salary_ceil=&refine_by_apply_type=&refine_by_experience_level=&employment_types_explicitly_set=true&location_types_explicitly_set=true&lk=MZpxX9Ly-rygQAZ7bKzmog",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Direct URL avoids broken filter button loop.",
+      "url": "https://www.ziprecruiter.com/jobs-search?search=&location=14810&radius=10&days=&refine_by_employment=full_time&refine_by_location_type=on_site&refine_by_apply_type=quick_apply&lk=LQUv9zdI7KSHguS-l5oTCw",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 23,
+  "cost_usd": 0.020188,
+  "maliyet": 0.020188,
+  "elapsed_s": 136.7,
+  "sure_sn": 136.7,
+  "level": "hard",
+  "website": "https://ziprecruiter.com/",
+  "domain": "ziprecruiter.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0017653
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

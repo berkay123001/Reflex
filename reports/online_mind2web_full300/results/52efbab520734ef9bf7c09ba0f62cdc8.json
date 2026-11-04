@@ -1,0 +1,39 @@
+{
+  "task_id": "52efbab520734ef9bf7c09ba0f62cdc8",
+  "task": "Find the app for iOS.",
+  "final_result_response": "The iOS app for Recreation.gov was found on https://www.recreation.gov/mobile-app:\n\n**Recreation.gov Mobile App for iOS**\n- Download on the App Store: https://itunes.apple.com/us/app/recreation-gov/id1440487780?ls=1&mt=8 (App ID: 1440487780)\n- Features: Find and reserve campsites, search tours/tickets, enter lotteries, manage reservations, save favorites, Scan & Pay for first-come campsites offline.\n- Also available for Android on Google Play, but iOS link above is the requested app.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The homepage directly lists Download our iOS App link.",
+      "url": "https://www.recreation.gov/mobile-app",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 1,
+  "cost_usd": 0.002579,
+  "maliyet": 0.002579,
+  "elapsed_s": 21.4,
+  "sure_sn": 21.4,
+  "level": "easy",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0012868
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

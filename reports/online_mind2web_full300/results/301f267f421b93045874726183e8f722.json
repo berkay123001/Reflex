@@ -1,0 +1,121 @@
+{
+  "task_id": "301f267f421b93045874726183e8f722",
+  "task": "Find healthy savory vegan snack recipes which can be cooked within 5 minutes and contain a high level of protein.",
+  "final_result_response": "Healthy savory vegan high-protein snacks from healthline.com (<=5 min cook, sensible defaults chosen):\n\n1. Edamame - 1 cup provides ~17g protein (<200 cal) and ~13g per cup shelled in high-protein article. Prep: microwave frozen edamame 2-3 min or boil/steam 3-5 min, sprinkle sea salt. Savory, vegan.\n\n2. Pumpkin seeds (pepitas) - 1 oz provides 8.5g protein. Prep: 0 min - eat dry-roasted handful as-is with salt/spices. Savory, vegan, no cooking.\n\n3. Roasted chickpeas / Hummus + veggies - chickpeas are plant-protein staple for vegan diets. Prep quick version: use canned chickpeas or store hummus (chickpeas, tahini, lemon, garlic, oil) with celery/cucumber - 2-3 min assembly, savory.\n\n4. \"Cheesy\" seasoned popcorn with nutritional yeast - popcorn provides 4g protein per oz (28g) plus nutritional yeast adds high-quality plant protein with B-vitamins and zinc and savory cheesy taste. Prep: air-pop/microwave popcorn 2-3 min, toss with nutritional yeast and salt.\n\nAll are listed as vegan-friendly savory options on https://www.healthline.com/nutrition/vegan-snacks and https://www.healthline.com/nutrition/healthy-high-protein-snacks",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to use site search to find relevant recipes.",
+      "url": "https://www.healthline.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search is open, now I need to enter query.",
+      "url": "https://www.healthline.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search text is entered, now submit it.",
+      "url": "https://www.healthline.com/search?q1=vegan%20protein%20snacks",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] (queue +2, rej 0) Best match is vegan snack ideas list for task.",
+      "url": "https://www.healthline.com/nutrition/vegan-snacks",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[answer_check] Need high-protein savory vegan options with proof from Healthline.",
+      "url": "https://www.healthline.com/nutrition/healthy-high-protein-snacks",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need protein amounts and prep times for vegan savory items.",
+      "url": "https://www.healthline.com/nutrition/healthy-high-protein-snacks",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need protein amounts and quick prep proof before completing.",
+      "url": "https://www.healthline.com/nutrition/healthy-high-protein-snacks",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need protein grams for vegan savory items to meet criteria.",
+      "url": "https://www.healthline.com/nutrition/healthy-high-protein-snacks",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need protein amounts and prep times for vegan savory options.",
+      "url": "https://www.healthline.com/nutrition/healthy-high-protein-snacks",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 9,
+  "cost_usd": 0.013772,
+  "maliyet": 0.013772,
+  "elapsed_s": 83.3,
+  "sure_sn": 83.3,
+  "level": "medium",
+  "website": "https://www.healthline.com/",
+  "domain": "www.healthline.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "fail",
+      "unmet": [
+        "high level of protein requirement not met - answer includes low-protein snacks such as Guacamole and Crackers and Rice Cakes and Avocado which are not high in protein"
+      ],
+      "cost_usd": 0.00399525
+    }
+  ],
+  "answer_check_rejections": 1,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

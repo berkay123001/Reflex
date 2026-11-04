@@ -1,0 +1,28 @@
+{
+  "task_id": "7b182a5087347d494b48a29dbc0f1d3e",
+  "task": "Find a shelter or rescue group near zip code 90011.",
+  "final_result_response": "Could not find a shelter near zip code 90011 because adoptapet.com is inaccessible. The homepage https://www.adoptapet.com/ returns '403 ERROR - The request could not be satisfied. The Amazon CloudFront distribution is configured to block access from your country.' No search or shelter listings could be accessed. Please try again from a supported location / network, or use an alternative site.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.001591,
+  "maliyet": 0.001591,
+  "elapsed_s": 7.4,
+  "sure_sn": 7.4,
+  "level": "easy",
+  "website": "https://www.adoptapet.com/",
+  "domain": "www.adoptapet.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00124605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

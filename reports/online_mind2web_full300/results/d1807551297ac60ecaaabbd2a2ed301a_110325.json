@@ -1,0 +1,79 @@
+{
+  "task_id": "d1807551297ac60ecaaabbd2a2ed301a_110325",
+  "task": "Show me a Dallas-based divorce lawyer who was once included in Top 50 Women Texas Super Lawyers list.",
+  "final_result_response": "Found Dallas-based divorce/family-law lawyer:\n\n**Jennifer Stanton Hargrave - Hargrave Family Law**\n4201 Spring Valley Rd. Suite 1210, Dallas, TX 75244\nPhone: 469-757-4469\nProfile: https://profiles.superlawyers.com/texas/dallas/lawyer/jennifer-stanton-hargrave/8f6a1987-7a28-453e-9bbb-b4918040df99.html\n\nEvidence:\n- Listed as \"Top rated Family Law attorney in Dallas, Texas\"\n- Practice focuses exclusively on family law / divorce (division of assets, custody, support, collaborative divorce)\n- Selected to Super Lawyers 2012-2026, Rising Stars 2009-2010\n- **Top Lists: Top 50: Women Texas Super Lawyers: 2014**\n- Board certified specialist in family law by Texas Board of Legal Specialization",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will start searching for Dallas divorce lawyers.",
+      "url": "https://www.superlawyers.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set Dallas location to find Dallas divorce lawyers.",
+      "url": "https://www.superlawyers.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to set the legal issue before searching.",
+      "url": "https://www.superlawyers.com/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Inputs ready so submit search now.",
+      "url": "https://attorneys.superlawyers.com/divorce/texas/dallas/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] (queue +0, rej 3) I need to check profiles for Top 50 Women evidence.",
+      "url": "https://profiles.superlawyers.com/texas/dallas/lawyer/jennifer-stanton-hargrave/8f6a1987-7a28-453e-9bbb-b4918040df99.html",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.00608,
+  "maliyet": 0.00608,
+  "elapsed_s": 37.9,
+  "sure_sn": 37.9,
+  "level": "medium",
+  "website": "https://superlawyers.com/",
+  "domain": "superlawyers.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00144405
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

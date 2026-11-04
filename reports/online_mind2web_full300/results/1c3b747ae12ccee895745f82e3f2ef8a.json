@@ -1,0 +1,109 @@
+{
+  "task_id": "1c3b747ae12ccee895745f82e3f2ef8a",
+  "task": "Identify the ongoing competition that offers the highest prize and find the code that received the most votes in that competition.",
+  "final_result_response": "Highest-prize ongoing competition is ARC Prize 2026 - Paper Track with $450,000 prize (https://www.kaggle.com/competitions/arc-prize-2026-paper-track). Its most-voted Code sorted by Most Votes is 'ARC-AGI 3 Interactive Testbed: 200+ Games' by ashvin singh with 20 votes, 10 copies, 777 views (https://www.kaggle.com/code/ashvinsingh/arc-agi-3-interactive-testbed-200-games).",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to verify the highest-prize competition on the competitions page.",
+      "url": "https://www.kaggle.com/competitions",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Highest prize identified, now need its top-voted code.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-paper-track",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open Code section to find most voted code.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-paper-track/code",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to sort notebooks by votes to find top.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-paper-track/code",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Sorting by votes reveals top-voted code.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-paper-track/code?competitionId=133724&sortBy=voteCount&excludeNonAccessedDatasources=true",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] A dialog blocks the notebook list, so I will close it.",
+      "url": "https://www.kaggle.com/competitions/arc-prize-2026-paper-track/code?competitionId=133724&sortBy=voteCount&excludeNonAccessedDatasources=true",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top notebook visible, need to open it for link.",
+      "url": "https://www.kaggle.com/code/ashvinsingh/arc-agi-3-interactive-testbed-200-games",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Cookie banner hides content, must dismiss it first.",
+      "url": "https://www.kaggle.com/code/ashvinsingh/arc-agi-3-interactive-testbed-200-games",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.007336,
+  "maliyet": 0.007336,
+  "elapsed_s": 41.6,
+  "sure_sn": 41.6,
+  "level": "hard",
+  "website": "https://www.kaggle.com/",
+  "domain": "www.kaggle.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00288655
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

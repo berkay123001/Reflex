@@ -1,0 +1,79 @@
+{
+  "task_id": "949dc965a6c23a95663b3bc2ca2c3a8a",
+  "task": "Find UA or AA flights from London to New York that arrive between 8:00 PM and 11:00 PM on FlightAware.",
+  "final_result_response": "Found UA and AA flights from London to New York arriving 8:00 PM - 11:00 PM on FlightAware (https://www.flightaware.com/live/findflight?origin=London&destination=New+York):\n\n1. UAL921 (United) - LHR to EWR - Dep Wed 06:00PM GMT, Arr Wed 09:30PM EST - B763 - Scheduled\n2. AAL141 (American Airlines) - LHR to JFK - Dep Wed 05:00PM GMT, Arr Wed 08:05PM EST - B772 - Scheduled\n\nSame flights also operate daily (e.g. Tue En Route versions with same times). No other UA/AA flights in this arrival window were listed; other UA flights (UAL15 06:45PM, UAL147 04:20PM, UAL17 03:10PM) and AA flight AAL107 (06:40PM) arrive earlier.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Flight Finder allows origin-destination airline search.",
+      "url": "https://www.flightaware.com/live/findflight/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to start flight search by entering origin.",
+      "url": "https://www.flightaware.com/live/findflight/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to fill destination field to enable flight search.",
+      "url": "https://www.flightaware.com/live/findflight/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Both fields filled, so submit the search.",
+      "url": "https://www.flightaware.com/live/findflight?origin=London&destination=New+York",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need full list before completing task.",
+      "url": "https://www.flightaware.com/live/findflight?origin=London&destination=New+York",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.005725,
+  "maliyet": 0.005725,
+  "elapsed_s": 32.9,
+  "sure_sn": 32.9,
+  "level": "hard",
+  "website": "https://www.flightaware.com/",
+  "domain": "www.flightaware.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0023313
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

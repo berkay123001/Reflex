@@ -1,0 +1,189 @@
+{
+  "task_id": "0e5536aaad9d3462b06cf725e6ed535a",
+  "task": "Show me the page with average wait times for U.S. citizens arriving at Raleigh-Durham International Airport on 2025-03-12.",
+  "final_result_response": "Page with average wait times for U.S. citizens arriving at Raleigh-Durham International Airport (RDU, Terminal 2) on 2025-03-12 is displayed at https://awt.cbp.gov/Report\n\nResults for RDU Terminal 2 on 2025-03-12 (U.S. Citizen Average / Max):\n- 13:00-14:00: 6 min avg / 15 max (156 pax, 2 flights)\n- 14:00-15:00: 9 min avg / 30 max (137 pax, 1 flight)\n- 16:00-17:00: 23 min avg / 47 max (128 pax, 1 flight)\n- 17:00-18:00: 44 min avg / 92 max (243 pax, 1 flight)\n- 19:00-20:00: 21 min avg / 42 max (245 pax, 2 flights)\nCurrent View Averages: 20 min avg / 45 max for U.S. Citizens.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The Border Wait Times link directly leads toward airport wait times.",
+      "url": "https://www.cbp.gov/travel/advisories-wait-times",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The Airport Wait Times link is visible and directly relevant.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "RELOAD",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] The AWT page shows no form, so reloading may load it.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to select Raleigh-Durham airport from the dropdown.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] RDU option is below viewport so scrolling is required.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] RDU option is below viewport so I must scroll down.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] I will type Raleigh into airport box to select RDU.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The dropdown shows Raleigh-Durham option, so I select it.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Airport is set, now I must set the date range.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will correct the date range to March 12 2025.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will set the From Day to 12 next.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] To date must match requested single day before creating report.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] To month shows 2025, must correct to 03.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] To Date day shows 3, must change to 12.",
+      "url": "https://awt.cbp.gov/",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] All filters are set so I will create the report.",
+      "url": "https://awt.cbp.gov/Report",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Report page appears empty so waiting for data to load.",
+      "url": "https://awt.cbp.gov/Report",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 16,
+  "cost_usd": 0.008677,
+  "maliyet": 0.008677,
+  "elapsed_s": 63.8,
+  "sure_sn": 63.8,
+  "level": "hard",
+  "website": "https://www.cbp.gov/",
+  "domain": "www.cbp.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00279825
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

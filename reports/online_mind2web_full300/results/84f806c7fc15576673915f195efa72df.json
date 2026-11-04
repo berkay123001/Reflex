@@ -1,0 +1,28 @@
+{
+  "task_id": "84f806c7fc15576673915f195efa72df",
+  "task": "Find a nationwide nearest animal shelter for birds around zip 10012.",
+  "final_result_response": "Could not find a bird shelter near zip 10012 because adoptapet.com is inaccessible. The homepage https://www.adoptapet.com/ returns '403 ERROR - The request could not be satisfied. The Amazon CloudFront distribution is configured to block access from your country.' No search, shelter list, or contact information could be retrieved. Please try again from a US location or allow use of an alternative nationwide shelter directory.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.001493,
+  "maliyet": 0.001493,
+  "elapsed_s": 8.2,
+  "sure_sn": 8.2,
+  "level": "medium",
+  "website": "https://www.adoptapet.com/",
+  "domain": "www.adoptapet.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0012493
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,79 @@
+{
+  "task_id": "47b93b9e649eadeb8d96a6e3df715c2d",
+  "task": "Show me Diagnoses & Treatment for Female infertility.",
+  "final_result_response": "Female infertility - Diagnosis and Treatment (Mayo Clinic) is shown at: https://www.mayoclinic.org/diseases-conditions/female-infertility/diagnosis-treatment/drc-20354313\n\nDIAGNOSIS:\n- Detailed medical history and physical exam for both partners.\n- Ovulation testing: OTC LH surge kit, progesterone blood test, prolactin check.\n- Hysterosalpingography: X-ray contrast into uterus to check uterus and tubal patency.\n- Ovarian reserve testing: blood + imaging for egg quantity/quality, especially >35.\n- Other hormone testing: ovulatory, thyroid and pituitary hormones.\n- Imaging: pelvic ultrasound, saline infusion sonogram (sonohysterogram), hysteroscopy.\n- Other: laparoscopy, genetic testing.\n\nTREATMENT:\nDepends on cause, age, duration, preferences.\n- Medications to restore fertility: Clomiphene citrate, Gonadotropins, Metformin, Letrozole, Bromocriptine.\n- Risks of fertility drugs: multiple pregnancy, ovarian hyperstimulation syndrome, long-term ovarian tumor risk.\n- Surgery to restore fertility: hysteroscopic, laparoscopic, tubal surgeries.\n- Reproductive assistance: Intrauterine insemination (IUI), Assisted reproductive technology including In vitro fertilization (IVF).\n\nAlso includes: Clinical trials, Coping and support, Preparing for appointment sections.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Cookie overlay must be rejected before searching for infertility.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search for female infertility using site search.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to submit the typed search query.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/search-results?q=female+infertility",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search results contain the target link, so open it.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/female-infertility/symptoms-causes/syc-20354308",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The diagnosis and treatment link is visible and directly satisfies goal.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/female-infertility/diagnosis-treatment/drc-20354313",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.005768,
+  "maliyet": 0.005768,
+  "elapsed_s": 33.3,
+  "sure_sn": 33.3,
+  "level": "easy",
+  "website": "https://www.mayoclinic.org/",
+  "domain": "www.mayoclinic.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0013018
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

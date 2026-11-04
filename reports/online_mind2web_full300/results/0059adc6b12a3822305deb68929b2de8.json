@@ -1,0 +1,99 @@
+{
+  "task_id": "0059adc6b12a3822305deb68929b2de8",
+  "task": "Find support services jobs in Bentonville, in the state of Arkansas.",
+  "final_result_response": "Found support services jobs in Bentonville, AR on Walmart Careers (66 open roles for 'support services'):\n\n1. Specialist, Enterprise Business Services - Other #30099, Bentonville, AR 72716-3148 - Multiple shifts - $19.00 - $35.00/hr\n\n2. (USA) Senior Manager, Supplier To Serve - Bentonville, AR - $80,000 - $155,000/yr\n\nSource: https://careers.walmart.com/us/en/results?searchQuery=support%20services",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for support services roles first.",
+      "url": "https://careers.walmart.com/us/en/home",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Dialog is open so use its search field directly.",
+      "url": "https://careers.walmart.com/us/en/home",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Query is entered, now I must trigger the search.",
+      "url": "https://careers.walmart.com/us/en/home",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Dialog covers page so must use its own search box.",
+      "url": "https://careers.walmart.com/us/en/home",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Dialog is open so must use its fields directly.",
+      "url": "https://careers.walmart.com/us/en/home",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Overlay blocks clicks so I will navigate directly to results.",
+      "url": "https://careers.walmart.com/us/en/results?searchQuery=support%20services",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Bentonville jobs are below fold, need to scroll to access them.",
+      "url": "https://careers.walmart.com/us/en/results?searchQuery=support%20services",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 7,
+  "cost_usd": 0.009158,
+  "maliyet": 0.009158,
+  "elapsed_s": 65.4,
+  "sure_sn": 65.4,
+  "level": "medium",
+  "website": "https://careers.walmart.com/",
+  "domain": "careers.walmart.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00341055
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

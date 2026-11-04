@@ -1,0 +1,69 @@
+{
+  "task_id": "e24662008c3be5d56f986f232fcec447_070826",
+  "task": "Find the stock price for TKO Group Holdings over the last month.",
+  "final_result_response": "TKO Group Holdings Inc (TKO:NYSE) - Last Month (1M view on Google Finance):\n\n- Current price: $187.20 (Closed Nov 3, 4:00:03 PM UTC-5)\n- 1-Month performance: +5.74% (+$10.16)\n- After hours: $187.20 (0.00%)\n- Monthly chart range: ~$170 to ~$190, with dates Oct 12, Oct 19, Oct 26, Nov 2 shown on axis, indicating upward trend into early November.\n- Context: Surge over past week on anticipated Q3 2026 earnings (due 1:00 AM tomorrow).\n\nSource: https://www.google.com/finance/quote/TKO:NYSE?window=1M",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for TKO Group Holdings stock.",
+      "url": "https://www.google.com/finance/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for TKO Group Holdings ticker.",
+      "url": "https://www.google.com/finance/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search input has TKO typed, need to submit to reveal results.",
+      "url": "https://www.google.com/finance/quote/TKO:NYSE",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to show last month chart by selecting 1M tab.",
+      "url": "https://www.google.com/finance/quote/TKO:NYSE?window=1M",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.004299,
+  "maliyet": 0.004299,
+  "elapsed_s": 28.7,
+  "sure_sn": 28.7,
+  "level": "easy",
+  "website": "https://www.google.com/finance/",
+  "domain": "www.google.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0019393
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

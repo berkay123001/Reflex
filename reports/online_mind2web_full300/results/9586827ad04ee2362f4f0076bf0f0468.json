@@ -1,0 +1,49 @@
+{
+  "task_id": "9586827ad04ee2362f4f0076bf0f0468",
+  "task": "Find the side effects of taking Montelukast.",
+  "final_result_response": "Side effects of Montelukast (from drugs.com - Montelukast Side Effects page, reviewed Dec 11, 2025):\n\nIMPORTANT BOXED WARNING - Serious Neuropsychiatric Events: agitation, aggression, depression, sleep disturbances, vivid dreams, anxiety, irritability, anger, suicidal thoughts and behavior including suicide. Stop drug and contact doctor immediately if behavior changes occur. Reserve use for allergic rhinitis only if alternatives inadequate.\n\nSerious side effects - Check with doctor immediately:\nMore common: body aches/pain, cough, difficulty breathing, sore throat, fever, headache, loss of voice, pain/tenderness around eyes/cheekbones, ear pain/redness/swelling, stomach pain, stuffy/runny nose, swollen glands in neck, trouble swallowing, unusual tiredness/weakness, voice changes.\nLess common: bloody nose, general discomfort/illness, joint pain, sweating.\nRare: pus in urine.\nIncidence not known: allergic reactions, vasculitis, liver issues, skin reactions (Stevens-Johnson, toxic epidermal necrolysis, rash, itching, angioedema, urticaria), palpitations, etc.\n\nOther side effects usually not needing medical attention:\nMore common: diarrhea.\nLess common: acid/sour stomach, belching, blurred vision, dental pain, dizziness, headache, etc.\n\nFor healthcare professionals - Most common (>5% and > placebo): upper respiratory infection, fever, headache, pharyngitis, cough, abdominal pain, diarrhea, otitis media, influenza, rhinorrhea, sinusitis, otitis.\n\nSource: https://www.drugs.com/sfx/montelukast-side-effects.html",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search for Montelukast using the site search.",
+      "url": "https://www.drugs.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Direct side effects link is visible, so click it.",
+      "url": "https://www.drugs.com/sfx/montelukast-side-effects.html",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 2,
+  "cost_usd": 0.004386,
+  "maliyet": 0.004386,
+  "elapsed_s": 17.9,
+  "sure_sn": 17.9,
+  "level": "medium",
+  "website": "https://www.drugs.com/",
+  "domain": "www.drugs.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0017313
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

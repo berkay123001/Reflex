@@ -1,0 +1,48 @@
+{
+  "task_id": "29526b17a32485742b5ab63507e99417",
+  "task": "Browse Humira dosage information.",
+  "final_result_response": "Humira (adalimumab) Dosage Information from Drugs.com (https://www.drugs.com/dosage/humira.html, reviewed Dec 23, 2025):\n\n- Form: injection, Generic: ADALIMUMAB 40mg in 0.8mL, Classes: Antirheumatics, TNF alfa inhibitors. Rx only, not controlled.\n- TB Evaluation: Evaluate for active TB and test for latent infection before and periodically during therapy.\n- RA / Psoriatic Arthritis / Ankylosing Spondylitis (adults): 40 mg subcutaneously every other week. May continue MTX, DMARDs, steroids, NSAIDs. RA without MTX may increase to 40 mg weekly or 80 mg every other week.\n- Juvenile Idiopathic Arthritis / Pediatric Uveitis (2+ years, weight-based every other week): 10- <15kg: 10 mg; 15- <30kg: 20 mg; >=30kg: 40 mg.\n- Crohn's Disease, Ulcerative Colitis, Plaque Psoriasis, Adult Uveitis, Hidradenitis Suppurativa: detailed induction/maintenance regimens listed in sections 2.4-2.7 on page.\n- Administration: subcutaneous use, general considerations in section 2.8.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search Humira using site search box.",
+      "url": "https://www.drugs.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Dosage link is directly available, so I will open it.",
+      "url": "https://www.drugs.com/dosage/humira.html",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 2,
+  "cost_usd": 0.004263,
+  "maliyet": 0.004263,
+  "elapsed_s": 16.7,
+  "sure_sn": 16.7,
+  "level": "easy",
+  "website": "https://www.drugs.com/",
+  "domain": "www.drugs.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0018733
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

@@ -40,6 +40,8 @@ In strict mode, Muse Spark also decides scrolling. Irreversible actions (payment
 - **19 real-site tasks, each run twice (Oct 29), with the cloud System 1 (Jev):** Muse alone 36/38, strict hybrid 33/38, the original flexible hybrid 14/19. The small model's confident mistakes cost extra recovery steps, and Muse Spark 1.3 answers in about 3 s per step, so there is little time left to save.
 - **6 tasks, each run twice (Oct 31), strict hybrid with Turnike:** 12/12 finished, Turnike took about one step in five (mostly the first search and a few clicks), and the runs were about 10–15% faster than Muse alone on the same tasks (small sample; the Muse-only runs were measured a day earlier).
 
+- **First 50 Online-Mind2Web tasks of the full run (Nov 4), same code for all modes:** Muse only 28/50 (28/40 reachable), strict hybrid with Jev 28/50 (28/39), strict hybrid with Turnike 27/50 (27/40). Turnike took 13% of the steps and Jev 35%, with no failed calls; median time and cost per task were about the same as Muse alone (60 s, $0.009). Per task: [`reports/online_mind2web_full300/hybrid_first50.json`](../reports/online_mind2web_full300/hybrid_first50.json).
+
 That is why Muse-only is the default. The hybrid modes stay selectable in Studio (`Mode`) and in `scripts/eval.py --mode`.
 
 ## Next steps

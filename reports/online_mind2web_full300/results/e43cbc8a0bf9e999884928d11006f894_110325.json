@@ -1,0 +1,129 @@
+{
+  "task_id": "e43cbc8a0bf9e999884928d11006f894_110325",
+  "task": "Show me an event to do in Miami for 2 adults, that last between 1 to 3 hours per session, cost under $100 per person, and are available for booking between next Monday and next Friday, have a rating of 4.5+.",
+  "final_result_response": "Found qualifying Miami experience for 2 adults:\n\n**Sunset Boat Tour: Mansions, Skyline & Cocktails** - ★4.85 (781 ratings)\n- Duration: Around 2 hrs (meets 1-3 hours)\n- Price: From ₺1,961 / guest discounted from ₺2,451 (~$45-55, well under $100 per person)\n- Availability between next Monday-Friday: Monday Nov 9 5-7PM, Wednesday Nov 11 5-7PM, Friday Nov 13 5-7PM\n- Location: Miami Beach, Florida - Biscayne Bay cruise with skyline, mansions, music and bar onboard\n- Free cancellation (cancel 1 day before)\n\nBooking link: https://www.airbnb.com/experiences/3692695?adults=2&checkin=2026-11-09&checkout=2026-11-13\n\nDefault selected: Monday Nov 9, 5-7PM for 2 adults. Click 'Show dates' on page to choose Wed or Fri.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to navigate to Experiences to search Miami.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for Miami experiences first.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select Miami suggestion to set location.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set availability window to next Monday to Friday.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to complete Monday-Friday date range selection.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Dates are set, now need to set guests before searching.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to set 2 adults before searching.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need 2 adults before searching Miami experiences.",
+      "url": "https://www.airbnb.com/experiences",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search filters are set but not submitted, so results must be refreshed.",
+      "url": "https://www.airbnb.com/s/Miami--Florida--United-States/experiences?place_id=ChIJEcHIDqKw2YgRZU-t3XHylv8&refinement_paths%5B%5D=%2Fexperiences&location_bb=Qc9e0MKgPu1BzawewqCjIQ%3D%3D&acp_id=d956c3de-2834-44a1-ad2e-47bb567a6467&date_picker_type=calendar&checkin=2026-11-09&checkout=2026-11-13&adults=2&source=structured_search_input_header&search_type=autocomplete_click",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] This candidate meets duration, rating, availability and likely price.",
+      "url": "https://www.airbnb.com/experiences/3692695?adults=2&checkin=2026-11-09&checkout=2026-11-13",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 10,
+  "cost_usd": 0.012982,
+  "maliyet": 0.012982,
+  "elapsed_s": 61.8,
+  "sure_sn": 61.8,
+  "level": "hard",
+  "website": "https://www.airbnb.com/",
+  "domain": "www.airbnb.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0026283
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,89 @@
+{
+  "task_id": "662ae0f2d3ac851dbcdd245f908277e3",
+  "task": "What is the second stop among the best stops along the road trip from Yellowstone National Park to Las Vegas?",
+  "final_result_response": "The second stop among the Best stops along the Yellowstone National Park to Las Vegas drive on wanderlog.com is Grizzly & Wolf Discovery Center. The Best stops section is numbered: 1. Grand Prismatic Spring, 2. Grizzly & Wolf Discovery Center, followed by Grand Teton, Jackson Hole Aerial Tram, etc.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to find the Yellowstone to Las Vegas road trip guide.",
+      "url": "https://wanderlog.com/drive?eventToTrackOnLoad=Click%20footer%20link%20on%20landing%20page",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ESCAPE",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Language popup blocks page, must dismiss it first",
+      "url": "https://wanderlog.com/drive?eventToTrackOnLoad=Click%20footer%20link%20on%20landing%20page",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Selecting English should close the blocking language dialog.",
+      "url": "https://wanderlog.com/drive?eventToTrackOnLoad=Click%20footer%20link%20on%20landing%20page",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for the specific road trip route.",
+      "url": "https://wanderlog.com/drive?eventToTrackOnLoad=Click%20footer%20link%20on%20landing%20page",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to open Yellowstone to access its road trips list.",
+      "url": "https://wanderlog.com/explore/58303/yellowstone-national-park",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The drive page will list best stops in order.",
+      "url": "https://wanderlog.com/drive/between/58303/58148/yellowstone-national-park-to-las-vegas-drive",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 6,
+  "cost_usd": 0.008229,
+  "maliyet": 0.008229,
+  "elapsed_s": 64.0,
+  "sure_sn": 64.0,
+  "level": "easy",
+  "website": "https://wanderlog.com/",
+  "domain": "wanderlog.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0017158
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

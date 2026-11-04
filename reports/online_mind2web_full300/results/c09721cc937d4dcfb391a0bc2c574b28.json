@@ -1,0 +1,79 @@
+{
+  "task_id": "c09721cc937d4dcfb391a0bc2c574b28",
+  "task": "Find the next available date for Albion Basin.",
+  "final_result_response": "Next available date for Albion Basin (232010, Uinta-Wasatch-Cache National Forest near Sandy, Utah):\n\n- Current status on recreation.gov Seasons & Fees tab: \"Availability is not released. Check back on January 10, 2027 to view availability.\"\n- Today shown as Nov 04, 2026. On Jan 10, 2027 at 18:00 availability will be released through Jul 10, 2027.\n- Season dates: Season Start Jul 10, 2027 - Season Closes Sep 11, 2027 (Peak Season). Rates $29 / $58 / $87 for Standard Nonelectric.\n\nTherefore the next bookable / available date is July 10, 2027, which is both the first date released and the Season Start. No earlier dates are bookable because the campground operates on a 6-month rolling basis and is currently outside the booking window. Default assumption: 1 night, any site type, as user was unavailable to specify preferences.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for Albion Basin facility.",
+      "url": "https://www.recreation.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search text entered, need to submit to see results.",
+      "url": "https://www.recreation.gov/search?q=Albion%20Basin",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches goal so open its facility page.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232010",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The page has a Next Available button to find open dates.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232010",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need season info to confirm next available date.",
+      "url": "https://www.recreation.gov/camping/campgrounds/232010?tab=seasons",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.005626,
+  "maliyet": 0.005626,
+  "elapsed_s": 43.0,
+  "sure_sn": 43.0,
+  "level": "easy",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00171905
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

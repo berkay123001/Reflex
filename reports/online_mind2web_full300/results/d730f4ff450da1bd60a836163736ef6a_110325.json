@@ -1,0 +1,109 @@
+{
+  "task_id": "d730f4ff450da1bd60a836163736ef6a_110325",
+  "task": "Find the GORE-TEX men's hiking shoe with the highest percentage discount, priced between $100.00 and $199.99, with a rating of 4 stars or higher.",
+  "final_result_response": "Could not complete the task because backcountry.com is unreachable. Tried https://www.backcountry.com/, https://backcountry.com/, http://www.backcountry.com/ and http://backcountry.com/ over 8 steps, plus reloads and waits, but the browser consistently returned chrome-error://chromewebdata/ with HTTP ERROR 404 for www.backcountry.com. No search, category, or product page could be loaded, so no GORE-TEX men's hiking shoe meeting the $100-$199.99, 4+ stars, highest discount criteria could be identified. Default choice: none. This appears to be a network/DNS block or site outage in this environment.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Need to load correct homepage to start search.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Retry homepage load after error.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "RELOAD",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Reload may resolve transient error and load homepage.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Same URL looped, so I try apex domain variant.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Temporary network failure may resolve after waiting.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "WAIT",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Waiting may allow network error to resolve before retrying.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] HTTPS fails, so I will try HTTP fallback.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] I will try the last untested URL variant before failing.",
+      "url": "chrome-error://chromewebdata/",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 8,
+  "cost_usd": 0.003265,
+  "maliyet": 0.003265,
+  "elapsed_s": 47.6,
+  "sure_sn": 47.6,
+  "level": "medium",
+  "website": "https://www.backcountry.com/",
+  "domain": "www.backcountry.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00179605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

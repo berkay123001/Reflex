@@ -1,0 +1,59 @@
+{
+  "task_id": "a69d2934fe54fef165490a5a2d95bf38_070826",
+  "task": "Show me recipes for pancakes in Japan without flour.",
+  "final_result_response": "Found 8,526 flourless pancake recipes on Cookpad Japan (cookpad.com/jp) for search \"小麦粉なし パンケーキ\":\n\n1. Banana & Sweet Potato Pancakes (no wheat flour) - https://cookpad.com/jp/recipes/26541926\n2. Rice Cooker Apple Pancake with Ruby Apples - https://cookpad.com/jp/recipes/26798747\n3. Just Mix Powdered Tofu Pancake (no wheat flour) - https://cookpad.com/jp/recipes/24543989\n4. Rice Flour & Soy Milk Pancake (no egg, no wheat flour) - https://cookpad.com/jp/recipes/24417671\n5. Buckwheat Flour & Yam Pancake (no wheat flour) - https://cookpad.com/jp/recipes/23992392\n6. Basic Chewy Rice Flour Pancake - https://cookpad.com/jp/recipes/26779075\n7. Fluffy Tofu Rice Flour Pancake - https://cookpad.com/jp/recipes/26768674\n8. Gentle Tofu & Rice Flour Pancake - https://cookpad.com/jp/recipes/26765407\n9. Oatmeal Protein Pancake - https://cookpad.com/jp/recipes/26764211\n10. Rice Flour Pancake (no milk, no wheat flour) - https://cookpad.com/jp/recipes/20774021\n11. High-Protein Low-Carb Oatmeal Pancake - https://cookpad.com/jp/recipes/26333671\n12. Oatmeal Pancake (no egg, no wheat flour) - https://cookpad.com/jp/recipes/20676208\n13. Rice Flour Pancake (no egg, dairy, wheat) - https://cookpad.com/jp/recipes/20580486\n14. Avocado & Banana Pancake (no wheat flour) - https://cookpad.com/jp/recipes/21057073\n15. Okara Pancake (no wheat flour) - https://cookpad.com/jp/recipes/20780905\n16. Sugar-free Wheat-free Oatmeal Pancake - https://cookpad.com/jp/recipes/20836883\n17. Banana Pancake (no wheat flour) - https://cookpad.com/jp/recipes/20747213\n18. Avocado Pancake (no egg, milk, wheat flour) - https://cookpad.com/jp/recipes/20211960\n19. Banana & Egg Pancake (no wheat flour needed) - https://cookpad.com/jp/recipes/20124589\n20. Banana Pancake (no egg, wheat flour) - https://cookpad.com/jp/recipes/19846329\n21. Pancake (no wheat flour, egg, milk) - https://cookpad.com/jp/recipes/19594498\n\nFull search results page: https://cookpad.com/jp/search/%E5%B0%8F%E9%BA%A6%E7%B2%89%E3%81%AA%E3%81%97%20%E3%83%91%E3%83%B3%E3%82%B1%E3%83%BC%E3%82%AD\nCommon flour substitutes used: rice flour (米粉), oatmeal, tofu, okara, banana, sweet potato, buckwheat flour.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Japan recipes require Japanese Cookpad domain first.",
+      "url": "https://cookpad.com/jp",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to search for flourless pancakes using the site search box.",
+      "url": "https://cookpad.com/jp",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will run the suggested flourless pancake search now.",
+      "url": "https://cookpad.com/jp/search/%E5%B0%8F%E9%BA%A6%E7%B2%89%E3%81%AA%E3%81%97%20%E3%83%91%E3%83%B3%E3%82%B1%E3%83%BC%E3%82%AD?event=search.suggestion&order=recent",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 3,
+  "cost_usd": 0.008133,
+  "maliyet": 0.008133,
+  "elapsed_s": 32.1,
+  "sure_sn": 32.1,
+  "level": "medium",
+  "website": "https://cookpad.com/",
+  "domain": "cookpad.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00463775
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

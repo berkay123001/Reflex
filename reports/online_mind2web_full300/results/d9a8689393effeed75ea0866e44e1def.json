@@ -1,0 +1,38 @@
+{
+  "task_id": "d9a8689393effeed75ea0866e44e1def",
+  "task": "Find the address and phone of the Office of the Inspector General (OIG).",
+  "final_result_response": "Office of the Inspector General (OIG), U.S. Department of Justice:\nAddress: 950 Pennsylvania Avenue NW, Washington, DC 20530-0001\nPhone: (202) 514-3435\nSource: https://oig.justice.gov/ footer.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The OIG link is directly visible so I will open it.",
+      "url": "https://oig.justice.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 1,
+  "cost_usd": 0.00276,
+  "maliyet": 0.00276,
+  "elapsed_s": 14.7,
+  "sure_sn": 14.7,
+  "level": "medium",
+  "website": "https://www.justice.gov/",
+  "domain": "www.justice.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00168255
+    }
+  ],
+  "answer_check_rejections": 0,
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,79 @@
+{
+  "task_id": "73d08420706ae205a9c5be28b6d4e80f",
+  "task": "Show me the rules and cancellation for Alley Spring.",
+  "final_result_response": "Rules and Cancellation for Alley Spring (Ozark National Scenic Riverways, near Eminence, Missouri) - from Recreation.gov campground 234046, Rules & Cancellations tab:\n\n**Reservation Rules:**\n- Maximum Consecutive Stay: up to 14 nights per visit (06/11/2007 - 12/31/2050)\n- Maximum Stay: up to 14 nights total within rolling 30 days (08/01/2018 - 12/31/2024)\n- Maximum Reservations per Transaction: up to 4 reservations at one time on same credit card, All Year\n- Self Service Modifications After Arrival Allowed: modify via My Reservations for remaining nights (change sites or leave early). Past nights can't be changed. All year.\n\n**Changes:**\n- Make changes in My Reservations. Planned changes should be made as far in advance as possible.\n- $10 change fee per reserved site if new stay dates are completely different from original.\n- No additional fees for adding/removing nights or changing to different campsite. Balances adjust to new nightly rate.\n\n**Cancellations:**\n- Can cancel anytime before scheduled arrival date. Refund for stay minus:\n  $10 cancellation fee + any reservation fees (if paid) + any previous change fees.\n- Late cancellation penalties may also apply.\n- What is \"Late\"? Individual campsites: starting midnight 1 calendar day before check-in. Cabins/group sites: midnight 14 calendar days or fewer before check-in.\n- Late Fee: In addition to above, late cancellation also subtracts first night's recreation use fee from refund.\n\n**Day Use Rules:**\n- Above modification/cancellation/refund guidance does NOT apply to Day Use sites. Day Use sites forfeit Day Use recreation use fee if cancelled less than 14 days before arrival (not to exceed total paid).",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to search for Alley Spring campground.",
+      "url": "https://www.recreation.gov/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "PRESS_ENTER",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to submit the typed search query.",
+      "url": "https://www.recreation.gov/search?q=Alley%20Spring",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches request, so I will open it.",
+      "url": "https://www.recreation.gov/camping/campgrounds/234046",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page content not loaded yet, so I will scroll to reveal it.",
+      "url": "https://www.recreation.gov/camping/campgrounds/234046",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The Rules tab is visible and must be opened.",
+      "url": "https://www.recreation.gov/camping/campgrounds/234046?tab=fees",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 5,
+  "cost_usd": 0.005504,
+  "maliyet": 0.005504,
+  "elapsed_s": 39.4,
+  "sure_sn": 39.4,
+  "level": "easy",
+  "website": "https://www.recreation.gov/",
+  "domain": "www.recreation.gov",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0018468
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

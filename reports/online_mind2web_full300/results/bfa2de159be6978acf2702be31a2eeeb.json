@@ -1,0 +1,139 @@
+{
+  "task_id": "bfa2de159be6978acf2702be31a2eeeb",
+  "task": "Show me the options for a roundtrip leaving from Las Vegas on flexible dates on the interactive map on united.",
+  "final_result_response": "United Interactive Explore Map - Roundtrip from Las Vegas (LAS), Flexible Dates, Max price $2000:\n\nLowest fares found (roundtrip, seen within last 48h):\n- Albuquerque, NM (ABQ) - Dec 3 to Dec 9 - from $207\n- Dallas, TX (DFW) - Dec 3 to Dec 10 - from $212\n- Boise, ID (BOI) - Dec 3 to Dec 9 - from $227\n- Colorado Springs, CO (COS) - Dec 3 to Dec 9 - from $247\n- Denver, CO (DEN) - Dec 4 to Dec 11 - from $247\n- Cleveland, OH (CLE) - Dec 3 to Dec 5 - from $291\n- Austin, TX (AUS) - Nov 10 to Nov 14 - from $292\n- Boston, MA (BOS) - Nov 14 to Nov 18 - from $298\n- Atlanta, GA (ATL) - Dec 4 to Dec 9 - from $312\n- Charleston, SC (CHS) - Dec 4 to Dec 11 - from $357\n- Cincinnati, OH (CVG) - Nov 21 to Nov 25 - from $359\n- Buffalo, NY (BUF) - Dec 4 to Dec 11 - from $367\n- Hartford, CT (BDL) - Dec 3 to Dec 9 - from $368\n- Nashville, TN (BNA) - Nov 18 to Nov 23 - from $382\n- Baltimore, MD (BWI) - Dec 4 to Dec 11 - from $387\n- Washington, DC (DCA) - Dec 3 to Dec 9 - from $388\n- Aspen, CO (ASE) - Dec 1 to Dec 8 - from $421\n- Columbus, OH (CMH) - Dec 3 to Dec 10 - from $422\n- Charlotte, NC (CLT) - Dec 2 to Dec 9 - from $454\n- Cancun, MX (CUN) - Dec 2 to Dec 9 - from $536\n\nSettings used: Origin LAS, Search type Roundtrip, Flexible dates ON. Viewed on https://www.united.com/en/us Explore destinations map section.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access explore map Flying from field below fold.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to reveal the explore map controls below the fold.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The map shows no results because origin is Istanbul, so I will change it to Las Vegas.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Origin is set but flexible dates not enabled, so enable it.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to trigger search to display flexible roundtrip options from LAS.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Origin needs valid airport code selection to load map.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to open the origin dropdown to pick the LAS suggestion.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Origin is LAS but results need refresh via Search.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Origin shows LAS but results empty, so I must confirm selection.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Origin is confirmed as LAS, so triggering search will show options.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Map shows prices but need destination details, so expand list.",
+      "url": "https://www.united.com/en/us",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 11,
+  "cost_usd": 0.007218,
+  "maliyet": 0.007218,
+  "elapsed_s": 70.3,
+  "sure_sn": 70.3,
+  "level": "hard",
+  "website": "https://www.united.com/",
+  "domain": "www.united.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0019428
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

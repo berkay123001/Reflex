@@ -1,0 +1,28 @@
+{
+  "task_id": "2e4e21cf1449c6894b17d571c47b77ea",
+  "task": "Find an English bulldog near zip code 90028 that was cared for by a private owner.",
+  "final_result_response": "Could not find an English Bulldog near 90028 cared for by a private owner because adoptapet.com is inaccessible. The homepage returns '403 ERROR - The request could not be satisfied. The Amazon CloudFront distribution is configured to block access from your country.' No search or listings could be viewed. Please try again from an allowed location or provide an alternative site.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.001565,
+  "maliyet": 0.001565,
+  "elapsed_s": 9.9,
+  "sure_sn": 9.9,
+  "level": "medium",
+  "website": "https://www.adoptapet.com/",
+  "domain": "www.adoptapet.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0013163
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

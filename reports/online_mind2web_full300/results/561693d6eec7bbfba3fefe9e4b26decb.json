@@ -1,0 +1,119 @@
+{
+  "task_id": "561693d6eec7bbfba3fefe9e4b26decb",
+  "task": "Browse Marriott Bonvoy credit cards on Marriott.",
+  "final_result_response": "Marriott Bonvoy Credit Cards on marriott.com/credit-cards.mi are organized by region:\n- North America: Mexico, Canada (English), Canada (French). US cards are promoted via Credit Cards menu as core offering.\n- Asia: China, South Korea, India, Indonesia, Japan\n- Europe: United Kingdom\n- Middle East: United Arab Emirates, Saudi Arabia (KSA), Qatar\n- South America: Brazil\nEach region tab links to local card offers. Default choice: US/North America as primary market.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Access denied on homepage, so try credit cards section directly.",
+      "url": "https://www.marriott.com/loyalty/credit-cards.mi",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The page lists the correct credit cards link to follow.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to reveal North America card options.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to browse cards across all regions starting with Asia.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to browse all regional card offerings systematically.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Continue browsing remaining regional tabs systematically.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to collect North America cards before finishing.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will open the remaining South America region tab.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] North America details still missing, so check that tab.",
+      "url": "https://www.marriott.com/credit-cards.mi",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 9,
+  "cost_usd": 0.004887,
+  "maliyet": 0.004887,
+  "elapsed_s": 55.0,
+  "sure_sn": 55.0,
+  "level": "easy",
+  "website": "https://www.marriott.com/",
+  "domain": "www.marriott.com",
+  "blocked_empty_domain": true,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0014528
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

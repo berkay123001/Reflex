@@ -1,0 +1,139 @@
+{
+  "task_id": "23204728192da9f73197a613d9681c18",
+  "task": "What are the Symptoms and causes of fever?",
+  "final_result_response": "Symptoms and Causes of Fever from mayoclinic.org (https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759):\n\nSYMPTOMS:\nFever defined as oral temperature 100 F (37.8 C) or higher (average normal 98.6 F / 37 C). Other signs depending on cause:\n- Sweating\n- Chills and shivering\n- Headache\n- Muscle aches\n- Loss of appetite\n- Irritability\n- Dehydration\n- General weakness\n\nCAUSES:\nFever is temporary rise in body temperature as part of immune system response, usually caused by infection. Hypothalamus (body thermostat) raises set point, increasing heat production and restricting heat loss. Fevers below 104 F (40 C) with common viral infections like flu may help fight disease and are generally not harmful.\nFever or elevated temperature might be caused by:\n- A viral infection\n- A bacterial infection\n- Heat exhaustion\n- Certain inflammatory conditions such as rheumatoid arthritis - inflammation of lining of joints (synovium)\n- A malignant tumor\n- Some immunizations, such as diphtheria, tetanus and acellular pertussis (DTaP), pneumococcal or COVID\n- Some medications",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[target_covered] Cookie banner covers search, so I will dismiss it first.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will search for fever using the disease search box.",
+      "url": "https://www.mayoclinic.org/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Search term entered, so I will submit the search.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/search-results?q=fever",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The Fever result directly matches the task, so I will open it.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Causes section is below fold and truncated, so scroll down.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] I need to scroll further to capture the causes content.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[loop_detected] Causes section is below current viewport and must be revealed.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Print version should contain full Causes text for extraction.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759?p=1",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "FAILED",
+      "thought": "[s2_every_step] Causes list is below fold and needs scrolling to capture.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759?p=1",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[loop_detected] Base page may show full causes list.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Causes anchor should reveal missing causes details.",
+      "url": "https://www.mayoclinic.org/diseases-conditions/fever/symptoms-causes/syc-20352759#causes",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 11,
+  "cost_usd": 0.00978,
+  "maliyet": 0.00978,
+  "elapsed_s": 64.3,
+  "sure_sn": 64.3,
+  "level": "easy",
+  "website": "https://www.mayoclinic.org/",
+  "domain": "www.mayoclinic.org",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00204205
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

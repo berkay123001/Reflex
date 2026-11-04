@@ -1,0 +1,89 @@
+{
+  "task_id": "a6f0434ce6aff5f9b03681241b03ad82",
+  "task": "Find the closing stock price for Tesla on March 17, 2023.",
+  "final_result_response": "The closing stock price for Tesla (TSLA) on March 17, 2023 was $180.13 (Open $184.52, High $186.22, Low $177.33, Adj Close $180.13, Volume 133,197,100) according to Yahoo Finance Historical Data.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to navigate to Tesla quote page first.",
+      "url": "https://finance.yahoo.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open TSLA quote to access historical data.",
+      "url": "https://finance.yahoo.com/",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open TSLA quote to reach historical data.",
+      "url": "https://finance.yahoo.com/quote/TSLA/",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need historical prices so open Historical Data tab.",
+      "url": "https://finance.yahoo.com/quote/TSLA/history/",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to change date range to include March 17, 2023.",
+      "url": "https://finance.yahoo.com/quote/TSLA/history/",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will load the history page with a March 2023 range directly.",
+      "url": "https://finance.yahoo.com/quote/TSLA/history/?period1=1678838400&period2=1679270400",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 6,
+  "cost_usd": 0.007103,
+  "maliyet": 0.007103,
+  "elapsed_s": 95.9,
+  "sure_sn": 95.9,
+  "level": "easy",
+  "website": "https://finance.yahoo.com/",
+  "domain": "finance.yahoo.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00124005
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

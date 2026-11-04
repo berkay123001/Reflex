@@ -1,0 +1,319 @@
+{
+  "task_id": "7e1047f4803237f319c004f7a7f6bccb_121125",
+  "task": "Discover the trade-in value of my Intel 10th generation i5, 2021, HP laptop in fair condition, which has 8 GB memory and can be powered on, proceed for the in-store trade-in.",
+  "final_result_response": "Trade-in value found on Best Buy for your HP laptop (Intel 10th Gen i5, 2021, 8GB, powers on, Fair condition, with battery/charger, no screen damage): $91.00 estimated. Device matched as HP Pavilion x360 2-in-1 14\" Touch-Screen Laptop - Intel Core i5 - 8GB Memory - 256GB SSD (Model 14M-DW0023DX, SKU 6404882). On the appraisal page, select 'Accept estimated value' to proceed for in-store drop-off at a Best Buy store (e.g., Bangor store shown) after factory reset. In-store pricing may vary.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Must enter US site to access trade-in estimator.",
+      "url": "https://www.bestbuy.com/?intl=nosplash",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Trade-In Program link directly leads to estimator flow.",
+      "url": "https://www.bestbuy.com/trade-in",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to access Computers trade-in flow for laptop valuation.",
+      "url": "https://www.bestbuy.com/trade-in#product-categories",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Computers category is below fold, need to scroll to access it.",
+      "url": "https://www.bestbuy.com/trade-in#product-categories",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to open Computers trade-in flow to estimate laptop value.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Page content appears unloaded so scrolling may reveal offers.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Account popup obscures trade-in form, so close it first.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Brand step is visible but selector not listed, so I will scroll to expose it.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to return to brand selection widget above.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Brand input is below viewport so scrolling down will reveal it.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Brand form is above current viewport so scroll up.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Brand selector is below fold and must be exposed.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] The brand form is above current viewport so scroll up.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    },
+    {
+      "step": 13,
+      "operation": "SCROLL_UP",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[oscillation] Brand selector is at top, need to return there.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/13_full_screenshot.png"
+    },
+    {
+      "step": 14,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Brand dropdown must be opened to proceed with HP selection.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/14_full_screenshot.png"
+    },
+    {
+      "step": 15,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select HP to proceed with trade-in estimator.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/15_full_screenshot.png"
+    },
+    {
+      "step": 16,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to expose Continue button and additional filter options.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/16_full_screenshot.png"
+    },
+    {
+      "step": 17,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to narrow results to 2021 model year.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/17_full_screenshot.png"
+    },
+    {
+      "step": 18,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Year 2021 matches the target laptop specification.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/18_full_screenshot.png"
+    },
+    {
+      "step": 19,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to narrow to Intel i5 10th gen specs.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/19_full_screenshot.png"
+    },
+    {
+      "step": 20,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to select Intel to filter to target laptop.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/20_full_screenshot.png"
+    },
+    {
+      "step": 21,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to specify i5 processor model next.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/21_full_screenshot.png"
+    },
+    {
+      "step": 22,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] The required processor option is visible and must be selected.",
+      "url": "https://www.bestbuy.com/trade-in/r/search?categorySlug=computers",
+      "screenshot": "trajectory/22_full_screenshot.png"
+    },
+    {
+      "step": 23,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] One result found so Continue will show the trade-in value.",
+      "url": "https://www.bestbuy.com/trade-in/r/appraisal?categorySlug=computers",
+      "screenshot": "trajectory/23_full_screenshot.png"
+    },
+    {
+      "step": 24,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Device matches task, now enter fair condition details.",
+      "url": "https://www.bestbuy.com/trade-in/r/appraisal?categorySlug=computers",
+      "screenshot": "trajectory/24_full_screenshot.png"
+    },
+    {
+      "step": 25,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Fair is set, now need to complete remaining condition questions.",
+      "url": "https://www.bestbuy.com/trade-in/r/appraisal?categorySlug=computers",
+      "screenshot": "trajectory/25_full_screenshot.png"
+    },
+    {
+      "step": 26,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will answer Functional as device powers on per task.",
+      "url": "https://www.bestbuy.com/trade-in/r/appraisal?categorySlug=computers",
+      "screenshot": "trajectory/26_full_screenshot.png"
+    },
+    {
+      "step": 27,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to answer battery Yes then screen No to reveal value.",
+      "url": "https://www.bestbuy.com/trade-in/r/appraisal?categorySlug=computers",
+      "screenshot": "trajectory/27_full_screenshot.png"
+    },
+    {
+      "step": 28,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to answer screen condition to reveal trade-in value.",
+      "url": "https://www.bestbuy.com/trade-in/r/appraisal?categorySlug=computers",
+      "screenshot": "trajectory/28_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 29,
+  "cost_usd": 0.018026,
+  "maliyet": 0.018026,
+  "elapsed_s": 116.6,
+  "sure_sn": 116.6,
+  "level": "hard",
+  "website": "https://www.bestbuy.com/",
+  "domain": "www.bestbuy.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0031733
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

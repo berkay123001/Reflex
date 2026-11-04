@@ -1,0 +1,69 @@
+{
+  "task_id": "8ea6c3a2ea3f59150619935261a76d19",
+  "task": "Find a staffed FedEx location near zip code 10019 to return a package.",
+  "final_result_response": "Nearest staffed FedEx location near zip 10019 for package return:\n\nFedEx Ship Center - 606 W 49th St\n606 W 49th St, New York, NY 10019\nPhone: (800) 463-3339\nStatus: Open Now - Closes at 9:00 PM\n\nHours:\nMon-Fri: 9:00 AM - 9:00 PM\nSaturday: 10:00 AM - 5:00 PM\nSunday: Closed\n\nServices include: Express drop off, QR code returns, Return shipping services, Packaging supplies, International shipping, Hold for pickup. Max package weight 150 LB. This is a staffed FedEx Ship Center (not just a drop box), suitable for returns.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Homepage has no usable elements, so I will open locator directly.",
+      "url": "https://local.fedex.com/en-us?ourl=https%3A%2F%2Flocal.fedex.com%2Fen-us%2Fsearch&oref=",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Need to enter zip code into search box.",
+      "url": "https://local.fedex.com/en-us?ourl=https%3A%2F%2Flocal.fedex.com%2Fen-us%2Fsearch&oref=",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Zip is entered, clicking Search will show nearby locations.",
+      "url": "https://local.fedex.com/en/search?q=10019&qp=10019&r=50&per=50&l=en",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] List is visible, now need hours for nearest staffed location.",
+      "url": "https://local.fedex.com/en-us/ny/new-york/nyca",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.003841,
+  "maliyet": 0.003841,
+  "elapsed_s": 27.9,
+  "sure_sn": 27.9,
+  "level": "medium",
+  "website": "https://www.fedex.com/en-us/home.html",
+  "domain": "www.fedex.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00125605
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

@@ -1,0 +1,39 @@
+{
+  "task_id": "cad62d2be0c53f08a416457486b3db23",
+  "task": "Search for adoptable dogs near 21122 zip code.",
+  "final_result_response": "Could not search for adoptable dogs near zip code 21122 because adoptapet.com is blocked in this region. The site returns a 403 ERROR: 'The Amazon CloudFront distribution is configured to block access from your country.' I retried loading the homepage but the block persists, so no search or listings could be accessed. Please try again from a US location or VPN, or I can search on an alternative site if you allow.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "RELOAD",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will retry loading the page in case block is temporary.",
+      "url": "https://www.adoptapet.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 1,
+  "cost_usd": 0.002074,
+  "maliyet": 0.002074,
+  "elapsed_s": 14.3,
+  "sure_sn": 14.3,
+  "level": "easy",
+  "website": "https://www.adoptapet.com/",
+  "domain": "www.adoptapet.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0016058
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

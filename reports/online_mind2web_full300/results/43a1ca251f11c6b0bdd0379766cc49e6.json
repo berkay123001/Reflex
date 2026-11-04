@@ -1,0 +1,28 @@
+{
+  "task_id": "43a1ca251f11c6b0bdd0379766cc49e6",
+  "task": "Find a neurosurgeon who is over 50 years old and has an appointment available tomorrow.",
+  "final_result_response": "Could not find a neurosurgeon over 50 with appointment tomorrow because healthgrades.com is not available in this region. The homepage shows: 'This page is not available in your area. Our servers have detected that you are accessing this site from a restricted area.' No search or doctor profiles could be accessed. Please try again from a supported US location or allow use of an alternative medical directory.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.00182,
+  "maliyet": 0.00182,
+  "elapsed_s": 9.3,
+  "sure_sn": 9.3,
+  "level": "medium",
+  "website": "https://www.healthgrades.com/",
+  "domain": "www.healthgrades.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0014778
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

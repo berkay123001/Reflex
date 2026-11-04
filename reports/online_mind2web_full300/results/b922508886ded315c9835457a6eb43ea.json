@@ -1,0 +1,69 @@
+{
+  "task_id": "b922508886ded315c9835457a6eb43ea",
+  "task": "Browse tenured/tenure-track faculty positions in Computer Sciences & Technology in California.",
+  "final_result_response": "Found 2 tenured/tenure-track faculty positions in Computer Sciences & Technology in California on jobs.chronicle.com:\n\n1. Assistant Professor in Computer Science & Engineering - University of California - San Diego - California, United States - tenure-track faculty positions in CSE department.\n\n2. Computer Science, Assistant Professor (Job No: 559402) - Cal Poly Pomona - Pomona, California - Work Type: Instructional Faculty Tenured/Tenure-Track.\n\nSearch path: Computer Sciences & Technology > Tenured/Tenured Track filtered by keyword 'California'. Two additional NY-sponsored top results were irrelevant and excluded.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to browse Computer Sciences jobs to filter for California tenure-track.",
+      "url": "https://jobs.chronicle.com/jobs/computer-sciences-and-technology/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to narrow to tenured track before California filter.",
+      "url": "https://jobs.chronicle.com/jobs/computer-sciences-and-technology/tenured-tenured-track/#browsing",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need California-only results, so search by California keyword.",
+      "url": "https://jobs.chronicle.com/jobs/computer-sciences-and-technology/tenured-tenured-track/#browsing",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to submit California keyword search to filter listings.",
+      "url": "https://jobs.chronicle.com/jobs/computer-sciences-and-technology/tenured-tenured-track/?Keywords=California#browsing",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 4,
+  "cost_usd": 0.006461,
+  "maliyet": 0.006461,
+  "elapsed_s": 38.4,
+  "sure_sn": 38.4,
+  "level": "medium",
+  "website": "https://jobs.chronicle.com",
+  "domain": "jobs.chronicle.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0028928
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

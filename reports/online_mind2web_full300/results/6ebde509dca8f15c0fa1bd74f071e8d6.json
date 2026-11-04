@@ -1,0 +1,159 @@
+{
+  "task_id": "6ebde509dca8f15c0fa1bd74f071e8d6",
+  "task": "Search for a job in Miami, Florida, in Human Resources on target.",
+  "final_result_response": "Found Human Resources job in Miami area on Target careers:\n\n**Executive Team Leader Human Resources (Assistant Manager HR) | North Miami, FL**\n- Location: 16901 Miramar Pkwy, Miramar, FL 33027-4528 (North Miami area)\n- Department: Store Leadership, Full-time\n- Pay: $64,000 - $128,000 USD annually (Job Id: R0000476149)\n- Role: Lead HR Experts and Team Leaders, talent strategy, recruiting, coaching, compliance with employment laws, guest-centric culture.\n- Benefits: Medical, vision, dental, life insurance, 401(k), employee discount, paid sick leave, vacation, holidays.\n- Apply: Via Apply button on page https://corporate.target.com/jobs/w61/49/executive-team-leader-human-resources-assistant-manager-hr-north-miami,-fl\n\nThis matches search for Human Resources job in Miami, Florida on target.com.",
+  "action_history": [
+    {
+      "step": 0,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I need to locate Target job listings from the homepage search.",
+      "url": "https://www.target.com/",
+      "screenshot": "trajectory/0_full_screenshot.png"
+    },
+    {
+      "step": 1,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Shop search cannot find jobs, so I will open Target careers site.",
+      "url": "https://corporate.target.com/careers",
+      "screenshot": "trajectory/1_full_screenshot.png"
+    },
+    {
+      "step": 2,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[progress_milestone] Job search inputs are below viewport, so scroll down.",
+      "url": "https://corporate.target.com/careers",
+      "screenshot": "trajectory/2_full_screenshot.png"
+    },
+    {
+      "step": 3,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will enter the HR keyword to start the job search.",
+      "url": "https://corporate.target.com/careers",
+      "screenshot": "trajectory/3_full_screenshot.png"
+    },
+    {
+      "step": 4,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] I will select the Human Resources suggestion to set keyword correctly.",
+      "url": "https://corporate.target.com/careers",
+      "screenshot": "trajectory/4_full_screenshot.png"
+    },
+    {
+      "step": 5,
+      "operation": "TYPE_TEXT",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Location must be Miami before searching for HR jobs.",
+      "url": "https://corporate.target.com/careers",
+      "screenshot": "trajectory/5_full_screenshot.png"
+    },
+    {
+      "step": 6,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Both fields are filled, so I will trigger the search.",
+      "url": "https://corporate.target.com/careers/job-search?query=Human%20Resources%20Expert&lat=39.9207&lon=32.854&location=Ankara%2C%2006%2006000",
+      "screenshot": "trajectory/6_full_screenshot.png"
+    },
+    {
+      "step": 7,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Location is wrong, must clear and set Miami Florida.",
+      "url": "https://corporate.target.com/careers/job-search?currentPage=1&query=Human%20Resources%20Expert&lat=39.9207&lon=32.854&location=Ankara%2C%2006%2006000",
+      "screenshot": "trajectory/7_full_screenshot.png"
+    },
+    {
+      "step": 8,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to filter search to Miami HR jobs directly.",
+      "url": "https://corporate.target.com/careers/job-search?query=Human%20Resources&location=Miami%2C%20FL",
+      "screenshot": "trajectory/8_full_screenshot.png"
+    },
+    {
+      "step": 9,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Need to see job listings to confirm Miami HR jobs.",
+      "url": "https://corporate.target.com/careers/job-search?currentPage=1&query=Human%20Resources&location=Miami%2C%20FL",
+      "screenshot": "trajectory/9_full_screenshot.png"
+    },
+    {
+      "step": 10,
+      "operation": "GOTO_URL",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Location text ignored without coordinates, so retry with Miami lat lon.",
+      "url": "https://corporate.target.com/careers/job-search?query=Human%20Resources&lat=25.7617&lon=-80.1918&location=Miami%2C%20FL",
+      "screenshot": "trajectory/10_full_screenshot.png"
+    },
+    {
+      "step": 11,
+      "operation": "SCROLL_DOWN",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Results are below the fold, so I will scroll down.",
+      "url": "https://corporate.target.com/careers/job-search?currentPage=1&query=Human%20Resources&lat=25.7617&lon=-80.1918&location=Miami%2C%20FL",
+      "screenshot": "trajectory/11_full_screenshot.png"
+    },
+    {
+      "step": 12,
+      "operation": "CLICK",
+      "target_label": null,
+      "text": null,
+      "action_status": "SUCCESS",
+      "thought": "[s2_every_step] Top result matches HR in Miami area, so open it.",
+      "url": "https://corporate.target.com/jobs/w61/49/executive-team-leader-human-resources-assistant-manager-hr-north-miami,-fl",
+      "screenshot": "trajectory/12_full_screenshot.png"
+    }
+  ],
+  "status": "done",
+  "steps": 13,
+  "cost_usd": 0.008999,
+  "maliyet": 0.008999,
+  "elapsed_s": 81.7,
+  "sure_sn": 81.7,
+  "level": "hard",
+  "website": "https://www.target.com/",
+  "domain": "www.target.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.00229255
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}

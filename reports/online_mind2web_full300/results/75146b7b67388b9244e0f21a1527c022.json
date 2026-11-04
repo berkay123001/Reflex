@@ -1,0 +1,28 @@
+{
+  "task_id": "75146b7b67388b9244e0f21a1527c022",
+  "task": "Find a male senior boxer near zip code 90028.",
+  "final_result_response": "Could not find a male senior Boxer near zip code 90028 because adoptapet.com is inaccessible. The site returns a 403 ERROR: The Amazon CloudFront distribution is configured to block access from your country. Retrying is not possible in this run. Default suggestion: try again from a US network/IP near 90028, or use Petfinder / local Los Angeles Boxer rescues as alternative.",
+  "action_history": [],
+  "status": "done",
+  "steps": 0,
+  "cost_usd": 0.001568,
+  "maliyet": 0.001568,
+  "elapsed_s": 8.4,
+  "sure_sn": 8.4,
+  "level": "medium",
+  "website": "https://www.adoptapet.com/",
+  "domain": "www.adoptapet.com",
+  "blocked_empty_domain": false,
+  "stuck_finish_triggered": false,
+  "iframe_steps_count": 0,
+  "answer_checks": [
+    {
+      "verdict": "pass",
+      "unmet": [],
+      "cost_usd": 0.0013153
+    }
+  ],
+  "answer_check_rejections": 0,
+  "s2_reasoning_effort": "minimal",
+  "schema_version": "online-mind2web-v2"
+}
