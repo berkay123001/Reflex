@@ -57,6 +57,12 @@ How this compares with the agents in the benchmark paper (their numbers are huma
 
 Per-task answers, verdicts, failure types and final screenshots: [`reports/online_mind2web_full300/`](reports/online_mind2web_full300/).
 
+Read by cause rather than by type, the 138 failures split like this:
+
+- **Outside the agent (81).** 67 sites refused our network from the start. On 9 more the site let us in and then failed part-way: Cloudflare on a later page (Fandom, JCPenney), a 403 on the page the task needs (AKC groomer search), a browser error (medicare.gov), a site that loaded without listings (student.com), no video available (ESPN), and craigslist sending us to Istanbul. We still count these 9 as reachable, so they lower the 70%. 5 tasks could not be done as written on the day, or should not be: the gift card was listed as unavailable, a state job board was asked for jobs in another state, booking.com offers no hotel + flight + car package, the wine asked for was not in stock, and contacting a seller needed personal details nobody gave the agent.
+- **The agent's own failures (57).** 37 ran out of the 40-step budget on long tasks: shopping with four or five filters and a cart, quote and savings calculators (UPS, USPS, Chase, SpotHero), course schedules with day and time filters. These are the long tasks of the benchmark: the human reference needs a median of 9 steps for them, against 6 for the tasks Reflex solved. 13 did the task but missed a requirement or picked the wrong page, most often by typing a search query instead of using the site's filter (Google Shopping, Zara, Walmart, Y Combinator, Steam) or by taking a neighbouring page (another Healthline quiz, Apple's press release instead of the specs). 3 answered with something the page does not show, and 4 met an interface the agent cannot use (a canvas physics simulation, a meme editor, a dialog it did not close, data the site does not list).
+
+
 ### What the full run found in our code
 
 We ran the 300 tasks in six batches of 50 and, after each batch, looked for failures caused by our code rather than by the model or the site. Each one was fixed in general (no site-specific rules), with a test, and the next batch ran on the new code; the tasks those bugs had cost were run again with the newer code (22 re-runs), and 8 of them then succeeded.
