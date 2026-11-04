@@ -87,6 +87,7 @@ _COMPILED_CATEGORIZED_PATTERNS: list[tuple[re.Pattern, str]] = (
 )
 _COMPILED_PATTERNS = [re.compile(pat, re.IGNORECASE) for pat in IRREVERSIBLE_PATTERNS]
 
+_URL_QUERY_RE = re.compile(r"(https?://[^\s?#]+)[?#]\S*", re.IGNORECASE)
 DESTRUCTIVE_KINDS = {"click", "select", "press_enter", "goto_url"}
 
 
@@ -204,6 +205,9 @@ def check_action_safety(
         texts_to_check.append(label)
     if submit_label and submit_label != label:
         texts_to_check.append(submit_label)
+    if kind == "goto_url":
+        # Query strings carry search parameters ("&checkout=2026-11-07" on hotel sites), not actions.
+        texts_to_check = [_URL_QUERY_RE.sub(r"\1", t) for t in texts_to_check]
 
     for pat, cat in _COMPILED_CATEGORIZED_PATTERNS:
         for txt in texts_to_check:

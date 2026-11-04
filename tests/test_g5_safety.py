@@ -651,3 +651,18 @@ def test_pseudo_button_links_require_confirmation() -> None:
 
 
 
+
+
+def test_goto_url_query_dates_are_not_payments() -> None:
+    """full300 2026-11-04 (booking.com): '&checkout=2026-11-07' in a search URL asked for payment approval."""
+    search = {
+        "id": "goto_url",
+        "kind": "goto_url",
+        "label": "Navigate to https://www.booking.com/searchresults.html?ss=San+Francisco&checkin=2026-11-04&checkout=2026-11-07",
+        "url": "https://www.booking.com/searchresults.html?ss=San+Francisco&checkin=2026-11-04&checkout=2026-11-07",
+    }
+    assert check_action_safety(search).requires_confirmation is False
+    checkout_page = {"id": "goto_url", "kind": "goto_url", "label": "Navigate to https://shop.example.com/checkout?step=2",
+                     "url": "https://shop.example.com/checkout?step=2"}
+    assert check_action_safety(checkout_page).requires_confirmation is True
+    assert check_action_safety({"kind": "click", "role": "button", "label": "Checkout"}).requires_confirmation is True

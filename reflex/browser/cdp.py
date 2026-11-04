@@ -1158,9 +1158,12 @@ class Browser:
                     continue
 
                 guard = self.evaluate(f"window.__jevFast.guard(window.__jevFast.nodes.get({node_id}))")
-                if guard:
-                    guards[str(node_id)] = guard
-                    guards[node_id] = guard
+                if not guard:
+                    # No staleness guard means act() can never accept the element (e.g. a hidden range
+                    # input behind +/- buttons): offering it would only produce failed decisions.
+                    continue
+                guards[str(node_id)] = guard
+                guards[node_id] = guard
 
                 act_id = f"e{next_id_num}"
                 next_id_num += 1
