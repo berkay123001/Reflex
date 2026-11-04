@@ -50,7 +50,11 @@ def test_unattended_first_ask_converts_to_default_and_continues_with_override() 
     cfg = ReflexConfig(interactive=False, s2_every_step=True)
 
     question_text = "What size shirt do you prefer?"
-    expected_hint = f"User is unavailable: choose a sensible default for: {question_text}, state it in the final answer"
+    expected_hint = (
+        f"User is unavailable: choose a sensible default for: {question_text}, state it in the final answer. "
+        "Defaults are only for choices, dates and ranges: never invent personal data (names, emails, phone numbers, "
+        "addresses, account or payment details); if the task needs them, stop and report what is needed."
+    )
 
     sup_ask = SupervisorDecision(
         action_type="ASK_USER",

@@ -2212,7 +2212,11 @@ class ReflexSession:
                     unattended.append(q_clean)
                     self.pending_fact_key = None
                     self.last_asked_question = None
-                    hint = f"User is unavailable: choose a sensible default for: {question}, state it in the final answer"
+                    hint = (
+                        f"User is unavailable: choose a sensible default for: {question}, state it in the final answer. "
+                        "Defaults are only for choices, dates and ranges: never invent personal data (names, emails, phone numbers, "
+                        "addresses, account or payment details); if the task needs them, stop and report what is needed."
+                    )
                     self.ctx.tactical_hint = hint
                     self.pending_escalation_reason = (
                         "ask_user_default",

@@ -78,12 +78,21 @@ ACCOUNT_PATTERNS = [
     r"\baboneli[ğg](?:i|imi|ini)?\s+(?:iptal\s+et|sonland[ıi]r)\b",
 ]
 
-IRREVERSIBLE_PATTERNS = PAYMENT_PATTERNS + DELETION_PATTERNS + ACCOUNT_PATTERNS
+# Sending something to a third party on the user's behalf (seller contact forms, inquiries, applications).
+TRANSMISSION_PATTERNS = [
+    r"\bsend\s+(?:a\s+|an\s+|the\s+|your\s+|my\s+)?(?:message|inquiry|enquiry|request|email|application)\b",
+    r"\bsubmit\s+(?:a\s+|an\s+|the\s+|your\s+|my\s+)?(?:inquiry|enquiry|request|application|message)\b",
+    r"\bmesaj(?:[ıi])?\s+gönder\b",
+    r"\bbaşvuru(?:yu)?\s+gönder\b",
+]
+
+IRREVERSIBLE_PATTERNS = PAYMENT_PATTERNS + DELETION_PATTERNS + ACCOUNT_PATTERNS + TRANSMISSION_PATTERNS
 
 _COMPILED_CATEGORIZED_PATTERNS: list[tuple[re.Pattern, str]] = (
     [(re.compile(pat, re.IGNORECASE), "account") for pat in ACCOUNT_PATTERNS]
     + [(re.compile(pat, re.IGNORECASE), "payment") for pat in PAYMENT_PATTERNS]
     + [(re.compile(pat, re.IGNORECASE), "deletion") for pat in DELETION_PATTERNS]
+    + [(re.compile(pat, re.IGNORECASE), "transmission") for pat in TRANSMISSION_PATTERNS]
 )
 _COMPILED_PATTERNS = [re.compile(pat, re.IGNORECASE) for pat in IRREVERSIBLE_PATTERNS]
 

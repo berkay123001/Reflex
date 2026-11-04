@@ -675,3 +675,13 @@ def test_goto_url_product_slugs_are_not_payments() -> None:
     # Like the url field (test_goto_url_does_not_inspect_url_text), URL text in the label is not an action;
     # the words around it still are, and the click on "Pay" / "Checkout" itself is still guarded.
     assert check_action_safety({"kind": "goto_url", "label": "Navigate to delete account"}).requires_confirmation is True
+
+
+def test_sending_a_message_to_a_third_party_needs_confirmation() -> None:
+    """full300 2026-11-04 (landwatch): an unattended run sent a seller contact form with made-up details."""
+    send = check_action_safety({"kind": "click", "role": "button", "label": "Send Message"})
+    assert send.requires_confirmation is True and send.category == "transmission"
+    for label in ("Submit inquiry", "Send request", "Mesajı gönder"):
+        assert check_action_safety({"kind": "click", "role": "button", "label": label}).requires_confirmation is True, label
+    for label in ("Submit", "Search", "Send to phone", "Request a quote"):
+        assert check_action_safety({"kind": "click", "role": "button", "label": label}).requires_confirmation is False, label
