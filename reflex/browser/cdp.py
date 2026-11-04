@@ -26,6 +26,12 @@ from browser_harness.helpers import cdp
 logger = logging.getLogger(__name__)
 
 READ_STATE = Path(__file__).with_name("snapshot.js").read_text(encoding="utf-8")
+# Visible centre and scroll offset of the box the snapshot scrolls (cache.scroller in snapshot.js), or null.
+SCROLL_BOX = (
+    "(() => { const s=window.__jevFast?.scroller?.(); if (!s) return null; const r=s.getBoundingClientRect();"
+    " const x=Math.max(r.left,0), y=Math.max(r.top,0), x2=Math.min(r.right,innerWidth), y2=Math.min(r.bottom,innerHeight);"
+    " return {x: Math.round((x+x2)/2), y: Math.round((y+y2)/2), top: s.scrollTop}; })()"
+)
 MARKER = f"(() => {{ const state={READ_STATE}; return state?.marker ?? null; }})()"
 DEFAULT_CDP_PORT = 9333
 IFRAME_MIN_WIDTH = 200
@@ -1692,21 +1698,32 @@ class Browser:
                 before_y = int(self.evaluate("window.scrollY || 0") or 0)
             except Exception:
                 before_y = 0
+            # Wheel over the box the snapshot offered scrolling for (an open panel or app scroll box).
+            try:
+                box = self.evaluate(SCROLL_BOX)
+            except Exception:
+                box = None
+            wx, wy = (box["x"], box["y"]) if box else (550, 450)
             for i in range(3):
                 d = total_delta - step_delta * 2 if i == 2 else step_delta
                 self.call(
                     "Input.dispatchMouseEvent",
                     type="mouseWheel",
-                    x=550,
-                    y=450,
+                    x=wx,
+                    y=wy,
                     deltaX=0,
                     deltaY=d,
                 )
                 time.sleep(0.04)
             try:
-                after_y = int(self.evaluate("window.scrollY || 0") or 0)
-                if after_y == before_y:
-                    self.evaluate(f"window.scrollBy(0, {total_delta})")
+                if box:
+                    after = self.evaluate(SCROLL_BOX)
+                    if not after or after.get("top") == box.get("top"):
+                        self.evaluate(f"(() => {{ const s=window.__jevFast?.scroller?.(); if (s) s.scrollBy(0, {total_delta}); }})()")
+                else:
+                    after_y = int(self.evaluate("window.scrollY || 0") or 0)
+                    if after_y == before_y:
+                        self.evaluate(f"window.scrollBy(0, {total_delta})")
             except Exception:
                 pass
             if self.light_stealth:

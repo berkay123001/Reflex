@@ -179,6 +179,33 @@
   cache.pageKey=()=>[performance.timeOrigin,location.href,scrollX,scrollY,innerWidth,innerHeight,
     [...allRoots.flatMap(r=>[...r.querySelectorAll('input,textarea,select')])].filter(safe)
       .map(e=>[identity(e),e.value,e.checked,e.selectedIndex,e.disabled,e.readOnly])];
+  // The box a scroll should move: the scroll box of an open dialog or panel, else the scrollable box
+  // under the middle of the screen. cdp.py wheels over the same box, so the offer and the act agree.
+  cache.scroller=()=>{
+    const canScroll=el=>['auto','scroll','overlay'].includes(getComputedStyle(el).overflowY) && el.scrollHeight>el.clientHeight+2;
+    const shown=el=>{ const r=el.getBoundingClientRect(); return r.width>40 && r.height>40 && r.bottom>0 && r.top<innerHeight && r.right>0 && r.left<innerWidth; };
+    const dialogs=[...document.querySelectorAll('dialog[open],[role="dialog"],[role="alertdialog"],[aria-modal="true"]')].filter(shown);
+    for (let i=dialogs.length-1; i>=0; i--) {
+      if (canScroll(dialogs[i])) return dialogs[i];
+      const inner=[...dialogs[i].querySelectorAll('*')].find(e=>canScroll(e) && shown(e));
+      if (inner) return inner;
+    }
+    for (let el=document.elementFromPoint(innerWidth/2,innerHeight/2); el && el!==document.body && el!==document.documentElement; el=el.parentElement) {
+      if (canScroll(el)) return el;
+    }
+    // App layouts with a fixed map or sidebar in the middle: the largest visible scroll box (the result list).
+    if (document.documentElement.scrollHeight<=innerHeight+2) {
+      let best=null, bestArea=0;
+      for (const el of document.querySelectorAll('body *')) {
+        if (el.clientHeight<100 || el.scrollHeight<=el.clientHeight+2 || !canScroll(el) || !shown(el)) continue;
+        const r=el.getBoundingClientRect();
+        const area=(Math.min(r.right,innerWidth)-Math.max(r.left,0))*(Math.min(r.bottom,innerHeight)-Math.max(r.top,0));
+        if (area>bestArea) { best=el; bestArea=area; }
+      }
+      if (best) return best;
+    }
+    return null;
+  };
   cache.guard=e=>{
     if (!e?.isConnected || !(visible(e) || choiceProxy(e) || choiceOverlay(e))) return null;
     const scope=e.closest('form,dialog,[role="dialog"],article,li,tr,[role="row"]') || e.parentElement;
@@ -675,21 +702,12 @@
   const omitted_actions=Math.max(0,actions.length-250);
   actions.splice(250);
   actions.forEach((a,i)=>a.id='e'+(i+1));
-  // App layouts scroll an inner box and leave the window still; the wheel lands at (550,450) (cdp.py),
-  // so the box under that point decides whether scrolling is possible.
-  let innerDown=false, innerUp=false;
-  if (!(scrollY+innerHeight<height-2) && !(scrollY>0)) {
-    let el=document.elementFromPoint(Math.min(550,innerWidth-1),Math.min(450,innerHeight-1));
-    for (let i=0; el && el!==document.body && el!==document.documentElement && i<25; i++, el=el.parentElement) {
-      if (['auto','scroll','overlay'].includes(getComputedStyle(el).overflowY) && el.scrollHeight>el.clientHeight+2) {
-        innerDown=el.scrollTop+el.clientHeight<el.scrollHeight-2;
-        innerUp=el.scrollTop>0;
-        break;
-      }
-    }
-  }
-  if (scrollY+innerHeight<height-2 || innerDown) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
-  if (scrollY>0 || innerUp) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
+  // App layouts and open panels scroll their own box (cache.scroller); inside a dialog only that box counts.
+  const sc=cache.scroller();
+  const scDown=!!sc && sc.scrollTop+sc.clientHeight<sc.scrollHeight-2, scUp=!!sc && sc.scrollTop>0;
+  const inDialog=!!sc && !!sc.closest('dialog[open],[role="dialog"],[role="alertdialog"],[aria-modal="true"]');
+  if (inDialog ? scDown : (scrollY+innerHeight<height-2 || scDown)) actions.push({id:'scroll_down',kind:'scroll',label:'Scroll down',delta:420});
+  if (inDialog ? scUp : (scrollY>0 || scUp)) actions.push({id:'scroll_up',kind:'scroll',label:'Scroll up',delta:-420});
   actions.push({id:'wait',kind:'wait',label:'Wait for the page to update'});
   // A dialog or overlay over the middle of the screen blocks the page behind it. System 2 reads text,
   // not pixels, so it is told about it (safety.py). Small popups (date pickers) are left out.

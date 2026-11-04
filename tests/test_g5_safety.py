@@ -662,7 +662,16 @@ def test_goto_url_query_dates_are_not_payments() -> None:
         "url": "https://www.booking.com/searchresults.html?ss=San+Francisco&checkin=2026-11-04&checkout=2026-11-07",
     }
     assert check_action_safety(search).requires_confirmation is False
-    checkout_page = {"id": "goto_url", "kind": "goto_url", "label": "Navigate to https://shop.example.com/checkout?step=2",
-                     "url": "https://shop.example.com/checkout?step=2"}
-    assert check_action_safety(checkout_page).requires_confirmation is True
     assert check_action_safety({"kind": "click", "role": "button", "label": "Checkout"}).requires_confirmation is True
+
+
+def test_goto_url_product_slugs_are_not_payments() -> None:
+    """full300 2026-11-04 (bestbuy.com): '/product/best-buy-100-...-gift-card' matched \\bbuy\\b."""
+    def goto(url: str) -> dict:
+        return {"id": "goto_url", "kind": "goto_url", "label": f"Navigate to {url}", "url": url}
+
+    assert check_action_safety(goto("https://www.bestbuy.com/product/best-buy-100-celebrate-balloons-gift-card/JCQ6HKZ72G")).requires_confirmation is False
+    assert check_action_safety(goto("https://www.example.com/how-to-pay-less-for-flights")).requires_confirmation is False
+    # Like the url field (test_goto_url_does_not_inspect_url_text), URL text in the label is not an action;
+    # the words around it still are, and the click on "Pay" / "Checkout" itself is still guarded.
+    assert check_action_safety({"kind": "goto_url", "label": "Navigate to delete account"}).requires_confirmation is True

@@ -87,7 +87,15 @@ _COMPILED_CATEGORIZED_PATTERNS: list[tuple[re.Pattern, str]] = (
 )
 _COMPILED_PATTERNS = [re.compile(pat, re.IGNORECASE) for pat in IRREVERSIBLE_PATTERNS]
 
-_URL_QUERY_RE = re.compile(r"(https?://[^\s?#]+)[?#]\S*", re.IGNORECASE)
+_URL_IN_TEXT_RE = re.compile(r"https?://\S+", re.IGNORECASE)
+
+
+def _words_outside_urls(texts: list[str]) -> list[str]:
+    """A navigation label reads "Navigate to <url>"; like the url field itself, the URL text is not an
+    action ("&checkout=2026-11-07", "/product/best-buy-100-gift-card"), only the words around it are."""
+    return [w for w in (_URL_IN_TEXT_RE.sub(" ", t).strip() for t in texts) if w]
+
+
 DESTRUCTIVE_KINDS = {"click", "select", "press_enter", "goto_url"}
 
 
@@ -206,20 +214,20 @@ def check_action_safety(
     if submit_label and submit_label != label:
         texts_to_check.append(submit_label)
     if kind == "goto_url":
-        # Query strings carry search parameters ("&checkout=2026-11-07" on hotel sites), not actions.
-        texts_to_check = [_URL_QUERY_RE.sub(r"\1", t) for t in texts_to_check]
+        texts_to_check = _words_outside_urls(texts_to_check)
 
     for pat, cat in _COMPILED_CATEGORIZED_PATTERNS:
-        for txt in texts_to_check:
-            if pat.search(txt):
-                return SafetyCheckResult(
-                    requires_confirmation=True,
-                    reason=f"Irreversible or high-impact {cat} action detected on '{txt}'",
-                    matched_pattern=pat.pattern,
-                    action_summary=f"{kind.upper()} '{txt}'",
-                    action_signature=sig_origin,
-                    category=cat,
-                )
+        hits = [t for t in texts_to_check if pat.search(t)]
+        if hits:
+            txt = hits[0]
+            return SafetyCheckResult(
+                requires_confirmation=True,
+                reason=f"Irreversible or high-impact {cat} action detected on '{txt}'",
+                matched_pattern=pat.pattern,
+                action_summary=f"{kind.upper()} '{txt}'",
+                action_signature=sig_origin,
+                category=cat,
+            )
 
     return SafetyCheckResult(
         requires_confirmation=False,
