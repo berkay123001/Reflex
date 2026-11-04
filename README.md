@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/lV04TGYplD0"><b>Demo video</b></a> ·
   <a href="#demo">Demo</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#results">Results</a> ·
@@ -28,7 +29,7 @@
 | **Built** | The Muse Spark agent in this repository (supervisor, browser layer, guards, answer check and benchmark) was built during the hackathon, Oct 26 – Nov 4, 2026 |
 | **Meta models at runtime** | `muse-spark-1.3-contributor` (Meta Model API) is the supervisor: it reads each page and decides every browser step.<br>`meta-models/muse-spark-open-1026` (**Muse Spark Open**, open weights, served by Baseten) checks every final answer against the user's task before it is shown; if a requirement is unmet, the agent is sent back once. |
 | **Bonus categories** | Best Build on Meta Open Weight Models · Best Agentic Use-Case |
-| **Demo video** | YouTube: link coming |
+| **Demo video** | [https://youtu.be/lV04TGYplD0](https://youtu.be/lV04TGYplD0) (2.5 min) |
 | **Results without any API key** | [All 300 Online-Mind2Web tasks, each with the agent's answer, our verdict and the final screenshot](reports/online_mind2web_full300/) |
 
 ## Why Reflex
@@ -40,6 +41,11 @@ Browser agents look good in demos. On live websites they often stall, or report 
 - **An answer is checked before you see it.** Muse Spark Open checks the final answer against every requirement of the task. When a site blocks the agent, Reflex says so instead of making up a result.
 
 ## Demo
+
+<p align="center">
+  <a href="https://youtu.be/lV04TGYplD0"><img src="https://img.youtube.com/vi/lV04TGYplD0/maxresdefault.jpg" alt="Watch the Reflex demo video on YouTube" width="720"></a>
+  <br><em>Watch the 2.5-minute demo video on YouTube.</em>
+</p>
 
 You give Reflex a website and a goal in plain language, for example *"find the most experienced real estate agent in St. Augustine, FL"* on remax.com. Reflex drives a real Chromium over the DevTools protocol: it reads the page, picks one action, checks that the action changed something, and repeats until it can answer. It asks before payments, deletions and sending messages on your behalf, fills personal-data fields only with details you gave it, and says so plainly when a site blocks it instead of making up a result.
 
