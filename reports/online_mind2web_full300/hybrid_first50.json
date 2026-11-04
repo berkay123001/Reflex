@@ -1,5 +1,5 @@
 {
- "what": "Same first 50 Online-Mind2Web tasks of the full run, same code (commit 81fc1a4), three modes, judged by Claude (Opus 5.5)",
+ "what": "Same first 50 Online-Mind2Web tasks of the full run, same code (commit b556711), three modes, judged by Claude (Opus 5.5)",
  "arms": {
   "muse_only": {
    "success": 28,

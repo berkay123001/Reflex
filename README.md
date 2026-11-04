@@ -178,7 +178,7 @@ One finding from the full run was about safety, and we report it as found. **In 
 
 We set out to pair Muse Spark with a fast local action model, and built it. In the hybrid modes, a small model proposes each step as probabilities over operations and page elements, and a calibrated confidence gate lets it act only when it is sure; everything else goes to Muse Spark. The local model is Turnike, a Qwen3.5-4B fine-tune that we trained before the hackathon in independent experiments (Oct 14–25); during the hackathon we connected it to Reflex through the gate, measured it, and trained one more version on human demonstrations. A cloud model (Jev, via OpenRouter) can take its place.
 
-On the first 50 tasks of the full Online-Mind2Web run, with the same code for all three (commit 81fc1a4) and judged the same way:
+On the first 50 tasks of the full Online-Mind2Web run, with the same code for all three (commit b556711) and judged the same way:
 
 | Same 50 tasks | Success | Reachable sites | Steps taken by the small model | Median time | Cost per task |
 |---|---|---|---|---|---|
